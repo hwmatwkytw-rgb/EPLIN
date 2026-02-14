@@ -13,7 +13,7 @@ module.exports = {
         prefix: true,
         noPrefix: false,
         groupAdminOnly: false,
-        description: 'تعديل الصور باستخدام AI (Notegpt بدون API Key)',
+        description: 'تعديل الصور باستخدام AI بدون API Key',
         category: 'ai',
         guide: {
             en: '{pn} <الوصف> - رد على صورة ليتم تعديلها'
@@ -26,7 +26,6 @@ module.exports = {
         const userId = event.senderID;
         const description = args.join(' ').trim();
 
-        // التحقق أن المستخدم رد على صورة
         if (!event.messageReply || !event.messageReply.attachments || event.messageReply.attachments.length === 0) {
             return api.sendMessage('•-• الرجاء الرد على صورة مع كتابة /عدلي <الوصف>', threadID, messageID);
         }
@@ -40,16 +39,14 @@ module.exports = {
 
         try {
             const attachment = event.messageReply.attachments[0];
-            if (attachment.type !== 'photo') {
-                return api.editMessage('•-• ❌ هذا ليس صورة', processingID);
-            }
+            if (attachment.type !== 'photo') return api.editMessage('•-• ❌ هذا ليس صورة', processingID);
 
             const cacheDir = path.join(__dirname, 'cache');
             if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
-            // =========================
-            // دمج Notegpt مباشرة هنا
-            // =========================
+            // ======================
+            // Notegpt المدموج داخل onStart
+            // ======================
             const timestamp = Date.now();
             const anonymousId = uuidv4();
             const sboxGuid = Buffer.from(`${timestamp}|${Math.floor(Math.random()*1000)}|${Math.floor(Math.random()*1000000000)}`).toString('base64');
