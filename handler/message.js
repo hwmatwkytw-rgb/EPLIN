@@ -88,7 +88,7 @@ const handleMessage = async (event, api, commands) => {
     if (body.startsWith(currentPrefix)) {
       const args = body.slice(currentPrefix.length).trim().split(/\s+/);
       if (args.length === 0 || (args.length === 1 && args[0] === "")) {
-        return api.sendMessage("🫦", event.threadID, event.messageID);
+        return api.sendMessage("تفضل مازا تريد •-•؟ ", event.threadID, event.messageID);
       }
       await handleCommand({ message: body, args, event, api, Users, Threads, commands, config: global.client.config });
     }
