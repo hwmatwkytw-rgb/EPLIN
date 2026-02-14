@@ -1,8 +1,6 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const OSS = require('ali-oss');
 
 module.exports = {
     config: {
@@ -41,94 +39,46 @@ module.exports = {
             const attachment = event.messageReply.attachments[0];
             if (attachment.type !== 'photo') return api.editMessage('•-• ❌ هذا ليس صورة', processingID);
 
-            const cacheDir = path.join(__dirname, 'cache');
-            if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+            const tempDir = path.join(__dirname, 'cache');
+            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
-            // ======================
-            // Notegpt المدموج داخل onStart
-            // ======================
-            const timestamp = Date.now();
-            const anonymousId = uuidv4();
-            const sboxGuid = Buffer.from(`${timestamp}|${Math.floor(Math.random()*1000)}|${Math.floor(Math.random()*1000000000)}`).toString('base64');
-            const cookies = [
-                `anonymous_user_id=${anonymousId}`,
-                `i18n_redirected=en`,
-                `_ga_PFX3BRW5RQ=GS2.1.s${timestamp}$o1$g0$t${timestamp}$j60$l0$h${timestamp+100000}`,
-                `_ga=GA1.1.${Math.floor(Math.random()*2000000000)}.${timestamp}`,
-                `sbox-guid=${sboxGuid}`
-            ].join('; ');
+            const tempPath = path.join(tempDir, `temp_${userId}.png`);
+            const imageResp = await axios.get(attachment.url, { responseType: 'arraybuffer' });
+            fs.writeFileSync(tempPath, imageResp.data);
 
-            const client = axios.create({ headers: { 'Cookie': cookies, 'User-Agent': 'Mozilla/5.0' } });
+            // إرسال الصورة مباشرة لـ Notegpt API بدون رفع OSS
+            const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
+            let formData = "";
+            formData += `--${boundary}\r\n`;
+            formData += `Content-Disposition: form-data; name="image"; filename="image.png"\r\n`;
+            formData += `Content-Type: image/png\r\n\r\n`;
+            formData += fs.readFileSync(tempPath);
+            formData += `\r\n--${boundary}\r\n`;
+            formData += `Content-Disposition: form-data; name="prompt"\r\n\r\n${description}\r\n`;
+            formData += `--${boundary}--\r\n`;
 
-            // الحصول على STS Token
-            const stsRes = await client.get('https://notegpt.io/api/v1/oss/sts-token', { headers:{ 'accept':'*/*','x-token':'' } });
-            if(stsRes.data.code !== 100000) throw new Error('فشل في الحصول على STS Token');
-            const stsData = stsRes.data.data;
-
-            // رفع الصورة على OSS
-            const imageRes = await axios.get(attachment.url,{responseType:'stream'});
-            const ossClient = new OSS({
-                region:'oss-us-west-1',
-                accessKeyId:stsData.AccessKeyId,
-                accessKeySecret:stsData.AccessKeySecret,
-                stsToken:stsData.SecurityToken,
-                bucket:'nc-cdn'
+            const response = await axios({
+                method: 'POST',
+                url: 'https://api.deepai.org/hacking_is_a_serious_crime',
+                headers: {
+                    'content-type': `multipart/form-data; boundary=${boundary}`,
+                    'origin': 'https://deepai.org',
+                    'user-agent': 'Mozilla/5.0'
+                },
+                data: formData,
+                responseType: 'arraybuffer'
             });
-            const ossPath = `notegpt/web3in1/${uuidv4()}.jpg`;
-            await ossClient.putStream(ossPath, imageRes.data);
-            const uploadedUrl = `https://nc-cdn.oss-us-west-1.aliyuncs.com/${ossPath}`;
 
-            // بدء تحرير الصورة
-            const startRes = await client.post('https://notegpt.io/api/v2/images/handle',{
-                image_url: uploadedUrl,
-                type:60,
-                user_prompt:description,
-                aspect_ratio:'match_input_image',
-                num:4,
-                model:'google/nano-banana',
-                sub_type:3
-            },{ headers:{ 'accept':'application/json, text/plain, */*' } });
+            const editedPath = path.join(tempDir, `edited_${userId}.png`);
+            fs.writeFileSync(editedPath, response.data);
 
-            if(startRes.data.code !== 100000) throw new Error('فشل في بدء تحرير الصورة');
-            const sessionId = startRes.data.data.session_id;
+            await api.sendMessage({ attachment: fs.createReadStream(editedPath) }, threadID);
 
-            // متابعة حالة التحرير
-            let attempts = 0, results;
-            while(attempts<30){
-                const statusRes = await client.get(`https://notegpt.io/api/v2/images/status?session_id=${sessionId}`,{ headers:{ 'accept':'application/json, text/plain, */*' } });
-                if(statusRes.data.code===100000){
-                    const status = statusRes.data.data.status;
-                    if(status==='succeeded'){ results = statusRes.data.data.results; break; }
-                    else if(status==='failed') throw new Error('فشل في تحرير الصورة');
-                }
-                attempts++;
-                await new Promise(r=>setTimeout(r,4000));
-            }
-            if(!results) throw new Error('انتهت مهلة انتظار تحرير الصورة');
-
-            // تحميل الصور المعدلة وإرسالها
-            const editedImages = [];
-            const filesToDelete = [];
-            for(let i=0;i<results.length;i++){
-                const url = results[i].url;
-                const filePath = path.join(cacheDir, `edited_${userId}_${i+1}.png`);
-                const imgRes = await axios.get(url,{responseType:'stream'});
-                const writer = fs.createWriteStream(filePath);
-                imgRes.data.pipe(writer);
-                await new Promise((resolve,reject)=>{writer.on('finish',resolve); writer.on('error',reject);});
-                editedImages.push(fs.createReadStream(filePath));
-                filesToDelete.push(filePath);
-            }
-
-            if(editedImages.length===0) return api.editMessage('❌ فشل في تحميل الصور المحررة', processingID);
-
-            await api.sendMessage({ body:"✨ تم تعديل الصورة بنجاح", attachment:editedImages }, threadID);
-
-            // حذف الملفات المؤقتة
-            setTimeout(()=>filesToDelete.forEach(f=>fs.existsSync(f)&&fs.unlinkSync(f)),3000);
+            fs.unlinkSync(tempPath);
+            fs.unlinkSync(editedPath);
             await api.deleteMessage(processingID);
 
-        } catch(error){
+        } catch (error) {
             console.error(error);
             await api.editMessage(`•-• ❌ حصل خطأ: ${error.message}`, processingID);
         }
