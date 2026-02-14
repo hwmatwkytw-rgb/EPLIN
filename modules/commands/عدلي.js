@@ -97,7 +97,7 @@ module.exports = {
             if(startRes.data.code !== 100000) throw new Error('فشل في بدء تحرير الصورة');
             const sessionId = startRes.data.data.session_id;
 
-            // متابعة حالة التحرير
+            // متابعة حالة التحرير حتى يكتمل
             let attempts = 0, results;
             while(attempts<30){
                 const statusRes = await client.get(`https://notegpt.io/api/v2/images/status?session_id=${sessionId}`,{ headers:{ 'accept':'application/json, text/plain, */*' } });
@@ -136,13 +136,11 @@ module.exports = {
 
         } catch(error){
             console.error(error);
-
             let errorMessage = `•-• ❌ حصل خطأ: ${error.message}`;
             if(error.response){
                 errorMessage += `\nStatus Code: ${error.response.status}`;
                 errorMessage += `\nResponse Data: ${JSON.stringify(error.response.data).substring(0,1000)}`;
             }
-
             await api.editMessage(errorMessage, processingID);
         }
     },
