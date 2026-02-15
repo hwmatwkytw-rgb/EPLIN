@@ -3,11 +3,11 @@ const path = require('path');
 
 const config = {
     name: "اعدادات",
-    version: "3.0",
+    version: "3.1",
     author: "ᏕᎥᏁᎨᎧ",
     countDown: 5,
     role: 1,
-    description: "إعدادات حماية المجموعة الشاملة",
+    description: "إعدادات حماية المجموعة Kenji Cloud",
     category: "الإدارة",
     guide: { ar: "{pn}" },
     event: true
@@ -24,7 +24,11 @@ function readDB() {
 }
 
 function writeDB(data) {
-    fs.writeJsonSync(dbPath, data, { spaces: 2 });
+    try {
+        fs.writeJsonSync(dbPath, data, { spaces: 2 });
+    } catch (e) {
+        console.error("خطأ في كتابة قاعدة البيانات:", e);
+    }
 }
 
 function renderMenu(settings, title = "🛡 إعدادات المجموعة") {
@@ -45,26 +49,31 @@ module.exports = {
     config,
 
     // ================== أمر الإعدادات ==================
-    onStart: async function ({ api, event }) {
+    onStart: function ({ api, event }) {
         const { threadID, messageID, senderID } = event;
         const db = readDB();
 
         if (!db[threadID]) db[threadID] = { settings: {}, original: {} };
 
-        // خزّن الاسم الأصلي عند أول استخدام
-        if (!db[threadID].original.threadName) {
-            const info = await api.getThreadInfo(threadID);
-            db[threadID].original.threadName = info.threadName;
-        }
+        // حفظ الاسم الأصلي + الكنيات + صورة المجموعة (callback Kenji Cloud)
+        api.getThreadInfo(threadID, (err, info) => {
+            if (err) return;
 
-        // خزّن الكنيات الأصلية لكل عضو
-        if (!db[threadID].original.nicknames) {
-            db[threadID].original.nicknames = {};
-            const info = await api.getThreadInfo(threadID);
-            info.userInfo.forEach(u => db[threadID].original.nicknames[u.id] = u.name);
-        }
+            if (!db[threadID].original.threadName) db[threadID].original.threadName = info.threadName;
 
-        writeDB(db);
+            if (!db[threadID].original.nicknames) {
+                db[threadID].original.nicknames = {};
+                info.userInfo.forEach(u => {
+                    db[threadID].original.nicknames[u.id] = u.name;
+                });
+            }
+
+            if (!db[threadID].original.threadImage && info.threadImage) {
+                db[threadID].original.threadImage = info.threadImage;
+            }
+
+            writeDB(db);
+        });
 
         const settings = db[threadID].settings.antiSettings || {
             antiSpam: false,
@@ -78,6 +87,7 @@ module.exports = {
         const msg = renderMenu(settings) + "\n↫ رد بالأرقام للتغيير";
 
         return api.sendMessage(msg, threadID, (err, info) => {
+            if (err) return;
             global.client.handleReply.push({
                 name: config.name,
                 messageID: info.messageID,
@@ -89,7 +99,7 @@ module.exports = {
     },
 
     // ================== الرد على القائمة ==================
-    onReply: async function ({ api, event, handleReply }) {
+    onReply: function ({ api, event, handleReply }) {
         const { threadID, messageID, body, senderID } = event;
         if (senderID !== handleReply.author) return;
 
@@ -122,7 +132,6 @@ module.exports = {
             return api.sendMessage("✍ اكتب (نعم) أو (لا)", threadID, messageID);
         }
 
-        // مرحلة الاختيار
         const nums = body.split(/\s+/).map(Number).filter(n => n >= 1 && n <= 6);
         if (!nums.length)
             return api.sendMessage("❌ اختيار غير صالح", threadID, messageID);
@@ -137,6 +146,7 @@ module.exports = {
         api.unsendMessage(handleReply.messageID);
 
         return api.sendMessage(confirmMsg, threadID, (err, info) => {
+            if (err) return;
             global.client.handleReply.push({
                 name: config.name,
                 messageID: info.messageID,
@@ -148,7 +158,7 @@ module.exports = {
     },
 
     // ================== حماية الأحداث ==================
-    onEvent: async function ({ api, event }) {
+    onEvent: function ({ api, event }) {
         const { threadID, logMessageType, logMessageData, author } = event;
         const db = readDB();
         const settings = db[threadID]?.settings?.antiSettings;
@@ -168,7 +178,7 @@ module.exports = {
         // حماية الكنيات
         if (logMessageType === "log:user-nickname" && settings.antiChangeNickname) {
             if (author !== api.getCurrentUserID()) {
-                const participantID = logMessageData.participantID || logMessageData.userID;
+                const participantID = logMessageData.userID || logMessageData.participantID;
                 const oldNickname = original.nicknames[participantID] || "";
                 api.changeNickname(oldNickname, threadID, participantID, () => {
                     api.sendMessage("🚫 تغيير الكنية غير مسموح، تمت استعادتها.", threadID);
@@ -176,7 +186,7 @@ module.exports = {
             }
         }
 
-        // منع الخروج (إعادة العضو)
+        // منع الخروج
         if (logMessageType === "log:unsubscribe" && settings.antiOut) {
             const leftID = logMessageData.leftParticipantFbId;
             if (leftID && leftID !== api.getCurrentUserID()) {
@@ -193,12 +203,12 @@ module.exports = {
                 if (oldImage) api.setThreadImage(oldImage, threadID);
                 api.sendMessage("⚠️ تغيير صورة المجموعة غير مسموح، تمت إعادة الصورة الأصلية.", threadID);
             }
-        }
 
-        // حفظ الصورة الأصلية عند أول استخدام
-        if (!original.threadImage && logMessageType === "log:thread-icon") {
-            original.threadImage = logMessageData.oldImageSrc;
-            writeDB(db);
+            // حفظ الصورة الأصلية عند أول مرة
+            if (!original.threadImage && logMessageData.oldImageSrc) {
+                original.threadImage = logMessageData.oldImageSrc;
+                writeDB(db);
+            }
         }
     }
 };
