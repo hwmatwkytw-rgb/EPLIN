@@ -28,7 +28,7 @@ module.exports = {
     const isThreadAdmin = threadInfo.adminIDs.some(item => item.id == senderID);
 
     // ضع هنا ايدي المطور
-    const developerID = "YOUR_UID_HERE";
+    const developerID = "61586897962846";
 
     if (!isThreadAdmin && senderID !== developerID)
       return api.sendMessage("❌ الأمر دا خاص بمسؤولي المجموعة والمطور فقط.", threadID);
