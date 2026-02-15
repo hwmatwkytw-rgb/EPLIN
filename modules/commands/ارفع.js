@@ -1,7 +1,7 @@
 module.exports = {
   config: {
     name: 'ارفع',
-    version: '1.0',
+    version: '1.1',
     author: 'ابو عبيده علي',
     countDown: 5,
     prefix: false,
@@ -14,30 +14,35 @@ module.exports = {
     }
   },
 
-  run: async function ({ api, event, Threads, Users }) {
+  run: async function ({ api, event }) {
 
     const { threadID, messageReply, senderID } = event;
 
     if (!messageReply)
-      return api.sendMessage("؟.", threadID);
-
-    // جلب معلومات المجموعة
-    const threadInfo = await api.getThreadInfo(threadID);
-
-    // التحقق هل المرسل أدمن في الجروب
-    const isThreadAdmin = threadInfo.adminIDs.some(item => item.id == senderID);
-
-    // ضع هنا ايدي المطور
-    const developerID = "61586897962846";
-
-    if (!isThreadAdmin && senderID !== developerID)
-      return api.sendMessage("❌ الأمر دا خاص بمسؤولي المجموعة والمطور فقط.", threadID);
+      return api.sendMessage("❌ لازم ترد على رسالة العضو.", threadID);
 
     try {
+      const threadInfo = await api.getThreadInfo(threadID);
+
+      const isThreadAdmin = threadInfo.adminIDs.some(item => item.id == senderID);
+
+      const developerID = "61586897962846"; // ايديك
+
+      if (!isThreadAdmin && senderID !== developerID)
+        return api.sendMessage("❌ الأمر دا خاص بمسؤولي المجموعة والمطور فقط.", threadID);
+
+      const isTargetAdmin = threadInfo.adminIDs.some(item => item.id == messageReply.senderID);
+
+      if (isTargetAdmin)
+        return api.sendMessage("⚠️ العضو دا مسؤول أصلاً.", threadID);
+
       await api.changeAdminStatus(threadID, messageReply.senderID, true);
-      api.sendMessage("✅ تم رفع العضو مسؤول في المجموعة بنجاح.", threadID);
-    } catch (error) {
-      api.sendMessage("❌ حصل خطأ، تأكد إن البوت عندو صلاحية مسؤول أول.", threadID);
+
+      return api.sendMessage("✅ تم رفع العضو مسؤول بنجاح.", threadID);
+
+    } catch (err) {
+      console.log(err);
+      return api.sendMessage("❌ فشل التنفيذ. تأكد إن البوت مسؤول في المجموعة.", threadID);
     }
 
   }
