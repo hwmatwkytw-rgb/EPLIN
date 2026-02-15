@@ -3,13 +3,14 @@ const path = require('path');
 
 const config = {
     name: "اعدادات",
-    version: "2.0",
-    author: "ᏕᎥᏁᎨᎧ (fixed)",
+    version: "2.1",
+    author: "ᏕᎥᏁᎨᎧ",
     countDown: 5,
     role: 1,
     description: "إعدادات حماية المجموعة",
     category: "الإدارة",
-    guide: { ar: "{pn}" }
+    guide: { ar: "{pn}" },
+    event: true
 };
 
 const threadsPath = path.join(__dirname, '../../database/groups.json');
@@ -43,7 +44,7 @@ function renderMenu(settings, title = "🛡 إعدادات المجموعة") {
 module.exports = {
     config,
 
-    // ================== القائمة الأولى ==================
+    // ================== قائمة الاعدادات ==================
     onStart: async function ({ api, event }) {
         const { threadID, messageID, senderID } = event;
         const db = readDB();
@@ -72,7 +73,7 @@ module.exports = {
         }, messageID);
     },
 
-    // ================== التحكم ==================
+    // ================== الرد على القائمة ==================
     onReply: async function ({ api, event, handleReply }) {
         const { threadID, messageID, body, senderID } = event;
         if (senderID !== handleReply.author) return;
@@ -86,7 +87,7 @@ module.exports = {
             "notifyChange"
         ];
 
-        // ===== مرحلة التأكيد =====
+        // مرحلة التأكيد
         if (handleReply.stage === "confirm") {
             if (body === "نعم") {
                 const db = readDB();
@@ -96,18 +97,7 @@ module.exports = {
                 writeDB(db);
 
                 api.unsendMessage(handleReply.messageID);
-
-                const msg = renderMenu(handleReply.newSettings) + "\n↫ رد بالأرقام للتغيير";
-
-                return api.sendMessage(msg, threadID, (err, info) => {
-                    global.client.handleReply.push({
-                        name: config.name,
-                        messageID: info.messageID,
-                        author: senderID,
-                        stage: "select",
-                        settings: handleReply.newSettings
-                    });
-                }, messageID);
+                return api.sendMessage("✅ تم حفظ الإعدادات بنجاح", threadID, messageID);
             }
 
             if (body === "لا") {
@@ -118,7 +108,7 @@ module.exports = {
             return api.sendMessage("✍ اكتب (نعم) أو (لا)", threadID, messageID);
         }
 
-        // ===== مرحلة الاختيار =====
+        // مرحلة الاختيار
         const nums = body.split(/\s+/).map(Number).filter(n => n >= 1 && n <= 6);
         if (!nums.length)
             return api.sendMessage("❌ اختيار غير صالح", threadID, messageID);
@@ -141,5 +131,42 @@ module.exports = {
                 newSettings
             });
         }, messageID);
+    },
+
+    // ================== حماية الأحداث ==================
+    onEvent: async function ({ api, event }) {
+        const { threadID, logMessageType, logMessageData, author } = event;
+        const db = readDB();
+        const settings = db[threadID]?.settings?.antiSettings;
+        if (!settings) return;
+
+        // حماية اسم المجموعة
+        if (logMessageType === "log:thread-name" && settings.antiChangeGroupName) {
+            if (author !== api.getCurrentUserID()) {
+                api.setTitle(logMessageData.oldName || "المجموعة", threadID, () => {
+                    api.sendMessage("⚠️ تغيير اسم المجموعة غير مسموح، تمت إعادة الاسم الأصلي.", threadID);
+                });
+            }
+        }
+
+        // حماية الكنيات
+        if (logMessageType === "log:user-nickname" && settings.antiChangeNickname) {
+            if (author !== api.getCurrentUserID()) {
+                const participantID = logMessageData.participantID || logMessageData.userID;
+                api.changeNickname("", threadID, participantID, () => {
+                    api.sendMessage("🚫 تغيير الكنية غير مسموح، تمت استعادتها.", threadID);
+                });
+            }
+        }
+
+        // منع الخروج (إعادة العضو)
+        if (logMessageType === "log:unsubscribe" && settings.antiOut) {
+            const leftID = logMessageData.leftParticipantFbId;
+            if (leftID && leftID !== api.getCurrentUserID()) {
+                api.addUserToGroup(leftID, threadID, (err) => {
+                    if (!err) api.sendMessage("🚫 العضو لم يُسمح له بالخروج، تم إرجاعه.", threadID);
+                });
+            }
+        }
     }
 };
