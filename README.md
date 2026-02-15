@@ -1,4 +1,4 @@
-<img src="https://i.ibb.co/wrL2V0W6/kenji-cloud-cover.jpg" alt="banner">
+<img src="https://i.ibb.co/hJ47QQMM/1771089849331.jpg" alt="banner">
 <h1 align="center"><img src="https://i.ibb.co/ZpZxdbP2/kenji-cloud-main.jpg" width="30px">ابلين - بوت شات ماسنجر</h1>
 
 <p align="center">
