@@ -3,7 +3,7 @@ const path = require('path');
 
 const config = {
     name: "اعدادات",
-    version: "1.1",
+    version: "1.0",
     author: "ᏕᎥᏁᎨᎧ",
     countDown: 5,
     role: 1,
@@ -28,14 +28,14 @@ function writeDB(data) {
 
 module.exports = {
     config,
-    onStart: async function ({ api, event }) {
-        const { threadID, messageID, senderID } = event;
-
-        if (!global.client.handleReply) global.client.handleReply = [];
-
+    onStart: async function ({ api, event, Threads }) {
+        const { threadID, messageID } = event;
         const threadData = readDB();
-        if (!threadData[threadID]) threadData[threadID] = { settings: {} };
-
+        
+        if (!threadData[threadID]) {
+            threadData[threadID] = { settings: {} };
+        }
+        
         const settings = threadData[threadID].settings.antiSettings || {
             antiSpam: false,
             antiOut: false,
@@ -58,21 +58,18 @@ module.exports = {
 ╰━━━━━━━━━━━━━━━━━╯
 ↫ رد بالأرقام لتغيير الإعدادات`;
 
-        const info = await api.sendMessage(msg, threadID, messageID);
-
-        global.client.handleReply.push({
-            name: this.config.name,
-            messageID: info.messageID,
-            author: senderID,
-            settings,
-            threadID
-        });
+        return api.sendMessage(msg, threadID, (err, info) => {
+            global.client.handleReply.push({
+                name: this.config.name,
+                messageID: info.messageID,
+                author: event.senderID,
+                settings
+            });
+        }, messageID);
     },
 
     onReply: async function ({ api, event, handleReply }) {
-        const { threadID, messageID, senderID, body } = event;
-
-        if (!handleReply) return;
+        const { threadID, messageID, body, senderID } = event;
         if (senderID !== handleReply.author) return;
 
         const nums = body.split(/\s+/).map(Number).filter(n => n >= 1 && n <= 6);
@@ -87,7 +84,6 @@ module.exports = {
             "notifyChange",
         ];
 
-        // تعديل الإعدادات
         const newSettings = { ...handleReply.settings };
         for (const n of nums) {
             const key = keys[n - 1];
@@ -102,7 +98,7 @@ module.exports = {
         const show = {};
         for (const k in newSettings) show[k] = newSettings[k] ? "✅" : "❌";
 
-        const confirmMsg = `╭━〔 ⚙️ تم تحديث الإعدادات 〕━╮
+        const confirmMsg = `╭━〔 ⚙️ تم تحديث الإعدادات 〕━ـ╮
 ① [${show.antiSpam}] مكافحة السبام
 ② [${show.antiOut}] منع الخروج
 ③ [${show.antiChangeGroupName}] حماية الاسم
@@ -110,10 +106,9 @@ module.exports = {
 ⑤ [${show.antiChangeNickname}] حماية الكنيات
 ⑥ [${show.notifyChange}] إشعارات
 ╰━━━━━━━━━━━━━━━━╯
-✅ تم حفظ التغييرات بنجاح`;
+تم حفظ التغييرات بنجاح ✅`;
 
-        // إزالة الرد القديم
-        await api.unsendMessage(handleReply.messageID);
+        api.unsendMessage(handleReply.messageID);
         return api.sendMessage(confirmMsg, threadID, messageID);
     }
 };
