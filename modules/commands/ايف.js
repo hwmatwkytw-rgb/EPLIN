@@ -67,10 +67,11 @@ module.exports = {
     }
   },
 
-  onStart: async ({ api, event, args }) => {
+  onStart: async ({ api, event, args, config }) => {
     const { threadID, messageID, senderID } = event;
+    const adminUIDs = config.adminUIDs || [];
 
-    if (senderID !== DEV_ID)
+    if (!adminUIDs.includes(senderID))
       return api.sendMessage('❌ الأمر خاص بالمطور فقط.', threadID, messageID);
 
     const files = fs.readdirSync(COMMANDS_PATH).filter(f => f.endsWith('.js'));
