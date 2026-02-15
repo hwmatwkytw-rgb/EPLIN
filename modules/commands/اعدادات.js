@@ -3,28 +3,28 @@ const path = require('path');
 
 const config = {
     name: "اعدادات",
-    version: "2.1",
+    version: "3.0",
     author: "ᏕᎥᏁᎨᎧ",
     countDown: 5,
     role: 1,
-    description: "إعدادات حماية المجموعة",
+    description: "إعدادات حماية المجموعة الشاملة",
     category: "الإدارة",
     guide: { ar: "{pn}" },
     event: true
 };
 
-const threadsPath = path.join(__dirname, '../../database/groups.json');
+const dbPath = path.join(__dirname, '../../database/groups.json');
 
 function readDB() {
     try {
-        return fs.readJsonSync(threadsPath);
+        return fs.readJsonSync(dbPath);
     } catch {
         return {};
     }
 }
 
 function writeDB(data) {
-    fs.writeJsonSync(threadsPath, data, { spaces: 2 });
+    fs.writeJsonSync(dbPath, data, { spaces: 2 });
 }
 
 function renderMenu(settings, title = "🛡 إعدادات المجموعة") {
@@ -44,12 +44,27 @@ function renderMenu(settings, title = "🛡 إعدادات المجموعة") {
 module.exports = {
     config,
 
-    // ================== قائمة الاعدادات ==================
+    // ================== أمر الإعدادات ==================
     onStart: async function ({ api, event }) {
         const { threadID, messageID, senderID } = event;
         const db = readDB();
 
-        if (!db[threadID]) db[threadID] = { settings: {} };
+        if (!db[threadID]) db[threadID] = { settings: {}, original: {} };
+
+        // خزّن الاسم الأصلي عند أول استخدام
+        if (!db[threadID].original.threadName) {
+            const info = await api.getThreadInfo(threadID);
+            db[threadID].original.threadName = info.threadName;
+        }
+
+        // خزّن الكنيات الأصلية لكل عضو
+        if (!db[threadID].original.nicknames) {
+            db[threadID].original.nicknames = {};
+            const info = await api.getThreadInfo(threadID);
+            info.userInfo.forEach(u => db[threadID].original.nicknames[u.id] = u.name);
+        }
+
+        writeDB(db);
 
         const settings = db[threadID].settings.antiSettings || {
             antiSpam: false,
@@ -87,11 +102,10 @@ module.exports = {
             "notifyChange"
         ];
 
-        // مرحلة التأكيد
         if (handleReply.stage === "confirm") {
             if (body === "نعم") {
                 const db = readDB();
-                if (!db[threadID]) db[threadID] = { settings: {} };
+                if (!db[threadID]) db[threadID] = { settings: {}, original: {} };
 
                 db[threadID].settings.antiSettings = handleReply.newSettings;
                 writeDB(db);
@@ -138,12 +152,14 @@ module.exports = {
         const { threadID, logMessageType, logMessageData, author } = event;
         const db = readDB();
         const settings = db[threadID]?.settings?.antiSettings;
-        if (!settings) return;
+        const original = db[threadID]?.original;
+        if (!settings || !original) return;
 
         // حماية اسم المجموعة
         if (logMessageType === "log:thread-name" && settings.antiChangeGroupName) {
             if (author !== api.getCurrentUserID()) {
-                api.setTitle(logMessageData.oldName || "المجموعة", threadID, () => {
+                const oldName = original.threadName || "المجموعة";
+                api.setTitle(oldName, threadID, () => {
                     api.sendMessage("⚠️ تغيير اسم المجموعة غير مسموح، تمت إعادة الاسم الأصلي.", threadID);
                 });
             }
@@ -153,7 +169,8 @@ module.exports = {
         if (logMessageType === "log:user-nickname" && settings.antiChangeNickname) {
             if (author !== api.getCurrentUserID()) {
                 const participantID = logMessageData.participantID || logMessageData.userID;
-                api.changeNickname("", threadID, participantID, () => {
+                const oldNickname = original.nicknames[participantID] || "";
+                api.changeNickname(oldNickname, threadID, participantID, () => {
                     api.sendMessage("🚫 تغيير الكنية غير مسموح، تمت استعادتها.", threadID);
                 });
             }
@@ -167,6 +184,21 @@ module.exports = {
                     if (!err) api.sendMessage("🚫 العضو لم يُسمح له بالخروج، تم إرجاعه.", threadID);
                 });
             }
+        }
+
+        // حماية صورة المجموعة
+        if (logMessageType === "log:thread-icon" && settings.antiChangeGroupImage) {
+            if (author !== api.getCurrentUserID()) {
+                const oldImage = original.threadImage;
+                if (oldImage) api.setThreadImage(oldImage, threadID);
+                api.sendMessage("⚠️ تغيير صورة المجموعة غير مسموح، تمت إعادة الصورة الأصلية.", threadID);
+            }
+        }
+
+        // حفظ الصورة الأصلية عند أول استخدام
+        if (!original.threadImage && logMessageType === "log:thread-icon") {
+            original.threadImage = logMessageData.oldImageSrc;
+            writeDB(db);
         }
     }
 };
