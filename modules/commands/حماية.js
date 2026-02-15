@@ -9,47 +9,63 @@ module.exports = {
         category: "الإدارة"
     },
 
-    onStart: async function ({ api, event, utils }) {
-
+    onStart: async function({ api, event }) {
         const threadID = event.threadID;
 
-        // حفظ اسم وصورة المجموعة الحالية
-        const groupInfo = await api.getThreadInfo(threadID);
-        const groupName = groupInfo.threadName;
-        const groupPic = groupInfo.imageSrc;
+        try {
+            const groupInfo = await api.getThreadInfo(threadID);
+            const groupName = groupInfo.threadName;
+            const groupPic = groupInfo.imageSrc;
 
-        // حدث تغيير الاسم
-        api.on("changeThreadName", async (info) => {
-            if (info.threadID === threadID) {
-                await api.setThreadName(threadID, groupName);
+            // حفظ البيانات في الذاكرة (في البوت)
+            api.storage = api.storage || {};
+            api.storage[threadID] = { groupName, groupPic };
+
+            api.sendMessage("✅ تم تفعيل حماية المجموعة بالكامل!", threadID);
+
+        } catch (err) {
+            console.error(err);
+            api.sendMessage("❌ حدث خطأ أثناء تفعيل الحماية!", threadID);
+        }
+    },
+
+    // التعامل مع الأحداث على مستوى البوت
+    onEvent: async function({ api, event }) {
+        const threadID = event.threadID;
+        const storage = api.storage?.[threadID];
+
+        if (!storage) return;
+
+        // منع تغيير الاسم
+        if (event.type === "change_thread_name") {
+            try {
+                await api.setThreadName(storage.groupName, threadID);
                 api.sendMessage("🚫 ممنوع تغيير اسم المجموعة!", threadID);
-            }
-        });
+            } catch {}
+        }
 
-        // حدث تغيير صورة المجموعة
-        api.on("changeThreadImage", async (info) => {
-            if (info.threadID === threadID) {
-                await api.changeThreadImage(groupPic, threadID);
+        // منع تغيير الصورة
+        if (event.type === "change_thread_image") {
+            try {
+                await api.changeThreadImage(storage.groupPic, threadID);
                 api.sendMessage("🚫 ممنوع تغيير صورة المجموعة!", threadID);
-            }
-        });
-
-        // حدث تغيير الكنيات
-        api.on("changeNickname", async (info) => {
-            if (info.threadID === threadID) {
-                await api.changeNickname(info.userID, info.nickName, threadID);
-                api.sendMessage("🚫 ممنوع تغيير الكنيات!", threadID);
-            }
-        });
+            } catch {}
+        }
 
         // منع المغادرة
-        api.on("userLeft", async (info) => {
-            if (info.threadID === threadID) {
-                api.addUserToGroup(info.userID, threadID);
+        if (event.type === "user_left") {
+            try {
+                await api.addUserToGroup(event.userID, threadID);
                 api.sendMessage("⚠️ ممنوع المغادرة أو الطرد!", threadID);
-            }
-        });
+            } catch {}
+        }
 
-        api.sendMessage("✅ تم تفعيل حماية المجموعة بالكامل!", threadID);
+        // منع تغيير الكنية
+        if (event.type === "change_nickname") {
+            try {
+                await api.changeNickname(event.userID, event.oldNickname, threadID);
+                api.sendMessage("🚫 ممنوع تغيير الكنيات!", threadID);
+            } catch {}
+        }
     }
 };
