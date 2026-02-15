@@ -1,47 +1,45 @@
 module.exports = {
   config: {
-    name: 'ارفع',
-    version: '1.2',
-    author: 'ابو عبيده علي',
+    name: "ارفع",
+    version: "1.0",
+    author: "ابو عبيده علي",
     countDown: 5,
-    prefix: false,
-    adminOnly: false,
-    description: 'رفع عضو مسؤول عن طريق الرد',
-    category: 'إدارة'
+    role: 1,
+    description: "رفع عضو مسؤول بالرد عليه",
+    category: "الإدارة",
+    guide: { ar: "رد على رسالة العضو واكتب ارفع" }
   },
 
-  run: async function ({ api, event }) {
+  onStart: async function ({ api, event }) {
 
     const { threadID, messageReply, senderID } = event;
 
     if (!messageReply)
-      return api.sendMessage("❌ رد على رسالة العضو أولاً.", threadID);
+      return api.sendMessage("❌ لازم ترد على رسالة العضو.", threadID, event.messageID);
 
     const developerID = "61586897962846";
 
-    api.getThreadInfo(threadID, (err, info) => {
-      if (err) return api.sendMessage("❌ فشل في جلب معلومات المجموعة.", threadID);
+    try {
+      const info = await api.getThreadInfo(threadID);
 
       const isAdmin = info.adminIDs.some(item => item.id == senderID);
 
       if (!isAdmin && senderID !== developerID)
-        return api.sendMessage("❌ الأمر خاص بالأدمن والمطور فقط.", threadID);
+        return api.sendMessage("❌ الأمر خاص بالأدمن والمطور فقط.", threadID, event.messageID);
 
       const targetID = messageReply.senderID;
 
       const isTargetAdmin = info.adminIDs.some(item => item.id == targetID);
-
       if (isTargetAdmin)
-        return api.sendMessage("⚠️ العضو دا مسؤول أصلاً.", threadID);
+        return api.sendMessage("⚠️ العضو دا مسؤول أصلاً.", threadID, event.messageID);
 
-      api.changeAdminStatus(threadID, targetID, true, (error) => {
-        if (error)
-          return api.sendMessage("❌ البوت ما عندو صلاحية يرفع مسؤول.", threadID);
+      await api.changeAdminStatus(threadID, targetID, true);
 
-        return api.sendMessage("✅ تم رفع العضو مسؤول بنجاح.", threadID);
-      });
+      return api.sendMessage("✅ تم رفع العضو مسؤول بنجاح.", threadID, event.messageID);
 
-    });
-
+    } catch (err) {
+      console.log(err);
+      return api.sendMessage("❌ البوت لازم يكون مسؤول عشان يرفع عضو.", threadID, event.messageID);
+    }
   }
 };
