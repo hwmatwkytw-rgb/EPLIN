@@ -15,7 +15,7 @@ module.exports = {
     const { threadID, messageReply, senderID } = event;
 
     if (!messageReply)
-      return api.sendMessage("❌ لازم ترد على رسالة العضو.", threadID, event.messageID);
+      return api.sendMessage("؟.", threadID, event.messageID);
 
     const developerID = "61586897962846";
 
@@ -25,21 +25,21 @@ module.exports = {
       const isAdmin = info.adminIDs.some(item => item.id == senderID);
 
       if (!isAdmin && senderID !== developerID)
-        return api.sendMessage("❌ الأمر خاص بالأدمن والمطور فقط.", threadID, event.messageID);
+        return api.sendMessage("انغلع يا فلاح.", threadID, event.messageID);
 
       const targetID = messageReply.senderID;
 
       const isTargetAdmin = info.adminIDs.some(item => item.id == targetID);
       if (isTargetAdmin)
-        return api.sendMessage("⚠️ العضو دا مسؤول أصلاً.", threadID, event.messageID);
+        return api.sendMessage("ادمن اصلا.", threadID, event.messageID);
 
       await api.changeAdminStatus(threadID, targetID, true);
 
-      return api.sendMessage("✅ تم رفع العضو مسؤول بنجاح.", threadID, event.messageID);
+      return api.sendMessage("🦧.", threadID, event.messageID);
 
     } catch (err) {
       console.log(err);
-      return api.sendMessage("❌ البوت لازم يكون مسؤول عشان يرفع عضو.", threadID, event.messageID);
+      return api.sendMessage("ارفع ادمن اول يا باطل 🦧.", threadID, event.messageID);
     }
   }
 };
