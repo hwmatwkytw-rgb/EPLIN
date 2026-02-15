@@ -1,5 +1,5 @@
 <img src="https://i.ibb.co/wrL2V0W6/kenji-cloud-cover.jpg" alt="banner">
-<h1 align="center"><img src="https://i.ibb.co/ZpZxdbP2/kenji-cloud-main.jpg" width="30px">Kenji Cloud Bot - Bot Chat Messenger</h1>
+<h1 align="center"><img src="https://i.ibb.co/ZpZxdbP2/kenji-cloud-main.jpg" width="30px">ابلين - بوت شات ماسنجر</h1>
 
 <p align="center">
   <a href="https://github.com/1dev-hridoy/Kenji-Cloud"><img src="https://img.shields.io/github/stars/1dev-hridoy/Kenji-Cloud?color=green" /></a>
@@ -9,219 +9,206 @@
   <a href="https://github.com/1dev-hridoy/Kenji-Cloud/actions"><img src="https://img.shields.io/badge/build-passing-yellowgreen" /></a>
 </p>
 
+بوت قوي للـ **Facebook Messenger** مع أوامر لتحميل الوسائط، متابعة زمن التشغيل، والمزيد. مصمم ليكون سهل الاستخدام وقابل للتخصيص.
 
-A powerful Facebook Messenger bot with commands for media downloading, uptime tracking, and more. Built for ease of use and customization.
+## نظرة عامة
 
-## Overview
+**ابلين** هو بوت مفتوح المصدر لتعزيز مجموعات ماسنجر بمزايا مثل تحميل الفيديوهات (فيسبوك، إنستغرام، تيك توك، يوتيوب)، متابعة زمن التشغيل، ورسائل وداع مخصصة. خفيف الوزن، قابل للتوسيع، ومثالي لإدارة المجتمعات.
 
-Kenji Cloud is an open-source bot designed to enhance Messenger group chats with features like video downloads (Facebook, Instagram, TikTok, YouTube), uptime monitoring, and custom goodbye messages. It’s lightweight, extensible, and perfect for community management.
-
-## Technologies
+## التقنيات المستخدمة
 
 ![Tech Stack](https://skillicons.dev/icons?i=nodejs,js,html,css,axios,express,mongodb,git)
 
--   **Node.js**: Runtime for the bot.
--   **JavaScript**: Core scripting language.
--   **HTML/CSS**: For web dashboard.
--   **Axios**: HTTP requests for APIs.
--   **Express**: Web server framework.
--   **MongoDB**: Data persistence.
--   **Git**: Version control.
+- **Node.js**: بيئة تشغيل البوت  
+- **JavaScript**: لغة البرمجة الأساسية  
+- **HTML/CSS**: لواجهة الويب  
+- **Axios**: لطلبات HTTP إلى APIs  
+- **Express**: إطار عمل السيرفر  
+- **MongoDB**: لتخزين البيانات  
+- **Git**: للتحكم بالإصدارات  
 
-## Installation
+## التثبيت
 
-### Prerequisites
+### المتطلبات المسبقة
 
--   Node.js (v18+)
--   npm (comes with Node.js)
--   Git
--   A Facebook account for app state
--   Internet connection
+- Node.js (الإصدار 18 أو أعلى)  
+- npm (مرفق مع Node.js)  
+- Git  
+- حساب فيسبوك لتصدير app state  
+- اتصال بالإنترنت  
 
-### Steps
+### خطوات التثبيت
 
-1.  **Clone the Repository**:
-    
-    ```bash
-    git clone https://github.com/1dev-hridoy/Kenji-Cloud.git
-    cd Kenji-Cloud
-    
-    ```
-    
-2.  **Install Dependencies**:
-    
-    ```bash
-    npm install
-    
-    ```
-    
-3.  **Set Up Environment**:
+1. **استنساخ المستودع**  
 
-    -   Edit `config/config.json` with:
+```bash
+git clone https://github.com/1dev-hridoy/Kenji-Cloud.git
+cd Kenji-Cloud
+```
 
-        ```json
-        {
-          "botName": "Kenji Cloud",
-          "prefix": "!",
-          "botpicture": "https://i.ibb.co/Xxmdjjfm/Flux-Dev-cinematic-keyframe13-anime-keyframe12-Animestyle-port-2.jpg",
-          "ownerName": "Hridoy",
-          "ownerUID": "61575746590997",
-          "adminUIDs": [
-            "61575746590997",
-            "another uid"
-          ]
-        }
-        ```
-        
-    -   Use the c3c utility extension to export a fresh Facebook app state and save it as `appstate.json`.
-4.  **Create Directories**:
-    
-    ```bash
-    mkdir config logger/logs database database/backup temp modules/commands/nayan
-    
-    ```
-    
-5.  **Run the Bot**:
-    
-    ```bash
-    node .
-    
-    ```
-    
-    -   Enter 2FA if prompted.
-    -   Access the dashboard at `http://localhost:3000`.
-6.  **Test Commands**:
-    
-    -   Try `!dl https://www.facebook.com/share/v/1J2zkAmJke/` or `!uptime`.
+2. **تثبيت التبعيات**  
 
-## Samples
+```bash
+npm install
+```
 
-### How to Make a Command
+3. **إعداد ملف البيئة**  
 
-Create a file in `modules/commands/` (e.g., `hello.js`):
+- عدل ملف `config/config.json` ليصبح كالتالي:
+
+```json
+{
+  "botName": "ابلين",
+  "prefix": "!",
+  "botpicture": "https://i.ibb.co/Xxmdjjfm/Flux-Dev-cinematic-keyframe13-anime-keyframe12-Animestyle-port-2.jpg",
+  "ownerName": "61586897962846",
+  "ownerUID": "61586897962846",
+  "adminUIDs": [
+    "61586897962846"
+  ]
+}
+```
+
+- استخدم امتداد **c3c utility** لتصدير حالة التطبيق **app state** وحفظها باسم `appstate.json`.  
+
+4. **إنشاء المجلدات اللازمة**  
+
+```bash
+mkdir config logger/logs database database/backup temp modules/commands/nayan
+```
+
+5. **تشغيل البوت**  
+
+```bash
+node .
+```
+
+- أدخل المصادقة الثنائية إذا طلبت  
+- للوصول إلى لوحة التحكم: `http://localhost:3000`  
+
+6. **تجربة الأوامر**  
+
+- مثال: `!dl https://www.facebook.com/share/v/1J2zkAmJke/`  
+- مثال: `!uptime`  
+
+## عينات الأوامر
+
+### إنشاء أمر عادي
+
+في `modules/commands/`، أنشئ ملف مثل `hello.js`:
 
 ```javascript
 module.exports = {
   config: {
     name: 'hello',
     version: '1.0',
-    author: 'Hridoy',
+    author: '61586897962846',
     countDown: 5,
     prefix: true,
     adminOnly: false,
     aliases: ['hlw', 'hi'],
-    description: 'replay hello message',
-    category: 'box chat',
+    description: 'يرد على رسالة hello',
+    category: 'مجموعة المحادثة',
     guide: {
-      en: '   {pn}hello]'
-    },
-
-module.exports.run = async ({ api, event }) => {
-    api.sendMessage("Hello! 👋", event.threadID);
-};
-
-```
-
--   Use `!hello` to trigger it.
-
-### How to Make an Admin-Only Command
-
-Add `adminOnly:  true,` to restrict to admins (0 for all, 1 for admins):
-
-```javascript
-module.exports = {
-  config: {
-    name: 'hello',
-    version: '1.0',
-    author: 'Hridoy',
-    countDown: 5,
-    prefix: true,
-    adminOnly: true,
-    aliases: ['hlw', 'hi'],
-    description: 'replay hello message',
-    category: 'box chat',
-    guide: {
-      en: '   {pn}hello]'
-    },
+      ar: '{pn}hello'
+    }
   },
 
 module.exports.run = async ({ api, event }) => {
-    api.sendMessage("This is an admin command!", event.threadID);
+    api.sendMessage("مرحباً! 👋", event.threadID);
 };
-
 ```
 
--   Only admins can use `!admincmd`.
+- استخدم `!hello` لتشغيله  
 
-### How to Make a No-Prefix Command
-
-Set `prefix: false` to trigger without a prefix:
+### أمر مخصص للمشرفين فقط
 
 ```javascript
 module.exports = {
   config: {
-    name: '`noprefix',
+    name: 'admincmd',
     version: '1.0',
-    author: 'Hridoy',
+    author: '61586897962846',
+    countDown: 5,
+    prefix: true,
+    adminOnly: true,
+    aliases: ['adm'],
+    description: 'أمر خاص بالمشرفين',
+    category: 'إدارة',
+    guide: {
+      ar: '{pn}admincmd'
+    }
+  },
+
+module.exports.run = async ({ api, event }) => {
+    api.sendMessage("هذا أمر للمشرفين فقط!", event.threadID);
+};
+```
+
+- لا يستطيع استخدامه إلا المشرفين  
+
+### أمر بدون بادئة
+
+```javascript
+module.exports = {
+  config: {
+    name: 'noprefix',
+    version: '1.0',
+    author: '61586897962846',
     countDown: 5,
     prefix: false,
     adminOnly: false,
-    aliases: ['hlw', 'hi'],
-    description: 'replay hello message',
-    category: 'box chat',
+    aliases: [],
+    description: 'أمر بدون بادئة',
+    category: 'مجموعة المحادثة',
     guide: {
-      en: '   {pn}hello]'
-    },
+      ar: 'اكتب noprefix لتشغيل الأمر'
+    }
+  },
 
 module.exports.run = async ({ api, event }) => {
     if (event.body.toLowerCase() === "noprefix") {
-        api.sendMessage("No prefix needed! 😄", event.threadID);
+        api.sendMessage("تم تنفيذ الأمر بدون بادئة! 😄", event.threadID);
     }
 };
-
 ```
 
--   Typing `noprefix` triggers it.
+- ببساطة اكتب `noprefix`  
 
-### How to Make a Group-Admin-Only Command
-
-Add `groupAdminOnly: true` to restrict to group admins:
+### أمر لمشرفي المجموعة فقط
 
 ```javascript
 module.exports.config = {
     name: "groupadmin",
     version: "1.0",
-    author: "Hridoy",
+    author: "61586897962846",
     countDown: 5,
     prefix: true,
     groupAdminOnly: true,
-    description: "Group admin-only command.",
-    category: "admin"
+    description: "أمر خاص بمشرفي المجموعة.",
+    category: "إدارة"
 };
 
 module.exports.run = async ({ api, event }) => {
-    api.sendMessage("Only group admins can see this!", event.threadID);
+    api.sendMessage("هذا الأمر يظهر لمشرفي المجموعة فقط!", event.threadID);
 };
-
 ```
 
--   Only group admins can use `!groupadmin`.
+- يشغل بـ `!groupadmin`  
 
-## Support & Contact
+## الدعم والتواصل
 
--   **Developer**: Hridoy (1dev-hridoy)
-    -   **Facebook**: [https://www.facebook.com/1dev.hridoy/](https://www.facebook.com/1dev.hridoy/)
--   **Email**: [bgmohammedhridoy@gmail.com](mailto:bgmohammedhridoy@gmail.com) (replace with actual email)
--   **Messenger**: [Contact Support](https://m.me/j/AbZ7V4ubIwFomn8x/)
--   **Telegram**: [Join Telegram](https://t.me/nexalo)
--   **Discord Server**: [Join Discord](https://discord.gg/acZaWzBegW)
+- **المطور**: 61586897962846  
+  - **فيسبوك**: [اضغط هنا](https://www.facebook.com/profile.php?id=61586897962846)  
+- **البريد الإلكتروني**: [bgmohammedhridoy@gmail.com](mailto:bgmohammedhridoy@gmail.com)  
+- **Messenger**: [للتواصل](https://m.me/j/AbZ7V4ubIwFomn8x/)  
+- **تيليجرام**: [انضم هنا](https://t.me/nexalo)  
+- **ديسكورد**: [انضم للسيرفر](https://discord.gg/acZaWzBegW)  
 
-Feel free to report issues, suggest features, or seek help!
+## المساهمة
 
-## Contributing
+يمكنك عمل **Fork** للمستودع، وإجراء التعديلات، وإرسال **Pull Request**. جميع المساهمات مرحب بها!  
 
-Fork the repo, make changes, and submit a pull request. All contributions are welcome!
+## الرخصة
 
-## License
-
-MIT License 
+MIT License
