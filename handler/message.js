@@ -64,8 +64,9 @@ const handleMessage = async (event, api, commands) => {
         const reply = handleReply.find(r => r.messageID === messageReply.messageID);
         if (reply) {
           const command = global.client.commands.get(reply.name);
-          if (command && command.handleReply) {
-            await command.handleReply({ event, api, handleReply: reply });
+          if (command && (command.onReply || command.handleReply)) {
+            const func = command.onReply || command.handleReply;
+            await func({ event, api, handleReply: reply, Users, Threads });
           }
         }
       }
@@ -88,7 +89,7 @@ const handleMessage = async (event, api, commands) => {
     if (body.startsWith(currentPrefix)) {
       const args = body.slice(currentPrefix.length).trim().split(/\s+/);
       if (args.length === 0 || (args.length === 1 && args[0] === "")) {
-        return api.sendMessage("تفضل مازا تريد •-•؟ ", event.threadID, event.messageID);
+        return api.sendMessage("🦧", event.threadID, event.messageID);
       }
       await handleCommand({ message: body, args, event, api, Users, Threads, commands, config: global.client.config });
     }
