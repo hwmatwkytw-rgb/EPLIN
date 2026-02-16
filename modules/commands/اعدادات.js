@@ -15,11 +15,8 @@ const config = {
 const threadsPath = path.join(__dirname, '../../database/groups.json');
 
 function readDB() {
-    try {
-        return fs.readJsonSync(threadsPath);
-    } catch (e) {
-        return {};
-    }
+    try { return fs.readJsonSync(threadsPath); }
+    catch (e) { return {}; }
 }
 
 function writeDB(data) {
@@ -28,14 +25,14 @@ function writeDB(data) {
 
 module.exports = {
     config,
-    onStart: async function ({ api, event, Threads }) {
-        const { threadID, messageID } = event;
+
+    onStart: async function ({ api, event }) {
+        const { threadID, messageID, senderID } = event;
         const threadData = readDB();
-        
-        if (!threadData[threadID]) {
-            threadData[threadID] = { settings: {} };
-        }
-        
+
+        if (!threadData[threadID]) threadData[threadID] = { settings: {}, members: {} };
+
+        // إعدادات افتراضية
         const settings = threadData[threadID].settings.antiSettings || {
             antiSpam: false,
             antiOut: false,
@@ -58,11 +55,11 @@ module.exports = {
 ╰━━━━━━━━━━━━━━━━━╯
 ↫ رد بالأرقام لتغيير الإعدادات`;
 
-        return api.sendMessage(msg, threadID, (err, info) => {
+        api.sendMessage(msg, threadID, (err, info) => {
             global.client.handleReply.push({
                 name: this.config.name,
                 messageID: info.messageID,
-                author: event.senderID,
+                author: senderID,
                 settings
             });
         }, messageID);
@@ -85,20 +82,18 @@ module.exports = {
         ];
 
         const newSettings = { ...handleReply.settings };
-        for (const n of nums) {
-            const key = keys[n - 1];
-            newSettings[key] = !newSettings[key];
-        }
+        for (const n of nums) newSettings[keys[n - 1]] = !newSettings[keys[n - 1]];
 
         const threadData = readDB();
-        if (!threadData[threadID]) threadData[threadID] = { settings: {} };
+        if (!threadData[threadID]) threadData[threadID] = { settings: {}, members: {} };
         threadData[threadID].settings.antiSettings = newSettings;
         writeDB(threadData);
 
         const show = {};
         for (const k in newSettings) show[k] = newSettings[k] ? "✅" : "❌";
 
-        const confirmMsg = `╭━〔 ⚙️ تم تحديث الإعدادات 〕━ـ╮
+        api.unsendMessage(handleReply.messageID);
+        return api.sendMessage(`╭━〔 ⚙️ تم تحديث الإعدادات 〕━╮
 ① [${show.antiSpam}] مكافحة السبام
 ② [${show.antiOut}] منع الخروج
 ③ [${show.antiChangeGroupName}] حماية الاسم
@@ -106,9 +101,6 @@ module.exports = {
 ⑤ [${show.antiChangeNickname}] حماية الكنيات
 ⑥ [${show.notifyChange}] إشعارات
 ╰━━━━━━━━━━━━━━━━╯
-تم حفظ التغييرات بنجاح ✅`;
-
-        api.unsendMessage(handleReply.messageID);
-        return api.sendMessage(confirmMsg, threadID, messageID);
+تم حفظ التغييرات بنجاح ✅`, threadID, messageID);
     }
 };
