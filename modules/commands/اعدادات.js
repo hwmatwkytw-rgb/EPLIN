@@ -3,11 +3,11 @@ const path = require('path');
 
 const config = {
     name: "اعدادات",
-    version: "1.0",
+    version: "1.1",
     author: "ᏕᎥᏁᎨᎧ",
     countDown: 5,
     role: 1,
-    description: "إعدادات حماية المجموعة",
+    description: "إعدادات حماية المجموعة + تطبيقها",
     category: "الإدارة",
     guide: { ar: "{pn}" }
 };
@@ -44,6 +44,18 @@ module.exports = {
 
         const show = {};
         for (const k in settings) show[k] = settings[k] ? "✅" : "❌";
+
+        // خزّن الاسم والصورة الأصلية وأسماء الأعضاء
+        const info = await api.getThreadInfo(threadID);
+        threadData[threadID].name = info.threadName;
+        threadData[threadID].image = info.imageSrc;
+        threadData[threadID].members = {};
+        for (const id of info.participantIDs) {
+            const user = await api.getUserInfo(id);
+            threadData[threadID].members[id] = user[id].name;
+        }
+
+        writeDB(threadData);
 
         const msg = `╭━〔 🛡 إعدادات المجموعة 🛡 〕━╮
 ① [${show.antiSpam}] مكافحة السبام
@@ -102,5 +114,42 @@ module.exports = {
 ⑥ [${show.notifyChange}] إشعارات
 ╰━━━━━━━━━━━━━━━━╯
 تم حفظ التغييرات بنجاح ✅`, threadID, messageID);
+    },
+
+    onEvent: async function ({ api, event }) {
+        const threadID = event.threadID;
+        const threadData = readDB();
+        if (!threadData[threadID]) return;
+        const settings = threadData[threadID].settings.antiSettings || {};
+
+        // حماية الاسم
+        if (settings.antiChangeGroupName && event.logMessageType === "log:thread-name") {
+            if (event.logMessageData.name !== threadData[threadID].name) {
+                api.setTitle(threadData[threadID].name, threadID);
+                if (settings.notifyChange) api.sendMessage("⚠️ ممنوع تغيير اسم المجموعة!", threadID);
+            }
+        }
+
+        // حماية الصورة
+        if (settings.antiChangeGroupImage && event.logMessageType === "log:thread-icon") {
+            api.setThreadImage(threadData[threadID].image, threadID);
+            if (settings.notifyChange) api.sendMessage("⚠️ ممنوع تغيير صورة المجموعة!", threadID);
+        }
+
+        // حماية الكنيات
+        if (settings.antiChangeNickname && event.logMessageType === "log:user-nickname") {
+            const userID = event.logMessageData.userID;
+            const oldNick = threadData[threadID].members[userID];
+            if (event.logMessageData.nickname !== oldNick) {
+                api.changeNickname(oldNick, threadID, userID);
+                if (settings.notifyChange) api.sendMessage(`⚠️ ممنوع تغيير كنيتك! ${oldNick}`, threadID);
+            }
+        }
+
+        // منع الخروج
+        if (settings.antiOut && event.logMessageType === "log:unsubscribe") {
+            const userID = event.logMessageData.leftParticipantFbId;
+            api.sendMessage(`⚠️ ${userID} لا يمكنه مغادرة المجموعة!`, threadID);
+        }
     }
 };
