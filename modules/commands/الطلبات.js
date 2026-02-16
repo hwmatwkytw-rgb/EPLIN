@@ -17,14 +17,16 @@ module.exports = {
     config: {
         name: "الطلبات",
         version: "5.3",
-        hasPermssion: 2,
+        author: "Hridoy",
+        countDown: 5,
+        role: 2,
+        prefix: true,
         description: "إدارة طلبات الانضمام والقائمة السوداء (للمطور فقط)",
-        commandCategory: "المطور",
-        usages: "[u/t/a/احصائيات/فحص]",
-        cooldowns: 5
+        category: "المطور",
+        guide: { ar: "{pn} [u/t/a/احصائيات/فحص]" }
     },
 
-    handleReply: async ({ api, event, handleReply }) => {
+    onReply: async ({ api, event, handleReply }) => {
         const { body, threadID, messageID, senderID } = event;
 
         if (senderID !== DEV_ID) {
@@ -85,12 +87,12 @@ module.exports = {
             }
 
         } catch (error) {
-            console.error("خطأ في handleReply:", error);
+            console.error("خطأ في onReply:", error);
             return api.sendMessage("❌ حدث خطأ أثناء تنفيذ العملية.", threadID, messageID);
         }
     },
 
-    run: async ({ api, event, args }) => {
+    onStart: async ({ api, event, args }) => {
         const { threadID, messageID, senderID } = event;
 
         if (senderID !== DEV_ID) {
@@ -126,15 +128,13 @@ module.exports = {
             });
             msg += `\n━━━━━━━━━━━━━\n💡 للقبول: رد بالرقم\n💡 للرفض/الحظر: رد بـ (رفض/حظر + الرقم)\n✨ خاص بالمطور فقط`;
 
-            if (!global.client.handleReply) global.client.handleReply = [];
-
             return api.sendMessage(
                 msg,
                 threadID,
                 (err, info) => {
                     if (err) return console.error(err);
                     global.client.handleReply.push({
-                        name: module.exports.config.name,
+                        name: "الطلبات",
                         messageID: info.messageID,
                         author: senderID,
                         pending: list
@@ -144,7 +144,7 @@ module.exports = {
             );
 
         } catch (error) {
-            console.error("خطأ في run:", error);
+            console.error("خطأ في onStart:", error);
             return api.sendMessage("❌ فشل في جلب البيانات.", threadID, messageID);
         }
     }
