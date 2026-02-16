@@ -5,12 +5,12 @@ const path = require('path');
 module.exports = {
   config: {
     name: "اغنية",
-    version: "1.2",
-    author: "Hridoy (Edited)",
+    version: "1.4",
+    author: "Gemini AI",
     countDown: 10,
     prefix: true,
     category: "media",
-    description: "تحميل أغنية من Spotify وإرسالها كملف صوتي",
+    description: "تحميل الأغاني والكلمات عبر مصادر بديلة مستقرة",
     guide: { ar: "{pn} اسم_الأغنية" }
   },
 
@@ -22,40 +22,51 @@ module.exports = {
       return api.sendMessage('🎵 اكتب اسم الأغنية يا زول.', threadID, messageID);
     }
 
-    const searchMsg = await api.sendMessage('⏳ جاري البحث والتحميل، ثواني بس...', threadID);
-    const apiUrl = `https://hridoy-apis.vercel.app/play/spotify-v2?q=${encodeURIComponent(musicName)}&apikey=hridoyXQC`;
+    const searchMsg = await api.sendMessage('🔍 جاري البحث والتحميل من السيرفر البديل...', threadID);
+    
+    // استخدام API بديلة للتحميل (YouTube Music Engine)
+    const downloadApi = `https://api.vyturex.com/ytmp3?q=${encodeURIComponent(musicName)}`;
+    const lyricsApi = `https://api.popcat.xyz/lyrics?song=${encodeURIComponent(musicName)}`;
+    
     const cachePath = path.join(__dirname, 'cache', `music_${Date.now()}.mp3`);
 
     try {
-      // التأكد من وجود مجلد الكاش
       await fs.ensureDir(path.join(__dirname, 'cache'));
 
-      // 1. طلب البيانات من الـ API
-      const response = await axios.get(apiUrl, { responseType: 'arraybuffer', timeout: 60000 });
+      // 1. جلب الكلمات أولاً
+      let lyricsText = "📝 لم يتم العثور على كلمات لهذه الأغنية.";
+      try {
+        const lyrRes = await axios.get(lyricsApi, { timeout: 5000 });
+        if (lyrRes.data && lyrRes.data.lyrics) {
+          lyricsText = `📜 كلمات: ${lyrRes.data.title}\n🎤 الفنان: ${lyrRes.data.artist}\n\n${lyrRes.data.lyrics}`;
+        }
+      } catch (e) { /* تجاهل خطأ الكلمات */ }
+
+      // 2. طلب رابط التحميل
+      const response = await axios.get(downloadApi);
+      const audioUrl = response.data.url;
+
+      if (!audioUrl) throw new Error('لم أتمكن من العثور على رابط تحميل مباشر.');
+
+      // 3. تحميل الملف الفعلي
+      const audioData = await axios.get(audioUrl, { responseType: 'arraybuffer' });
+      await fs.writeFile(cachePath, Buffer.from(audioData.data));
+
+      // 4. الإرسال
+      await api.sendMessage(lyricsText, threadID);
       
-      // 2. التحقق من حجم البيانات المستلمة
-      if (response.data.byteLength < 10000) { // أقل من 10 كيلوبايت يعني غالباً خطأ
-        throw new Error('الملف المستلم غير صالح أو صغير جداً');
-      }
-
-      // 3. كتابة الملف مؤقتاً
-      await fs.writeFile(cachePath, Buffer.from(response.data));
-
-      // 4. إرسال الملف للمستخدم
       await api.sendMessage({
-        body: `🎧 تم تحميل: ${musicName}\n✅ استمتع بالاستماع!`,
+        body: `🎧 تم التحميل بنجاح!\n✅ استمتع بالاستماع.`,
         attachment: fs.createReadStream(cachePath)
       }, threadID, () => {
-        // حذف الملف بعد الإرسال لتوفير مساحة
         if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
       }, messageID);
 
-      // حذف رسالة "جاري التحميل"
       api.unsendMessage(searchMsg.messageID);
 
     } catch (error) {
       console.error(error);
-      api.sendMessage(`❌ فشل تحميل الأغنية. تأكد من الاسم أو حاول لاحقاً.\nالسبب: ${error.message}`, threadID, messageID);
+      api.sendMessage(`❌ السيرفر حالياً مضغوط، حاول مرة أخرى لاحقاً.\nالسبب: ${error.message}`, threadID, messageID);
       if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
     }
   }
