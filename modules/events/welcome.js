@@ -44,7 +44,7 @@ async function sendGroupWelcome(api, threadID, userIDs) {
 
     const mentions = [];
     let bodyText = `
-╭━━━〔  نـورتـم مــجمـوعـــتنه  〕━━━╮
+╭━━〔نـورتـم مــجمـوعـــتنه〕━━╮
 
 
 `;
