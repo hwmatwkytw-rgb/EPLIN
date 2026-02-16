@@ -5,12 +5,12 @@ const path = require('path');
 module.exports = {
   config: {
     name: "اغنية",
-    version: "1.5",
+    version: "1.6",
     author: "Gemini AI",
     countDown: 5,
     prefix: true,
     category: "media",
-    description: "تحميل الأغاني والكلمات عبر سيرفرات سريعة",
+    description: "تحميل الأغاني من سيرفرات عالية السرعة",
     guide: { ar: "{pn} اسم_الأغنية" }
   },
 
@@ -19,64 +19,65 @@ module.exports = {
     const musicName = args.join(" ");
 
     if (!musicName) {
-      return api.sendMessage('🎵 اكتب اسم الأغنية يا زول.', threadID, messageID);
+      return api.sendMessage('🎵 يا زول اكتب اسم الأغنية!', threadID, messageID);
     }
 
-    const searchMsg = await api.sendMessage('🚀 جاري التحميل، ثواني بس...', threadID);
-    const cachePath = path.join(__dirname, 'cache', `music_${Date.now()}.mp3`);
+    const searchMsg = await api.sendMessage('⏳ جاري البحث والتحضير... خليك قريب', threadID);
+    const cachePath = path.resolve(__dirname, 'cache', `music_${Date.now()}.mp3`);
 
     try {
       await fs.ensureDir(path.join(__dirname, 'cache'));
 
-      // 1. البحث عن الأغنية والحصول على رابط التحميل (استخدام API سريعة)
-      const searchRes = await axios.get(`https://api.vyturex.com/ytmp3?q=${encodeURIComponent(musicName)}`, { timeout: 20000 });
-      const downloadUrl = searchRes.data.url;
+      // 1. استخدام API بديلة قوية (سيرفر معالجة سريع)
+      const searchUrl = `https://api.vyturex.com/ytmp3?q=${encodeURIComponent(musicName)}`;
+      const response = await axios.get(searchUrl, { timeout: 30000 });
+      const downloadLink = response.data.url;
 
-      if (!downloadUrl) throw new Error('لم أجد الأغنية المطلوبة.');
+      if (!downloadLink) {
+        throw new Error('لم أجد رابطاً صالحاً للأغنية.');
+      }
 
-      // 2. محاولة جلب الكلمات بشكل جانبي (اختياري)
-      let lyricsText = "";
+      // 2. جلب الكلمات (اختياري - لن يعطل الكود إذا فشل)
+      let lyricsInfo = "";
       try {
         const lyrRes = await axios.get(`https://api.popcat.xyz/lyrics?song=${encodeURIComponent(musicName)}`, { timeout: 5000 });
-        if (lyrRes.data && lyrRes.data.lyrics) {
-          lyricsText = `📜 *${lyrRes.data.title}*\n🎤 *${lyrRes.data.artist}*\n\n${lyrRes.data.lyrics}`;
+        if (lyrRes.data && !lyrRes.data.error) {
+          lyricsInfo = `📜 *${lyrRes.data.title}* - *${lyrRes.data.artist}*\n\n${lyrRes.data.lyrics.substring(0, 1000)}...`;
         }
-      } catch (e) { lyricsText = "📝 (لم يتم العثور على كلمات)"; }
+      } catch (e) { /* استمرار بدون كلمات */ }
 
-      // 3. تحميل ملف الصوت الفعلي بمهلة زمنية
-      const audioResponse = await axios({
-        method: 'get',
-        url: downloadUrl,
-        responseType: 'stream',
-        timeout: 45000 // 45 ثانية كحد أقصى للتحميل
+      // 3. تحميل الملف الفعلي وحفظه
+      const audioBuffer = await axios.get(downloadLink, { 
+        responseType: 'arraybuffer',
+        headers: { 'User-Agent': 'Mozilla/5.0' } 
       });
 
-      const writer = fs.createWriteStream(cachePath);
-      audioResponse.data.pipe(writer);
+      await fs.writeFile(cachePath, Buffer.from(audioBuffer.data));
 
-      writer.on('finish', async () => {
-        // إرسال الكلمات أولاً إذا كانت موجودة
-        if (lyricsText.length > 50) {
-           await api.sendMessage(lyricsText, threadID);
-        }
+      // 4. إرسال الكلمات (إذا وجدت) ثم الأغنية
+      if (lyricsInfo) {
+        await api.sendMessage(lyricsInfo, threadID);
+      }
 
-        // إرسال الملف
-        await api.sendMessage({
-          body: `🎧 تفضل الأغنية: ${musicName}\n✅ استمتع!`,
-          attachment: fs.createReadStream(cachePath)
-        }, threadID, () => {
-          if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-        }, messageID);
+      await api.sendMessage({
+        body: `✅ تم التحميل: ${musicName}\n🎧 استماع ممتع!`,
+        attachment: fs.createReadStream(cachePath)
+      }, threadID, () => {
+        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+      }, messageID);
 
-        api.unsendMessage(searchMsg.messageID);
-      });
-
-      writer.on('error', (err) => { throw err; });
+      api.unsendMessage(searchMsg.messageID);
 
     } catch (error) {
-      console.error(error);
+      console.error('Music Error:', error.message);
       api.unsendMessage(searchMsg.messageID);
-      api.sendMessage(`❌ فشل التحميل. السيرفر بطيء حالياً، حاول مرة أخرى أو جرب اسم أغنية أوضح.`, threadID, messageID);
+      
+      // رسالة خطأ ذكية تخبرك بالسبب الحقيقي
+      const errorMsg = error.message.includes('timeout') 
+        ? "⏳ السيرفر تأخر في الرد، جرب مرة ثانية." 
+        : "❌ حصل مشكلة في السيرفر، جرب اسم أغنية مختلف أو حاول لاحقاً.";
+      
+      api.sendMessage(errorMsg, threadID, messageID);
       if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
     }
   }
