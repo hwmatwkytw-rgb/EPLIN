@@ -1,13 +1,13 @@
 const { log } = require('../../logger/logger');
 
-// نخزن الأعضاء المرحب بيهم (لكل قروب)
+// تخزين الأعضاء الذين تم الترحيب بهم لكل قروب
 const welcomedUsers = new Set();
 
 module.exports = {
   config: {
     name: 'welcome',
-    version: '3.0',
-    author: 'Hridoy + Fixed Multi Mention',
+    version: '4.0',
+    author: 'Hridoy + Abu Ubaida Edit',
     eventType: ['log:subscribe']
   },
 
@@ -44,8 +44,8 @@ async function sendGroupWelcome(api, threadID, userIDs) {
 
     const mentions = [];
     let bodyText = `
-╔═════════❀═════════╗
-   نـورتـم مـــــجـمـوعـتـنـا الــــــسـقـيـرة 💛
+╭━━━〔  نـورتـم مــجمـوعـــتنه  〕━━━╮
+
 
 `;
 
@@ -62,7 +62,7 @@ async function sendGroupWelcome(api, threadID, userIDs) {
         const name = userInfo?.[id]?.name || "عضو جديد";
         const tag = `@${name}`;
 
-        bodyText += ` ${count}. ${tag}\n`;
+        bodyText += ` ✦ ${count} ➜ ${tag}\n`;
 
         mentions.push({
           tag,
@@ -81,10 +81,14 @@ async function sendGroupWelcome(api, threadID, userIDs) {
 
     bodyText += `
 
-👥 عدد الأعضاء الحالي: ${memberCount}
-💬 نتمنى لكم أوقات ممتعة وذكريات رائعة معنا!
-        ✨ 𝓝𝓲𝓬𝓮 𝓽𝓸 𝓢𝓮𝓮 𝓨𝓸𝓾 ✨
-╚════════❀════════╝
+━━━━━━━━━━━━━━━━━━
+👥 عدد الأعضاء الآن : ${memberCount}
+🎉 نتمنى لك أوقات ممتعة معنا
+🤝 شارك – تفاعل – استمتع
+💬 أي استفسار لا تتردد
+
+   ≛ ⇄ 𝐓𝐍𝐗『 𝑾𝒆𝒍𝒄𝒐𝒎𝒆 💫 』
+╰━━━━━━━━━━━━━━━━━━╯
 `;
 
     await api.sendMessage(
@@ -100,4 +104,4 @@ async function sendGroupWelcome(api, threadID, userIDs) {
   } catch (error) {
     log('error', `sendGroupWelcome error: ${error.message}`);
   }
-      }
+  }
