@@ -19,9 +19,6 @@ module.exports = {
     const threadID = event.threadID;
     const replyID = event.messageID;
 
-    // وضع تفاعل 🔂 على الرسالة مباشرة
-    await api.reactMessage('🔂', replyID);
-
     const waitingMsg = await api.sendMessage(
       '⏳ جاري فحص حالة النظام...',
       threadID,
