@@ -4,15 +4,15 @@ const path = require('path');
 
 module.exports = {
   config: {
-    name: 'sing',
-    version: '1.0',
+    name: 'sing ',
+    version: '1.1',
     author: 'Hridoy',
     countDown: 5,
     prefix: true,
-    description: 'Search and play music from YouTube, auto selects most viewed.',
+    description: 'البحث وتشغيل الأغاني من يوتيوب، يختار الأكثر مشاهدة تلقائيًا.',
     category: 'music',
     guide: {
-      en: '{pn}sing <music name>'
+      ar: '{pn}اغنية <اسم الأغنية>'
     }
   },
 
@@ -22,61 +22,59 @@ module.exports = {
     const query = args.join(' ').trim();
 
     if (!query) {
-      return api.sendMessage('❌ Please provide a music name. Example: sing Starboy', threadID, messageID);
+      return api.sendMessage('❌ الرجاء إدخال اسم الأغنية. مثال: اغنية Starboy', threadID, messageID);
     }
 
     let statusMsg;
     try {
-   
+      // رسالة جاري البحث
       statusMsg = await new Promise((resolve, reject) => {
-        api.sendMessage('🔎 Searching the music...', threadID, (err, info) => {
+        api.sendMessage('🔎 جاري البحث عن الأغنية...', threadID, (err, info) => {
           if (err) reject(err);
           else resolve(info);
         }, messageID);
       });
 
-   
+      // البحث في API
       const searchRes = await axios.get(`https://hridoy-apis.vercel.app/search/youtube?query=${encodeURIComponent(query)}&count=5&apikey=hridoyXQC`);
-      const results = searchRes.data && searchRes.data.result;
+      const results = searchRes.data?.result;
       if (!Array.isArray(results) || results.length === 0) {
-        await api.editMessage('❌ No music found.', statusMsg.messageID);
+        await api.editMessage('❌ لم يتم العثور على أي أغاني.', statusMsg.messageID);
         return;
       }
 
+      // اختيار الأكثر مشاهدة
+      let mostViewed = results.reduce((prev, curr) => (curr.views > prev.views ? curr : prev), results[0]);
 
-      let mostViewed = results[0];
-      for (const vid of results) {
-        if (vid.views > mostViewed.views) mostViewed = vid;
-      }
+      await api.editMessage('⬇️ جاري التحميل...', statusMsg.messageID);
 
-      await api.editMessage('⬇️ Downloading...', statusMsg.messageID);
-
-      const ytmp3Res = await axios.get(`https://hridoy-apis.vercel.app/downloader/ytmp4?url=${encodeURIComponent(mostViewed.url)}&format=mp3&apikey=hridoyXQC`);
+      // طلب رابط التحميل (يفضل yt-mp3 endpoint)
+      const ytmp3Res = await axios.get(`https://hridoy-apis.vercel.app/downloader/ytmp3?url=${encodeURIComponent(mostViewed.url)}&apikey=hridoyXQC`);
       const downloadUrl = ytmp3Res.data?.result?.download;
       const musicTitle = ytmp3Res.data?.result?.title || mostViewed.title;
       const musicAuthor = mostViewed.author;
       const views = mostViewed.views?.toLocaleString?.() || mostViewed.views || "N/A";
 
       if (!downloadUrl) {
-        await api.editMessage('❌ Failed to get music download link.', statusMsg.messageID);
+        await api.editMessage('❌ فشل الحصول على رابط تحميل الأغنية.', statusMsg.messageID);
         return;
       }
 
-    
-      await api.editMessage('📤 Sending...', statusMsg.messageID);
+      await api.editMessage('📤 جاري الإرسال...', statusMsg.messageID);
 
-    
+      // إنشاء مجلد مؤقت
       const cacheDir = path.join(__dirname, 'cache');
       await fs.ensureDir(cacheDir);
-      const filePath = path.join(cacheDir, `sing_${Date.now()}.mp3`);
+      const filePath = path.join(cacheDir, `اغنية_${Date.now()}.mp3`);
 
-      const audioRes = await axios.get(downloadUrl, { responseType: 'arraybuffer', timeout: 60000 });
+      // تحميل الأغنية
+      const audioRes = await axios.get(downloadUrl, { responseType: 'arraybuffer', timeout: 120000 });
       await fs.writeFile(filePath, Buffer.from(audioRes.data));
 
-     
+      // إرسال الأغنية
       await new Promise((resolve, reject) => {
         api.sendMessage({
-          body: `🎶 ${musicTitle}\n👤 Author: ${musicAuthor}\n👁️ Views: ${views}`,
+          body: `🎶 ${musicTitle}\n👤 المؤلف: ${musicAuthor}\n👁️ المشاهدات: ${views}`,
           attachment: fs.createReadStream(filePath)
         }, threadID, (err) => {
           fs.unlink(filePath).catch(() => {});
@@ -85,18 +83,17 @@ module.exports = {
         }, messageID);
       });
 
-     
       if (statusMsg?.messageID) {
         await api.unsendMessage(statusMsg.messageID);
       }
 
     } catch (error) {
-      console.error('[sing] Error:', error);
+      console.error('[اغنية] خطأ:', error);
       if (statusMsg?.messageID) {
-        await api.editMessage('❌ Error occurred while processing your request.', statusMsg.messageID);
+        await api.editMessage('❌ حدث خطأ أثناء معالجة طلبك.', statusMsg.messageID);
         setTimeout(() => api.unsendMessage(statusMsg.messageID), 10000);
       } else {
-        api.sendMessage('❌ Error occurred while processing your request.', threadID, messageID);
+        api.sendMessage('❌ حدث خطأ أثناء معالجة طلبك.', threadID, messageID);
       }
     }
   }
