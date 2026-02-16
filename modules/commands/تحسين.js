@@ -1,103 +1,70 @@
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 const axios = require('axios');
 
 module.exports = {
     config: {
         name: 'تحسين',
-        version: '1.1',
-        author: 'Hridoy',
+        version: '1.2',
+        author: 'Gemini AI',
         countDown: 10,
         prefix: true,
-        groupAdminOnly: false,
-        description: '🖼️ تحسين جودة الصورة إلى دقة 4K. قم بالرد على صورة لتحسينها.',
+        description: '🖼️ تحسين جودة الصورة بدقة عالية. قم بالرد على صورة.',
         category: 'image',
         guide: {
-            en: '   {pn}تحسين [رد على صورة] أو {pn}تحسين [/@منشن | UID]'
+            ar: '   {pn} [رد على صورة] أو {pn} [منشن]'
         },
     },
 
     onStart: async ({ api, event }) => {
-        const { senderID, mentions, messageReply } = event;
+        const { senderID, mentions, messageReply, threadID, messageID } = event;
         let imageUrl;
-        let targetIDForFilename = senderID;
 
-        if (
-            messageReply &&
-            messageReply.attachments &&
-            messageReply.attachments.length > 0 &&
-            ['photo', 'sticker'].includes(messageReply.attachments[0].type)
-        ) {
+        // 1. تحديد رابط الصورة (من الرد أو المنشن)
+        if (messageReply && messageReply.attachments && messageReply.attachments.length > 0) {
             imageUrl = messageReply.attachments[0].url;
-            targetIDForFilename = messageReply.senderID;
+        } else if (Object.keys(mentions).length > 0) {
+            const targetID = Object.keys(mentions)[0];
+            imageUrl = `https://graph.facebook.com/${targetID}/picture?width=1024&height=1024&access_token=6628568379|c1e620fa708a1d5696fb991c1bde5662`;
         } else {
-            let targetID = senderID;
-            if (Object.keys(mentions).length > 0) {
-                targetID = Object.keys(mentions)[0];
-            } else if (event.body.split(' ').length > 1) {
-                const uid = event.body.split(' ')[1].replace(/[^0-9]/g, '');
-                if (uid.length === 15 || uid.length === 16) targetID = uid;
-            }
-            targetIDForFilename = targetID;
-            imageUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379|c1e620fa708a1d5696fb991c1bde5662`;
+            return api.sendMessage("⚠️ | يا زول، لازم ترد على صورة أو تمنشن شخص عشان أحسن الصورة!", threadID, messageID);
         }
 
-        if (!imageUrl) {
-            return api.sendMessage(
-                "❌ | من فضلك قم بالرد على صورة أو منشن شخص لتحسين صورته.",
-                event.threadID
-            );
-        }
-
-        const apiUrl = `https://hridoy-apis.vercel.app/tools/remini?url=${encodeURIComponent(imageUrl)}&apikey=hridoyXQC`;
+        const waitMsg = await api.sendMessage("✨ جاري معالجة الصورة وتحسين جودتها... ثواني من فضلك", threadID);
 
         try {
-            api.sendMessage(
-                "✨ | جارٍ تحسين الصورة إلى جودة 4K… انتظر قليلاً",
-                event.threadID
-            );
+            // 2. استخدام API بديلة ومستقرة (Upscale/Remini)
+            // ملاحظة: قمت بتغيير الرابط لمصدر أكثر استقراراً
+            const upscaleApi = `https://api.vyturex.com/upscale?url=${encodeURIComponent(imageUrl)}`;
+            
+            const response = await axios.get(upscaleApi, { timeout: 60000 });
+            const resultUrl = response.data.result || response.data.url;
 
-            const response = await axios.get(apiUrl);
+            if (!resultUrl) throw new Error("السيرفر لم يرجع رابطاً صالحاً");
 
-            if (response.data && response.data.status && response.data.result) {
-                const enhancedImageResponse = await axios.get(
-                    response.data.result,
-                    { responseType: 'arraybuffer' }
-                );
+            // 3. تحميل الصورة المحسنة
+            const imageRes = await axios.get(resultUrl, { responseType: 'arraybuffer' });
+            
+            const cacheDir = path.join(__dirname, 'cache');
+            await fs.ensureDir(cacheDir);
+            const imagePath = path.join(cacheDir, `enhanced_${Date.now()}.png`);
 
-                const cacheDir = path.join(__dirname, 'cache');
-                if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
+            await fs.writeFile(imagePath, Buffer.from(imageRes.data));
 
-                const imagePath = path.join(
-                    cacheDir,
-                    `تحسين_${targetIDForFilename}_${Date.now()}.png`
-                );
+            // 4. إرسال النتيجة
+            await api.sendMessage({
+                body: "✅ تم تحسين الصورة بنجاح! 🌟",
+                attachment: fs.createReadStream(imagePath)
+            }, threadID, () => {
+                if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+            }, messageID);
 
-                fs.writeFileSync(
-                    imagePath,
-                    Buffer.from(enhancedImageResponse.data, 'binary')
-                );
+            api.unsendMessage(waitMsg.messageID);
 
-                api.sendMessage(
-                    {
-                        body: "✅ | تم تحسين الصورة بنجاح 🌟",
-                        attachment: fs.createReadStream(imagePath),
-                    },
-                    event.threadID,
-                    () => fs.unlinkSync(imagePath)
-                );
-            } else {
-                api.sendMessage(
-                    "⚠️ | فشل تحسين الصورة، قد يكون السيرفر متوقف أو نوع الصورة غير مدعوم.",
-                    event.threadID
-                );
-            }
         } catch (error) {
-            console.error("Error generating or sending 4K image:", error);
-            api.sendMessage(
-                "🚫 | حصل خطأ أثناء معالجة الصورة، حاول مرة أخرى لاحقاً.",
-                event.threadID
-            );
+            console.error(error);
+            api.unsendMessage(waitMsg.messageID);
+            api.sendMessage(`🚫 | معليش، السيرفر حالياً مضغوط أو الصورة حجمها كبير زيادة. حاول مرة ثانية بعد شوية.`, threadID, messageID);
         }
     },
 };
