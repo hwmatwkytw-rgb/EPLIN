@@ -3,7 +3,7 @@ const path = require('path');
 
 const config = {
     name: "اعدادات",
-    version: "1.1",
+    version: "1.2",
     author: "ᏕᎥᏁᎨᎧ",
     countDown: 5,
     role: 1,
@@ -31,31 +31,31 @@ module.exports = {
         const threadData = readDB();
 
         if (!threadData[threadID]) threadData[threadID] = { settings: {}, members: {} };
+        if (!threadData[threadID].settings.antiSettings) {
+            threadData[threadID].settings.antiSettings = {
+                antiSpam: false,
+                antiOut: false,
+                antiChangeGroupName: false,
+                antiChangeGroupImage: false,
+                antiChangeNickname: false,
+                notifyChange: false
+            };
+        }
 
-        // إعدادات افتراضية
-        const settings = threadData[threadID].settings.antiSettings || {
-            antiSpam: false,
-            antiOut: false,
-            antiChangeGroupName: false,
-            antiChangeGroupImage: false,
-            antiChangeNickname: false,
-            notifyChange: false
-        };
+        const settings = threadData[threadID].settings.antiSettings;
 
-        const show = {};
-        for (const k in settings) show[k] = settings[k] ? "✅" : "❌";
-
-        // خزّن الاسم والصورة الأصلية وأسماء الأعضاء
+        // خزّن الاسم والصورة وأعضاء المجموعة
         const info = await api.getThreadInfo(threadID);
         threadData[threadID].name = info.threadName;
         threadData[threadID].image = info.imageSrc;
-        threadData[threadID].members = {};
         for (const id of info.participantIDs) {
             const user = await api.getUserInfo(id);
             threadData[threadID].members[id] = user[id].name;
         }
-
         writeDB(threadData);
+
+        const show = {};
+        for (const k in settings) show[k] = settings[k] ? "✅" : "❌";
 
         const msg = `╭━〔 🛡 إعدادات المجموعة 🛡 〕━╮
 ① [${show.antiSpam}] مكافحة السبام
@@ -97,7 +97,6 @@ module.exports = {
         for (const n of nums) newSettings[keys[n - 1]] = !newSettings[keys[n - 1]];
 
         const threadData = readDB();
-        if (!threadData[threadID]) threadData[threadID] = { settings: {}, members: {} };
         threadData[threadID].settings.antiSettings = newSettings;
         writeDB(threadData);
 
@@ -124,32 +123,36 @@ module.exports = {
 
         // حماية الاسم
         if (settings.antiChangeGroupName && event.logMessageType === "log:thread-name") {
-            if (event.logMessageData.name !== threadData[threadID].name) {
-                api.setTitle(threadData[threadID].name, threadID);
-                if (settings.notifyChange) api.sendMessage("⚠️ ممنوع تغيير اسم المجموعة!", threadID);
+            const oldName = threadData[threadID].name || "";
+            if (event.logMessageData.name !== oldName) {
+                api.setTitle(oldName, threadID);
+                if (settings.notifyChange) api.sendMessage(`⚠️ ممنوع تغيير اسم المجموعة! الاسم الأصلي: ${oldName}`, threadID);
             }
         }
 
         // حماية الصورة
         if (settings.antiChangeGroupImage && event.logMessageType === "log:thread-icon") {
-            api.setThreadImage(threadData[threadID].image, threadID);
-            if (settings.notifyChange) api.sendMessage("⚠️ ممنوع تغيير صورة المجموعة!", threadID);
+            const oldImage = threadData[threadID].image || "";
+            api.setThreadImage(oldImage, threadID);
+            if (settings.notifyChange) api.sendMessage(`⚠️ ممنوع تغيير صورة المجموعة!`, threadID);
         }
 
         // حماية الكنيات
         if (settings.antiChangeNickname && event.logMessageType === "log:user-nickname") {
             const userID = event.logMessageData.userID;
-            const oldNick = threadData[threadID].members[userID];
-            if (event.logMessageData.nickname !== oldNick) {
+            const oldNick = threadData[threadID].members[userID] || "";
+            const newNick = event.logMessageData.nickname || "";
+
+            if (newNick !== oldNick) {
                 api.changeNickname(oldNick, threadID, userID);
-                if (settings.notifyChange) api.sendMessage(`⚠️ ممنوع تغيير كنيتك! ${oldNick}`, threadID);
+                if (settings.notifyChange) api.sendMessage(`⚠️ ممنوع تغيير كنيتك! الاسم الأصلي: ${oldNick}`, threadID);
             }
         }
 
         // منع الخروج
         if (settings.antiOut && event.logMessageType === "log:unsubscribe") {
             const userID = event.logMessageData.leftParticipantFbId;
-            api.sendMessage(`⚠️ ${userID} لا يمكنه مغادرة المجموعة!`, threadID);
+            if (settings.notifyChange) api.sendMessage(`⚠️ ${userID} لا يمكنه مغادرة المجموعة!`, threadID);
         }
     }
 };
