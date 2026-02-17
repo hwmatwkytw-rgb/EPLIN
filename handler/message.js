@@ -86,10 +86,17 @@ const handleMessage = async (event, api, commands) => {
     }
 
     
+    // Event handlers for passive monitoring (e.g. dev support)
+    for (const [eventName, command] of commands) {
+      if (command.handleEvent) {
+        await command.handleEvent({ api, event, config: global.client.config, Users, Threads });
+      }
+    }
+
     if (body.startsWith(currentPrefix)) {
       const args = body.slice(currentPrefix.length).trim().split(/\s+/);
       if (args.length === 0 || (args.length === 1 && args[0] === "")) {
-        return api.sendMessage("🦧", event.threadID, event.messageID);
+        return api.sendMessage("انغلع", event.threadID, event.messageID);
       }
       await handleCommand({ message: body, args, event, api, Users, Threads, commands, config: global.client.config });
     }
