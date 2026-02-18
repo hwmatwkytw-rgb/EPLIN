@@ -2,7 +2,7 @@ const fs = require('fs');
 
 module.exports = {
   config: {
-    name: 'رستارت', // تغيير اسم الأمر للعربي
+    name: 'رستارت',
     version: '1.2',
     author: 'Hridoy',
     countDown: 5,
@@ -15,17 +15,23 @@ module.exports = {
     },
   },
 
-  onStart: async ({ message, event, api, config }) => {
+  onStart: async ({ message, event, api }) => {
     try {
       const restartInfo = {
         startTime: Date.now(),
         threadID: event.threadID
       };
+      
+      // حفظ بيانات الجلسة الحالية
       fs.writeFileSync('./restart.json', JSON.stringify(restartInfo));
 
-      api.sendMessage(`🔄 جاري إعادة تشغيل ${config.botName}...`, event.threadID, () => {
-        process.exit(2); 
-      });
+      // التفاعل مع رسالة المطلب بالإيموجي المطلوب
+      await api.setMessageReaction("🔂", event.messageID, () => {}, true);
+
+      // تأخير بسيط للتأكد من وصول التفاعل قبل الخروج
+      setTimeout(() => {
+        process.exit(2);
+      }, 1000);
 
     } catch (error) {
       console.log(error);
@@ -33,15 +39,17 @@ module.exports = {
   },
 
   onLoad: async ({ api }) => {
-    // تحقق من وجود ملف restart.json لإرسال رسالة بعد إعادة التشغيل
+    // التحقق من وجود ملف بيانات إعادة التشغيل
     if (fs.existsSync('./restart.json')) {
       try {
         const data = JSON.parse(fs.readFileSync('./restart.json', 'utf8'));
         const { threadID } = data;
 
+        // إرسال رسالة النجاح بعد العودة للعمل
         await api.sendMessage('ابلين رستارت دن 🌼✅', threadID);
 
-        fs.unlinkSync('./restart.json'); // حذف الملف بعد الإرسال
+        // تنظيف الملف
+        fs.unlinkSync('./restart.json');
       } catch (err) {
         console.error('خطأ عند إرسال رسالة إعادة التشغيل:', err);
       }
