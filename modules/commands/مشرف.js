@@ -1,102 +1,98 @@
-const { isOwner } = require('../../func/permissions');
-const { log } = require('../../logger/logger');
 const fs = require('fs-extra'); 
 
 module.exports = {
   config: {
     name: 'مشرف',
-    version: '1.1',
-    author: 'Hridoy',
+    version: '2.0',
+    author: ' & Abu Obaida',
     countDown: 5,
     prefix: true,
     adminOnly: true,
-    aliases: ['adm', 'ادمن'],
-    description: '⚙️ إدارة صلاحيات المشرفين',
+    aliases: ['adm', 'ادمن', 'المشرفين'],
+    description: 'إدارة وعرض قائمة مشرفين البوت',
     category: 'admin',
     guide: {
-      en: '   {pn}مشرف [اضافة | ازالة] [UID | @منشن]'
+      ar: '{pn} [اضافة | ازالة | قائمة]'
     },
   },
 
-  onStart: async ({ message, args, event, api }) => {
+  onStart: async ({ args, event, api }) => {
+    const { threadID, messageID, senderID, mentions } = event;
+    const currentConfig = global.client.config;
+
     try {
-      if (!isOwner(event.senderID)) {
-        return api.sendMessage(
-          '🚫 | هذا الأمر مخصص لمالك البوت فقط.',
-          event.threadID
-        );
+      // 1. ميزة عرض القائمة
+      if (args[0] === 'قائمة' || !args[0]) {
+        const adminIDs = currentConfig.adminUIDs;
+        if (adminIDs.length === 0) return api.sendMessage("ꕥ ┋ لا يوجد مشرفون مضافون حالياً.", threadID);
+
+        let msg = `╭━━━━〔 𓆩 👑 𓆪 〕━━━━╮\n┃\n`;
+        msg += `┃ 𓆩 ꕥ 𓆪 قـائمة مـشرفي الـعرش\n┃\n`;
+        
+        for (let i = 0; i < adminIDs.length; i++) {
+          const name = (await api.getUserInfo(adminIDs[i]))[adminIDs[i]].name;
+          msg += `┃ 〖 ${i + 1} 〗ـ ${name}\n┃ 🆔 ${adminIDs[i]}\n┃\n`;
+        }
+        
+        msg += `╰━━━━━━━━━━━━━━━━━━━━╯`;
+        return api.sendMessage(msg, threadID, messageID);
       }
 
-      if (args.length < 1) {
-        return api.sendMessage(
-          '📌 | الاستخدام: !مشرف [اضافة | ازالة] [UID | @منشن]',
-          event.threadID
-        );
+      // التحقق من صلاحية المالك للإضافة والحذف
+      // ملاحظة: استبدل الـ ID هنا بآيدي المالك الخاص بك إذا لم تكن تستخدم دالة isOwner
+      const owners = currentConfig.ownerUIDs || []; 
+      if (!owners.includes(senderID) && senderID !== "100076211832049") {
+         return api.sendMessage("ꕥ ┋ ❌ هـذا الـأمر مـخصص لـمالك الـبوت فـقط.", threadID, messageID);
       }
 
       const action = args[0].toLowerCase();
       let targetUID;
 
-      if (event.mentions && Object.keys(event.mentions).length > 0) {
-        targetUID = Object.keys(event.mentions)[0]; 
-      } else if (args.length > 1) {
+      if (mentions && Object.keys(mentions).length > 0) {
+        targetUID = Object.keys(mentions)[0]; 
+      } else if (args[1]) {
         targetUID = args[1];
       } else {
-        return api.sendMessage(
-          '❌ | يرجى كتابة UID العضو أو منشنته.',
-          event.threadID
-        );
+        return api.sendMessage("ꕥ ┋ ⚠️ يـرجى مـنشنة الـعضو أو كـتابة الـ ID.", threadID, messageID);
       }
 
-      if (!['add', 'remove', 'اضافة', 'ازالة'].includes(action)) {
-        return api.sendMessage(
-          '⚠️ | أمر غير صالح، استخدم (اضافة) أو (ازالة).',
-          event.threadID
-        );
-      }
-
-      const currentConfig = global.client.config;
-
+      // 2. ميزة الإضافة
       if (action === 'add' || action === 'اضافة') {
         if (currentConfig.adminUIDs.includes(targetUID)) {
-          return api.sendMessage(
-            'ℹ️ | هذا العضو مشرف بالفعل.',
-            event.threadID
-          );
+          return api.sendMessage("ꕥ ┋ ℹ️ هـذا الـعضو مـشرف بـالفعل.", threadID, messageID);
         }
 
         currentConfig.adminUIDs.push(targetUID);
         fs.writeJsonSync('./config/config.json', currentConfig, { spaces: 2 });
 
-        api.sendMessage(
-          `✅ | تم ترقية العضو إلى مشرف بنجاح.`,
-          event.threadID
-        );
-        log('info', `Admin added: ${targetUID}`);
+        const successAdd = 
+          `╭───〔 𓆩 ✅ تـم الـتـرقـيـة 𓆪 〕───╮\n` +
+          `┃ ꕥ الـحالة: إضـافة مـشرف جـديد\n` +
+          `┃ ꕥ الـآيدي: ${targetUID}\n` +
+          `╰──────────────────╯`;
+        return api.sendMessage(successAdd, threadID, messageID);
 
-      } else { 
+      } 
+      // 3. ميزة الإزالة
+      else if (action === 'remove' || action === 'ازالة') {
         if (!currentConfig.adminUIDs.includes(targetUID)) {
-          return api.sendMessage(
-            'ℹ️ | هذا العضو ليس مشرفًا.',
-            event.threadID
-          );
+          return api.sendMessage("ꕥ ┋ ℹ️ هـذا الـعضو لـيس مـشرفاً.", threadID, messageID);
         }
 
         currentConfig.adminUIDs = currentConfig.adminUIDs.filter(id => id !== targetUID);
         fs.writeJsonSync('./config/config.json', currentConfig, { spaces: 2 });
 
-        api.sendMessage(
-          `🗑️ | تم إزالة العضو من قائمة المشرفين.`,
-          event.threadID
-        );
-        log('info', `Admin removed: ${targetUID}`);
+        const successRemove = 
+          `╭───〔 𓆩 🗑️ تـم الـإعـفـاء 𓆪 〕───╮\n` +
+          `┃ ꕥ الـحالة: إزالـة مـن الـمشرفين\n` +
+          `┃ ꕥ الـآيدي: ${targetUID}\n` +
+          `╰──────────────────╯`;
+        return api.sendMessage(successRemove, threadID, messageID);
       }
+
     } catch (error) {
-      log('error', `Admin command error: ${error.message}`);
-      api.sendMessage(
-        '❌ | حدث خطأ أثناء إدارة صلاحيات المشرفين.',
-        event.threadID
-      );
+      console.error(error);
+      api.sendMessage("ꕥ ┋ ❌ حـدث خـطأ فـي إدارة الـصلاحيات.", threadID, messageID);
     }
   },
 };
