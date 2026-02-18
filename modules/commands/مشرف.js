@@ -41,7 +41,7 @@ module.exports = {
       // التحقق من صلاحية المالك للإضافة والحذف
       // ملاحظة: استبدل الـ ID هنا بآيدي المالك الخاص بك إذا لم تكن تستخدم دالة isOwner
       const owners = currentConfig.ownerUIDs || []; 
-      if (!owners.includes(senderID) && senderID !== "100076211832049") {
+      if (!owners.includes(senderID) && senderID !== "61586897962846") {
          return api.sendMessage("ꕥ ┋ ❌ هـذا الـأمر مـخصص لـمالك الـبوت فـقط.", threadID, messageID);
       }
 
