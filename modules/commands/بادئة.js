@@ -28,9 +28,9 @@ module.exports = {
       Threads.set(event.threadID, threadData);
 
       if (newPrefix === '') {
-        api.sendMessage('تم ضبط البوت للعمل **بدون بادئة** لهذه المجموعة.', event.threadID);
+        api.sendMessage('بادئة افتراضه! .', event.threadID);
       } else {
-        api.sendMessage(`تم ضبط البادئة لهذه المجموعة لتصبح: '${newPrefix}'.`, event.threadID);
+        api.sendMessage(`تم ضبط البادئة الى: 〘${newPrefix}〙.`, event.threadID);
       }
 
     } catch (error) {
