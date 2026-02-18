@@ -3,59 +3,51 @@ const { Threads } = require('../../database/database');
 module.exports = {
   config: {
     name: 'prefix ',
-    version: '1.2',
-    author: 'جيميني',
+    version: '1.1',
+    author: 'Hridoy',
     countDown: 5,
-    prefix: false, 
-    description: 'يعرض بادئة النظام وبادئة المجموعة بزخرفة ملكية الموديل 3',
+    prefix: false,
+    description: 'عرض بادئة المجموعة والنظام بزخرفة هادئة',
     category: 'utility',
   },
 
   onStart: async ({ api, event, args }) => {
     try {
-      const { threadID, messageID, isGroup } = event;
+      const { threadID, messageID } = event;
       const threadData = Threads.get(threadID) || {};
       threadData.settings = threadData.settings || {};
 
-      // بادئة المجموعة الحالية
-      const groupPrefix = threadData.settings.prefix || 'لا تـوجـد';
+      const groupPrefix = threadData.settings.prefix || 'لـم تـحدد';
 
-      // --- تغيير بادئة المجموعة ---
-      if (args[0] === 'تغيير' || args[0] === 'setprefix') {
-        if (!isGroup)
-          return api.sendMessage("𑁍 ────────────── 𑁍\n❌ الأمر دا خاص بالمجموعات بس\n𑁍 ────────────── 𑁍", threadID, messageID);
-
-        if (!args[1])
-          return api.sendMessage("𑁍 ────────────── 𑁍\n⚠️ أرسل البادئة الجديدة بعد الكلمة\n𑁍 ────────────── 𑁍", threadID, messageID);
+      // --- تغيير البادئة ---
+      if (args[0] === 'setprefix') {
+        if (!event.isGroup) return api.sendMessage('❌ للمجموعات فقط', threadID);
+        if (!args[1]) return api.sendMessage('⚠️ أرسل الرمز الجديد', threadID);
 
         threadData.settings.prefix = args[1];
         Threads.set(threadID, threadData);
 
-        let successMsg = `𑁍 ────────────── 𑁍\n`;
-        successMsg += `⊱ ✅ ⊰ **تـم الـتـحـديـث** ⊱ ✅ ⊰\n\n`;
-        successMsg += `𖤍 ┋ الـحـالـة: تـم التـغـيـيـر\n`;
-        successMsg += `𖦹 ┋ الـجـديـدة: 『 ${args[1]} 』\n`;
-        successMsg += `𑁍 ────────────── 𑁍`;
-
-        return api.sendMessage(successMsg, threadID, messageID);
+        let successMsg = `𑁍 ──────────── 𑁍\n`;
+        successMsg += `⊱ ✅ ⊰ **تـم الـتـحـديـث**\n\n`;
+        successMsg += `𖤍 ┋ الـجـديـدة: 『 ${args[1]} 』\n`;
+        successMsg += `𑁍 ──────────── 𑁍`;
+        return api.sendMessage(successMsg, threadID);
       }
 
-      // --- عرض البوادئ الحالية (الموديل 3) ---
+      // --- عرض المعلومات ---
       const systemPrefix = global.client.config.prefix || 'نظامي';
 
-      let displayMsg = `𑁍 ────────────── 𑁍\n`;
-      displayMsg += `⊱ ✨ ⊰ مـعـلومـات الـبـادئة ⊱ ✨ ⊰\n\n`;
-      displayMsg += `𖤍 ┋ بـادئـة الـنـظـام: 『 ${systemPrefix} 』\n`;
-      displayMsg += `𖦹 ┋ بـادئـة الـقـروب: 『 ${groupPrefix} 』\n`;
-      displayMsg += ` ┋ الأمـر الـحـالـي: 『 البرفكس 』\n\n`;
-      displayMsg += `𑁍 ────────────── 𑁍\n`;
-      displayMsg += `🎖️ لـلتـغيير: البرفكس تغيير [الرمز]`;
+      let message = `𑁍 ──────────── 𑁍\n`;
+      message += `⊱ ✨ ⊰ **مـعـلومـات الـبـادئة**\n\n`;
+      message += `𖤍 ┋ الـنـظـام: 『 ${systemPrefix} 』\n`;
+      message += `𖦹 ┋ الـقـروب: 『 ${groupPrefix} 』\n`;
+      message += `𑁍 ──────────── 𑁍`;
 
-      api.sendMessage(displayMsg, threadID, messageID);
+      api.sendMessage(message, threadID, messageID);
 
     } catch (err) {
-      console.error('خطأ في أمر prefix:', err);
-      api.sendMessage('𑁍 ─ ❌ حصل خطأ في النظام ─ 𑁍', event.threadID);
+      console.error(err);
+      api.sendMessage('❌ حصل خطأ في تنفيذ الأمر', event.threadID);
     }
   }
 };
