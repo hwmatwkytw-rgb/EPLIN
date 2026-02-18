@@ -59,7 +59,7 @@ const handleCommand = async ({ message, args, event, api, Users, Threads, comman
 
     // صلاحية الأمر
     if (!hasPermission(event.senderID, command.config, await api.getThreadInfo(event.threadID))) {
-      return api.sendMessage('وزع يا فلاح .', event.threadID);
+      return api.sendMessage('', event.threadID);
     }
 
     // كولداون (مدة الانتظار)
