@@ -3,12 +3,12 @@ const axios = require('axios');
 module.exports = {
   config: {
     name: 'بانكاي',
-    version: '1.1',
+    version: '1.2',
     author: 'Hridoy',
     countDown: 5,
     prefix: true,
     groupAdminOnly: true,
-    description: 'يقوم بطرد عضو من المجموعة.',
+    description: 'يقوم بطرد عضو من المجموعة مع تفاعل ساخر.',
     category: 'group',
     guide: {
       ar: '{pn} @منشن | UID | بالرد على رسالة'
@@ -16,6 +16,11 @@ module.exports = {
   },
 
   onStart: async ({ api, event, args }) => {
+    const { threadID, messageID } = event;
+
+    // إضافة التفاعل الساخر 😆 على رسالة الشخص الذي نفذ الأمر
+    api.setMessageReaction("😆", messageID, (err) => {}, true);
+
     try {
       let targetID = null;
 
@@ -38,8 +43,8 @@ module.exports = {
       if (!targetID) {
         return api.sendMessage(
           '❌ استخدم الأمر مع منشن أو UID أو بالرد على رسالة.',
-          event.threadID,
-          event.messageID
+          threadID,
+          messageID
         );
       }
 
@@ -55,22 +60,22 @@ module.exports = {
           body: '⚠️ بانكاي مفعل!\nسيتم طرد العضو الآن...',
           attachment: img.data
         },
-        event.threadID
+        threadID
       );
 
       // طرد المستخدم
-      api.removeUserFromGroup(targetID, event.threadID, (err) => {
+      api.removeUserFromGroup(targetID, threadID, (err) => {
         if (err) {
           console.error(err);
           return api.sendMessage(
             '❌ فشل الطرد، تأكد أن البوت مشرف.',
-            event.threadID
+            threadID
           );
         }
 
         api.sendMessage(
           `هنفتقدو 🦆.`,
-          event.threadID
+          threadID
         );
       });
 
@@ -78,7 +83,8 @@ module.exports = {
       console.error('خطأ أمر بانكاي:', err);
       api.sendMessage(
         '❌ حدث خطأ غير متوقع.',
-        event.threadID
+        threadID,
+        messageID
       );
     }
   }
