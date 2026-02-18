@@ -30,12 +30,12 @@ async function downloadImage(url) {
 module.exports = {
     config: {
         name: 'اوامر',
-        version: '5.0',
+        version: '6.0',
         author: 'Edited by Abu Obaida',
         countDown: 5,
         prefix: true,
         groupAdminOnly: false,
-        description: 'عرض قائمة الأوامر أو تفاصيل أمر محدد بزخرفة هندسية ملكية.',
+        description: 'عرض قائمة الأوامر بتنسيق خطي ملكي هادئ.',
         category: 'المجموعة',
         guide: {
             ar: '{pn}\n{pn} <اسم_الأمر>'
@@ -53,10 +53,8 @@ module.exports = {
             try {
                 delete require.cache[require.resolve(path.join(commandsPath, file))];
                 const command = require(path.join(commandsPath, file));
-
                 if (command.config) {
                     commands[command.config.name.toLowerCase()] = command.config;
-
                     if (command.config.aliases) {
                         for (const alias of command.config.aliases) {
                             commands[alias.toLowerCase()] = command.config;
@@ -74,33 +72,29 @@ module.exports = {
             );
 
         // =========================
-        // عرض تفاصيل أمر (مزخرف)
+        // عرض تفاصيل أمر (بدون نجوم)
         // =========================
         if (input) {
             const cmd = commands[input.toLowerCase()];
-
-            if (!cmd) {
-                return api.sendMessage(`ꕥ ┋ ❌ لم يتم العثور على الأمر "${input}"`, event.threadID);
-            }
+            if (!cmd) return api.sendMessage(`ꕥ ┋ ❌ لم يتم العثور على الأمر "${input}"`, event.threadID);
 
             let detailMessage =
 `╭━━━━〔 ꕥ تـفـاصـيـل ꕥ 〕━━━━╮
 ┃
-┃ 𓆩 ꕥ 𓆪 الاسـم: 『 ${cmd.name} 』
-┃ 𓆩 ꕥ 𓆪 الـوصف: 『 ${cmd.description} 』
-┃ 𓆩 ꕥ 𓆪 الـمؤلف: 『 ${cmd.author} 』
-┃ 𓆩 ꕥ 𓆪 الـإصدار: 『 ${cmd.version} 』`;
+┃ 𓆩 ♢ 𓆪 الاسـم: 『 ${cmd.name} 』
+┃ 𓆩 ♢ 𓆪 الـوصف: 『 ${cmd.description} 』
+┃ 𓆩 ♢ 𓆪 الـمؤلف: 『 ${cmd.author} 』
+┃ 𓆩 ♢ 𓆪 الـإصدار: 『 ${cmd.version} 』`;
 
             if (cmd.aliases?.length) {
-                detailMessage += `\n┃ 𓆩 ꕥ 𓆪 الـأسماء: 『 ${cmd.aliases.join(' , ')} 』`;
+                detailMessage += `\n┃ 𓆩 ♢ 𓆪 الـأسماء: 『 ${cmd.aliases.join(' , ')} 』`;
             }
 
             if (cmd.guide?.ar) {
-                detailMessage += `\n┃\n┃ 𓆩 ✨ 𓆪 طـريقة الـاستخدام:\n┃ 〖 ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)} 〗`;
+                detailMessage += `\n┃\n┃ 𓆩 ♢ 𓆪 طـريقة الـاستخدام:\n┃ 〖 ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)} 〗`;
             }
 
             detailMessage += `\n┃\n╰━━━━━━━━━━━━━━━━━━━━╯`;
-
             return api.sendMessage(detailMessage, event.threadID);
         }
 
@@ -109,27 +103,23 @@ module.exports = {
         // =========================
         const categories = {};
         const categoryMap = {
-            'group': 'المجموعة', 'image': 'الصور', 'media': 'الوسائط',
-            'admin': 'الإدارة', 'fun': 'الترفيه', 'random': 'عشوائي',
-            'music': 'الموسيقى', 'video': 'الفيديو', 'ai': 'الذكاء الاصطناعي',
-            'tools': 'الأدوات', 'utility': 'الخدمات السريعة', 'owner': 'المطور',
-            'level': 'المستوى', 'game': 'اللعب', 'play': 'اللعب',
+            'group': 'الـمجموعة', 'image': 'الـصور', 'media': 'الـوسائط',
+            'admin': 'الـإدارة', 'fun': 'الـترفيه', 'ai': 'الـذكاء',
+            'owner': 'الـمطور', 'game': 'الـلعب'
         };
 
         for (const cmd of uniqueCommands) {
-            let category = cmd.category || 'الترفيه';
-            if (['اقتصاد', 'اللعب', 'game', 'play'].includes(category)) category = 'اللعب';
-            if (category === 'owner' || category === 'المطور' || cmd.role === 2 || ['رستارت', 'إشعار'].includes(cmd.name)) category = 'المطور';
-            
+            let category = cmd.category || 'عـام';
+            if (category === 'owner' || category === 'المطور' || cmd.role === 2) category = 'الـمطور';
             category = categoryMap[category] || category;
             if (!categories[category]) categories[category] = [];
             categories[category].push(cmd.name);
         }
 
-        const orderedCats = ['المجموعة', 'الصور', 'الوسائط', 'الذكاء الاصطناعي', 'الترفيه', 'اللعب', 'عشوائي', 'المطور', 'الأدوات'];
+        const orderedCats = ['الـمجموعة', 'الـوسائط', 'الـذكاء', 'الـترفيه', 'الـلعب', 'الـمطور'];
 
         // =========================
-        // بناء القائمة (بالمربعات والورود النصية)
+        // بناء القائمة (سطر واحد هادئ)
         // =========================
         let finalMessage = `ꕥ ─────────────── ꕥ\n`;
         finalMessage += `  𓆩 ♢ 𓆪  قـائمة الأوامـر  𓆩 ♢ 𓆪\n`;
@@ -140,22 +130,17 @@ module.exports = {
             if (!cmds || cmds.length === 0) continue;
 
             const adminList = config.adminUIDs || [];
-            if (category === "المطور" && !adminList.includes(event.senderID)) continue;
+            if (category === "الـمطور" && !adminList.includes(event.senderID)) continue;
 
-            // المربع المحيط بالفئة
-            finalMessage += `╭───〔 𓆩 ✨ ${category.toUpperCase()} ✨ 𓆪 〕───╮\n`;
-            
-            for (let i = 0; i < cmds.length; i += 3) {
-                const row = cmds.slice(i, i + 3).map(c => `ꕥ ${c}`).join("  ");
-                finalMessage += `┃ ${row}\n`;
-            }
-
+            // عرض الأوامر في سطر واحد مفصل برمز ♢
+            finalMessage += `╭───〔 𓆩 ♢ ${category} ♢ 𓆪 〕───╮\n`;
+            finalMessage += `┃ ${cmds.join(' ♢ ')}\n`;
             finalMessage += `╰──────────────────╯\n\n`;
         }
 
         finalMessage += `ꕥ ─────────────── ꕥ\n`;
-        finalMessage += ` عدد الأوامر: 『 ${uniqueCommands.length} 』\n`;
-        finalMessage += `ꕥ Edited by Abu Obaida 𓆩☆𓆪`;
+        finalMessage += ` الـعدد الـكلي: 『 ${uniqueCommands.length} 』\n`;
+        finalMessage += `ꕥ ÆPłN To Pøt 𓆩 ♢ 𓆪`;
 
         try {
             const imagePath = await downloadImage('https://i.ibb.co/sJp75WCF/75b56d9d0b03b232909a1d1cb61f00a1.jpg');
