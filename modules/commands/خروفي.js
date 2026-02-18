@@ -1,63 +1,88 @@
 const fs = require('fs-extra');
 const path = require('path');
-const { Jimp } = require('jimp');
+const axios = require('axios');
+const { createCanvas, loadImage } = require('canvas');
 
-const config = {
+module.exports = {
+  config: {
     name: "خروفي",
     version: "1.0",
     author: "ابو عبيده علي",
-    description: "رد على صورة شخص ليظهره على خروفك",
-    role: 0,
     countDown: 3,
-    event: true,
-};
+    prefix: true,
+    adminOnly: false,
+    category: "متعة",
+    description: "رد على صورة شخص ليظهره على خروفك",
+    guide: {
+      en: "{pn} [رد أو منشن]"
+    },
+  },
 
-const cacheDir = path.join(__dirname, "../../cache");
-fs.ensureDirSync(cacheDir);
+  onStart: async function({ api, event }) {
+    const { threadID, messageID, senderID, messageReply, mentions } = event;
+    const cacheDir = path.join(__dirname, "cache");
 
-function getRandomFileName() {
-    return `sheep_${Date.now()}.jpg`;
-}
+    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
-module.exports = {
-    config,
+    try {
+      // تحديد الشخص المستهدف
+      let targetID;
+      if (messageReply) {
+        targetID = messageReply.senderID;
+      } else if (Object.keys(mentions).length > 0) {
+        targetID = Object.keys(mentions)[0];
+      } else {
+        return api.sendMessage("❌ رد على حد أو منشنه عشان يركب خروفك", threadID, messageID);
+      }
 
-    // ===== أمر الإرسال =====
-    onStart: async function({ api, event, usersData, sh }) {
-        try {
-            const { threadID, messageID } = event;
+      // روابط الصور
+      const userAvatarUrl = `https://graph.facebook.com/${senderID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+      const targetAvatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+      const backgroundUrl = "https://i.ibb.co/YThmPKSR/h2-Qh6-Jd-Wqf.jpg";
 
-            if (!event.messageReply && Object.keys(event.mentions).length === 0) {
-                return sh.reply("❌ رد على حد أو منشنه عشان علي خروفك");
-            }
+      // تحميل الصور باستخدام Canvas
+      const [bgImg, userImg, targetImg] = await Promise.all([
+        loadImage(backgroundUrl),
+        loadImage(userAvatarUrl),
+        loadImage(targetAvatarUrl)
+      ]);
 
-            const target = event.messageReply?.senderID || Object.keys(event.mentions)?.[0];
+      const canvas = createCanvas(bgImg.width, bgImg.height);
+      const ctx = canvas.getContext('2d');
 
-            // تحميل الخلفية
-            const background = await Jimp.read("https://i.ibb.co/YThmPKSR/h2-Qh6-Jd-Wqf.jpg");
+      // رسم الخلفية
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-            // تحميل صور المستخدمين
-            const userAvatar = await Jimp.read(await usersData.getAvatarUrl(event.senderID));
-            const targetAvatar = await Jimp.read(await usersData.getAvatarUrl(target));
+      // دالة لرسم الصورة بشكل دائري
+      const drawCircleImg = (img, x, y, width, height) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(img, x, y, width, height);
+        ctx.restore();
+      };
 
-            userAvatar.resize(190, 190).circle();
-            targetAvatar.resize(190, 190).circle();
+      // وضع الصور في الإحداثيات المطلوبة
+      drawCircleImg(userImg, 150, 200, 190, 190);
+      drawCircleImg(targetImg, 170, 430, 190, 190);
 
-            background.composite(userAvatar, 150, 200);
-            background.composite(targetAvatar, 170, 430);
+      const filePath = path.join(cacheDir, `sheep_${Date.now()}.png`);
+      const buffer = canvas.toBuffer('image/png');
+      fs.writeFileSync(filePath, buffer);
 
-            const fileName = getRandomFileName();
-            const filePath = path.join(cacheDir, fileName);
+      // إرسال النتيجة
+      return api.sendMessage({
+        body: "هاك خروفك جاهز! 🐑",
+        attachment: fs.createReadStream(filePath)
+      }, threadID, () => {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }, messageID);
 
-            await background.writeAsync(filePath);
-
-            await sh.reply({ attachment: fs.createReadStream(filePath) });
-
-            // حذف الصورة بعد الإرسال لتوفير المساحة
-            setTimeout(() => fs.unlink(filePath).catch(() => {}), 60 * 1000);
-        } catch (err) {
-            console.error(err);
-            sh.reply("❌ حدث خطأ أثناء إنشاء خروفك، حاول مرة أخرى.");
-        }
+    } catch (error) {
+      console.error(error);
+      return api.sendMessage("❌ حصل خطأ في المكتبات أو الرابط، تأكد من تثبيت canvas.", threadID, messageID);
     }
+  }
 };
