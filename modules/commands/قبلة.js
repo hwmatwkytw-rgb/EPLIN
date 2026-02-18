@@ -23,6 +23,9 @@ module.exports = {
             const userId = event.senderID;
             const messageId = event.messageID;
 
+            // التفاعل بالقلب 💕 على رسالة المستخدم فوراً
+            api.setMessageReaction("💕", messageId, (err) => {}, true);
+
             const commandUserInfo = await api.getUserInfo(userId);
             const commandUsername = commandUserInfo[userId]?.name || 'مستخدم';
             const commandUserAvatar = `https://graph.facebook.com/${userId}/picture?width=512&height=512&access_token=6628568379|c1e620fa708a1d5696fb991c1bde5662`;
@@ -93,7 +96,7 @@ module.exports = {
                 );
             }
 
-            const caption = `💋 قبلة بين ${commandUsername} و ${targetUsername}`;
+            const caption = `🙅 قبلة بين ${commandUsername} و ${targetUsername}`;
             try {
                 api.sendMessage({
                     body: caption,
@@ -108,7 +111,7 @@ module.exports = {
                     } catch (err) {
                         log('error', `فشل حذف الملف المؤقت: ${err.message}`);
                     }
-                });
+                }, messageId); // جعل الرد كـ Reply
             } catch (err) {
                 log('error', `خطأ في إرسال الرسالة: ${err.message}`);
                 try {
