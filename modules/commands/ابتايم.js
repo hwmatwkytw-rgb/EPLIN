@@ -17,12 +17,15 @@ module.exports = {
 
   onStart: async ({ api, event }) => {
     const threadID = event.threadID;
-    const replyID = event.messageID;
+    const messageID = event.messageID; // معرف رسالة المستخدم
+
+    // إضافة التفاعل بالرمز التعبيري ✨
+    api.setMessageReaction("✨", messageID, (err) => {}, true);
 
     const waitingMsg = await api.sendMessage(
       '⏳ جاري فحص حالة النظام...',
       threadID,
-      replyID
+      messageID
     );
     const processingID = waitingMsg.messageID;
 
@@ -48,7 +51,7 @@ module.exports = {
         time: moment().format('hh:mm:ss A'),
         users: global.users?.length || 0,
         threads: global.threads?.length || 0,
-        ping: Math.floor(performance.now()) + 'ملليثانية',
+        ping: Math.floor(performance.now()) + ' ملليثانية',
         status: '⚠️ | تحميل متوسط',
       };
 
