@@ -1,17 +1,22 @@
+const axios = require("axios");
+
 module.exports = {
   config: {
     name: "المطور",
-    version: "1.0",
+    version: "1.1",
     author: "Ꮥ.ᎥᏁᎨᎧᎯᏴᎨᏟᎻᎥᎯᎶᎯ",
     countDown: 3,
     role: 1,
-    description: "يعرض معلومات المطور بشكل فخم بزخارف",
+    description: "يعرض معلومات المطور بشكل فخم بزخارف مع تفاعل",
     category: "معلومات",
     guide: { ar: "اكتب المطور لعرض معلومات المطور" }
   },
 
   onStart: async function ({ api, event }) {
-    const { threadID } = event;
+    const { threadID, messageID } = event;
+
+    // إضافة التفاعل بالفراشة 🦋 على رسالة العضو
+    api.setMessageReaction("🦋", messageID, (err) => {}, true);
 
     const infoText = `
 ✧ الـــــــــﻤطوࢪ | Ꮥ.ᎥᏁᎨᎧ ✧
@@ -44,18 +49,19 @@ https://www.facebook.com/profile.php?id=61586897962846
     const imageURL = "https://i.ibb.co/sJp75WCF/75b56d9d0b03b232909a1d1cb61f00a1.jpg";
 
     try {
-      const imgStream = (await require("axios").get(imageURL, { responseType: "stream" })).data;
+      const imgStream = (await axios.get(imageURL, { responseType: "stream" })).data;
 
       return api.sendMessage(
         {
           body: infoText,
           attachment: imgStream
         },
-        threadID
+        threadID,
+        messageID // لجعل الرد كـ "Reply" على رسالتك
       );
     } catch (err) {
       console.error("Developer info error:", err);
-      return api.sendMessage("اظن سينكو  🦧.", threadID);
+      return api.sendMessage("اظن سينكو  🦧.", threadID, messageID);
     }
   }
 };
