@@ -35,7 +35,7 @@ module.exports = {
         countDown: 5,
         prefix: true,
         groupAdminOnly: false,
-        description: 'عرض قائمة الأوامر أو تفاصيل أمر محدد بزخرفة هندسية ملكية.',
+        description: 'عرض قائمة الأوامر أو تفاصيل أمر محدد بزخرفة الختم الماسي.',
         category: 'المجموعة',
         guide: {
             ar: '{pn}\n{pn} <اسم_الأمر>'
@@ -74,38 +74,36 @@ module.exports = {
             );
 
         // =========================
-        // عرض تفاصيل أمر (مزخرف)
+        // عرض تفاصيل أمر (نمط رقم 5)
         // =========================
         if (input) {
             const cmd = commands[input.toLowerCase()];
 
             if (!cmd) {
-                return api.sendMessage(`ꕥ ┋ ❌ لم يتم العثور على الأمر "${input}"`, event.threadID);
+                return api.sendMessage(`❌ لم يتم العثور على الأمر "${input}"`, event.threadID);
             }
 
-            let detailMessage =
-`╭━━━━〔 ꕥ تـفـاصـيـل ꕥ 〕━━━━╮
-
- 𓆩 ꕥ 𓆪 الاسـم: 『 ${cmd.name} 』
- 𓆩 ꕥ 𓆪 الـوصف: 『 ${cmd.description} 』
- 𓆩 ꕥ 𓆪 الـمؤلف: 『 ${cmd.author} 』
- 𓆩 ꕥ 𓆪 الـإصدار: 『 ${cmd.version} 』`;
+            let detailMessage = `◈ ─── 𓊆 تـفـاصـيـل 𓊉 ─── ◈\n\n`;
+            detailMessage += `✧ الاسـم: 『 ${cmd.name} 』\n`;
+            detailMessage += `✧ الـوصف: 『 ${cmd.description} 』\n`;
+            detailMessage += `✧ الـمؤلف: 『 ${cmd.author} 』\n`;
+            detailMessage += `✧ الـإصدار: 『 ${cmd.version} 』\n`;
 
             if (cmd.aliases?.length) {
-                detailMessage += `\n. 𓆩 ☆ 𓆪 الـأسماء: 『 ${cmd.aliases.join(' , ')} 』`;
+                detailMessage += `✧ الـأسماء: 『 ${cmd.aliases.join(' , ')} 』\n`;
             }
 
             if (cmd.guide?.ar) {
-                detailMessage += `\n. \n. 𓆩  𓆪 طـريقة الـاستخدام:\n┃ 〖 ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)} 〗`;
+                detailMessage += `\n✧ طـريقة الـاستخدام:\n┃ 〖 ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)} 〗\n`;
             }
 
-            detailMessage += `\n┃\n. `;
+            detailMessage += `\n◈ ──────────────── ◈`;
 
             return api.sendMessage(detailMessage, event.threadID);
         }
 
         // =========================
-        // تصنيف الأوامر
+        // تصنيف الأوامر (نفس منطقك الأصلي)
         // =========================
         const categories = {};
         const categoryMap = {
@@ -129,11 +127,9 @@ module.exports = {
         const orderedCats = ['المجموعة', 'الصور', 'الوسائط', 'الذكاء الاصطناعي', 'الترفيه', 'اللعب', 'عشوائي', 'المطور', 'الأدوات'];
 
         // =========================
-        // بناء القائمة (بالمربعات والورود النصية)
+        // بناء القائمة (النمط رقم 5 الماسي)
         // =========================
-        let finalMessage = `ꕥ ─────────────── ꕥ\n`;
-        finalMessage += `  𓆩 ♢ 𓆪  قـائمة الأوامـر  𓆩 ♢ 𓆪\n`;
-        finalMessage += `ꕥ ─────────────── ꕥ\n\n`;
+        let finalMessage = `◈ ─── ≛  قـائـمة الأوامـر ≛  ─── ◈\n\n`;
 
         for (const category of orderedCats) {
             const cmds = categories[category];
@@ -142,27 +138,30 @@ module.exports = {
             const adminList = config.adminUIDs || [];
             if (category === "المطور" && !adminList.includes(event.senderID)) continue;
 
-            // المربع المحيط بالفئة
-            finalMessage += `╭───〔 𓆩  ${category.toUpperCase()} 𓆪 〕──╮\n`;
+            // شكل القسم والخط الفاصل (رقم 5)
+            finalMessage += `✧ قـسـم ${category.toUpperCase()} :\n`;
             
             for (let i = 0; i < cmds.length; i += 3) {
-                const row = cmds.slice(i, i + 3).map(c => `≛  ${c}`).join("  ");
-                finalMessage += `┃ ${row}\n`;
+                const row = cmds.slice(i, i + 3).map(c => `⬩ ${c}`).join("  ");
+                finalMessage += `${row}\n`;
             }
 
-            finalMessage += `. \n\n`;
+            finalMessage += `━━━━━━━━━━━━━━━━━\n\n`;
         }
 
-        finalMessage += `ꕥ ─────────────── ꕥ\n`;
-        finalMessage += ` عدد الأوامر: 『 ${uniqueCommands.length} 』\n`;
-        finalMessage += `ꕥ  الــــــــمطوࢪ 〘 سينكو〙𓆩☆𓆪`;
+        finalMessage += `◈ ───────────────── ◈\n`;
+        finalMessage += `│← عـدد الأوامـر ⠇${uniqueCommands.length}\n`;
+        finalMessage += `│←\n`;
+        finalMessage += `│← اسـتـمـتـع بـالـمـطـوࢪ 〖 سينكو 〗 𓆩☆𓆪`;
 
         try {
             const imagePath = await downloadImage('https://i.ibb.co/sJp75WCF/75b56d9d0b03b232909a1d1cb61f00a1.jpg');
             return api.sendMessage({
                 body: finalMessage.trim(),
                 attachment: fs.createReadStream(imagePath)
-            }, event.threadID, () => fs.unlinkSync(imagePath));
+            }, event.threadID, () => {
+                if(fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+            });
         } catch (err) {
             return api.sendMessage(finalMessage.trim(), event.threadID);
         }
