@@ -11,6 +11,7 @@ function readDB(filePath) {
         const data = fs.readFileSync(filePath, 'utf8');
         return JSON.parse(data);
     } catch (error) {
+        console.error(`خطأ في قراءة الملف ${filePath}:`, error);
         return {};
     }
 }
@@ -29,23 +30,28 @@ async function downloadImage(url) {
 module.exports = {
     config: {
         name: 'اوامر',
-        version: '7.0',
-        author: 'Abu Obaida',
+        version: '6.0',
+        author: 'Edited by Abu Obaida',
         countDown: 5,
         prefix: true,
+        groupAdminOnly: false,
+        description: 'عرض قائمة الأوامر بتنسيق خطي ملكي هادئ.',
         category: 'المجموعة',
-        description: 'عرض قائمة الأوامر بتنسيق ملكي هادئ ومنظم.',
-        guide: { ar: '{pn}\n{pn} <اسم_الأمر>' },
+        guide: {
+            ar: '{pn}\n{pn} <اسم_الأمر>'
+        },
     },
 
     onStart: async ({ api, event, args }) => {
         const config = readDB(configPath);
         const input = args[0];
+
         const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
         const commands = {};
 
         for (const file of commandFiles) {
             try {
+                delete require.cache[require.resolve(path.join(commandsPath, file))];
                 const command = require(path.join(commandsPath, file));
                 if (command.config) {
                     commands[command.config.name.toLowerCase()] = command.config;
@@ -55,44 +61,69 @@ module.exports = {
                         }
                     }
                 }
-            } catch (e) {}
+            } catch (error) {
+                console.error(`خطأ أثناء تحميل ${file}:`, error);
+            }
         }
 
-        const uniqueCommands = Object.values(commands).filter((cmd, index, self) =>
-            self.findIndex(c => c.name === cmd.name) === index
-        );
+        const uniqueCommands = Object.values(commands)
+            .filter((cmd, index, self) =>
+                self.findIndex(c => c.name === cmd.name) === index
+            );
 
+        // =========================
+        // عرض تفاصيل أمر (بدون نجوم)
+        // =========================
         if (input) {
             const cmd = commands[input.toLowerCase()];
             if (!cmd) return api.sendMessage(`ꕥ ┋ ❌ لم يتم العثور على الأمر "${input}"`, event.threadID);
 
-            let detailMessage = `ꕥ ─── 〔 الـتـفـاصـيـل 〕 ─── ꕥ\n\n`;
-            detailMessage += `♢ الاسـم: 『 ${cmd.name} 』\n`;
-            detailMessage += `♢ الـوصف: 『 ${cmd.description} 』\n`;
-            detailMessage += `♢ الـمؤلف: 『 ${cmd.author} 』\n`;
-            if (cmd.guide?.ar) {
-                detailMessage += `\n♢ طـريقة الـاستخدام:\n${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)}\n`;
+            let detailMessage =
+`╭━━━━〔 ꕥ تـفـاصـيـل ꕥ 〕━━━━╮
+
+𓆩 ♢ 𓆪 الاسـم: 『 ${cmd.name} 』
+𓆩 ♢ 𓆪 الـوصف: 『 ${cmd.description} 』
+𓆩 ♢ 𓆪 الـمؤلف: 『 ${cmd.author} 』
+ 𓆩 ♢ 𓆪 الـإصدار: 『 ${cmd.version} 』`;
+
+            if (cmd.aliases?.length) {
+                detailMessage += `\n 𓆩 ♢ 𓆪 الـأسماء: 『 ${cmd.aliases.join(' , ')} 』`;
             }
-            detailMessage += `\nꕥ ────────────────── ꕥ`;
+
+            if (cmd.guide?.ar) {
+                detailMessage += `\n\n 𓆩 ♢ 𓆪 طـريقة الـاستخدام:\n 〖 ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)} 〗`;
+            }
+
+            detailMessage += `\n\n`;
             return api.sendMessage(detailMessage, event.threadID);
         }
 
+        // =========================
+        // تصنيف الأوامر
+        // =========================
+        const categories = {};
         const categoryMap = {
             'group': 'الـمجموعة', 'image': 'الـصور', 'media': 'الـوسائط',
             'admin': 'الـإدارة', 'fun': 'الـترفيه', 'ai': 'الـذكاء',
             'owner': 'الـمطور', 'game': 'الـلعب'
         };
 
-        const categories = {};
         for (const cmd of uniqueCommands) {
-            let cat = categoryMap[cmd.category] || cmd.category || 'عـام';
-            if (!categories[cat]) categories[cat] = [];
-            categories[cat].push(cmd.name);
+            let category = cmd.category || 'عـام';
+            if (category === 'owner' || category === 'المطور' || cmd.role === 2) category = 'الـمطور';
+            category = categoryMap[category] || category;
+            if (!categories[category]) categories[category] = [];
+            categories[category].push(cmd.name);
         }
 
         const orderedCats = ['الـمجموعة', 'الـوسائط', 'الـذكاء', 'الـترفيه', 'الـلعب', 'الـمطور'];
 
-        let finalMessage = `ꕥ ─── 𓆩 قـائمة الأوامـر 𓆪 ─── ꕥ\n\n`;
+        // =========================
+        // بناء القائمة (سطر واحد هادئ)
+        // =========================
+        let finalMessage = `ꕥ ─────────────── ꕥ\n`;
+        finalMessage += `  𓆩 ♢ 𓆪  قـائمة الأوامـر  𓆩 ♢ 𓆪\n`;
+        finalMessage += `ꕥ ─────────────── ꕥ\n\n`;
 
         for (const category of orderedCats) {
             const cmds = categories[category];
@@ -101,19 +132,24 @@ module.exports = {
             const adminList = config.adminUIDs || [];
             if (category === "الـمطور" && !adminList.includes(event.senderID)) continue;
 
-            finalMessage += `[ 𓆩 ${category} 𓆪 ]\n`;
-            finalMessage += `${cmds.join(' ♢ ')}\n\n`;
+            // عرض الأوامر في سطر واحد مفصل برمز ♢
+            finalMessage += `╭───〔 𓆩 ♢ ${category} ♢ 𓆪 〕──╮\n`;
+            finalMessage += ` ${cmds.join(' ♢ ')}\n`;
+            finalMessage += `\n\n`;
         }
 
-        finalMessage += `ꕥ ────────────────── ꕥ\n`;
-        finalMessage += `♢ الـعدد الـكلي: 『 ${uniqueCommands.length} 』\n`;
+        finalMessage += `ꕥ ─────────────── ꕥ\n`;
+        finalMessage += ` الـعدد الـكلي: 『 ${uniqueCommands.length} 』\n`;
         finalMessage += `ꕥ ÆPłN To Pøt 𓆩 ♢ 𓆪`;
 
         try {
-            const img = await downloadImage('https://i.ibb.co/sJp75WCF/75b56d9d0b03b232909a1d1cb61f00a1.jpg');
-            return api.sendMessage({ body: finalMessage, attachment: fs.createReadStream(img) }, event.threadID, () => fs.unlinkSync(img));
-        } catch {
-            return api.sendMessage(finalMessage, event.threadID);
+            const imagePath = await downloadImage('https://i.ibb.co/sJp75WCF/75b56d9d0b03b232909a1d1cb61f00a1.jpg');
+            return api.sendMessage({
+                body: finalMessage.trim(),
+                attachment: fs.createReadStream(imagePath)
+            }, event.threadID, () => fs.unlinkSync(imagePath));
+        } catch (err) {
+            return api.sendMessage(finalMessage.trim(), event.threadID);
         }
     }
 };
