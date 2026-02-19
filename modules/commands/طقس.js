@@ -3,42 +3,43 @@ const axios = require('axios');
 module.exports = {
   config: {
     name: "طقس",
-    version: "1.2",
+    version: "1.5",
     author: "Kenji",
     countDown: 5,
     prefix: true,
     category: "fun",
-    description: "عرض حالة الطقس بزخرفة كونية"
+    description: "عرض حالة الطقس بزخرفة النخبة"
   },
 
   onStart: async ({ api, event, args }) => {
     const city = args.join(" ");
-    if (!city) return api.sendMessage("🪐 ‹ يرجى تحديد المدينة لفتح الرادار..", event.threadID);
+    if (!city) return api.sendMessage("⚠️ ‹ يرجى كتابة اسم المدينة (مثال: طقس السودان)", event.threadID);
 
     try {
-      const res = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=026778f8303378385d8e7c1bc3326129&units=metric&lang=ar`);
+      // استخدام API بمفتاح جديد ومستقر
+      const res = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=e269f829f045233e70d744f933157f44&units=metric&lang=ar`);
       const d = res.data;
 
-      // اختيار إيموجي الطقس المناسب
-      const weatherEmoji = d.main.temp > 30 ? "🔥" : d.main.temp > 20 ? "☀️" : "☁️";
-
       const msg = `
-   ☄️ ───  𝗦𝗞𝗬  𝗦𝗖𝗔𝗡𝗡𝗘𝗥  ─── ☄️
-   
-   🌑 الـمـديـنـة : ${d.name}
-   🌡️ الـحـرارة : ${d.main.temp}°C ${weatherEmoji}
-   🌬️ الـحـالـة : ${d.weather[0].description}
+   ┏━━━━━━━ ⚡︎ ━━━━━━━┓
+      𝗥𝗘𝗔𝗟-𝗧𝗜𝗠𝗘 𝗪𝗘𝗔𝗧𝗛𝗘𝗥
+   ┗━━━━━━━ ⚡︎ ━━━━━━━┛
+
+   📍 الـمـكـان : ${d.name} | ${d.sys.country}
+   🌡️ الـحـرارة : ${Math.round(d.main.temp)}°C
+   ☁️ الـحـالـة : ${d.weather[0].description}
    💧 الـرطـوبـة : ${d.main.humidity}%
-   
-   ◈ ────────────── ◈
-    🛰️ الـريـاح : ${d.wind.speed} 𝗆/𝗌
-    🌅 الـشروق : ${new Date(d.sys.sunrise * 1000).toLocaleTimeString('ar-EG')}
-   ◈ ────────────── ◈
-   ✨ 𝖲𝖨𝖭𝖪𝖮 𝖴𝖭𝖨𝖵𝖤𝖱𝖲𝖤 ✨`;
+
+   ◈ ━━━━━━━━━━━━━━ ◈
+    💨 الـريـاح : ${d.wind.speed} m/s
+    🕒 الـتـوقـيت : ${new Date().toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'})}
+   ◈ ━━━━━━━━━━━━━━ ◈
+   ✨ 𝖲𝖨𝖭𝖪𝖮 𝖤𝖣𝖨𝖳𝖨𝖮𝖭 ✨`;
 
       api.sendMessage(msg, event.threadID, event.messageID);
     } catch (e) {
-      api.sendMessage("🛰️ ‹ فشل الاتصال بالأقمار الصناعية.", event.threadID);
+      console.error(e);
+      api.sendMessage("❌ ‹ لم يتم العثور على المدينة، حاول كتابة الاسم بشكل صحيح.", event.threadID);
     }
   }
 };
