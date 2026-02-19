@@ -22,7 +22,7 @@ module.exports = {
     api.setMessageReaction("🦋", messageID, (err) => {}, true);
 
     const waitingMsg = await api.sendMessage(
-      '◄▬▬▬ ● جاري استخراج البيانات... ● ▬▬▬►',
+      '◄جاري استخراج البيانات...►',
       threadID,
       messageID
     );
@@ -58,7 +58,7 @@ module.exports = {
 
 ◈ الـحـالـ 『 مـسـتـقـر ✨ 』
 
-◄▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬►
+◄▬▬▬▬▬▬▬▬▬▬▬▬▬►
       ꗴ═〘 🖤〙 𝑺𝒀𝑺𝑻𝑬𝑴 `;
 
       api.editMessage(message, processingID);
