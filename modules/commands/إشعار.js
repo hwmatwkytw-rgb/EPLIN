@@ -23,9 +23,9 @@ module.exports = {
         const text = args.join(' ').trim();
         if (!text) {
             return api.sendMessage(
-                "◢◤━━━━━━━━━ 🖤 ━━━━━━━━━◥◣\n" +
+                "◢◤━━━━━━━━ 🖤 ━━━━━━━◥◣\n" +
                 "⚠️ يرجى كتابة نص الإشعار بعد الأمر\n" +
-                "◥◣━━━━━━━━━━━━━━━━━━━━◢◤",
+                "◥◣━━━━━━━━━━━━━━━━━━◢◤",
                 threadID,
                 messageID
             );
@@ -61,13 +61,13 @@ module.exports = {
 
             // --- صياغة الرسالة بالموديل 16 الفخم ---
             const notificationMessage =
-                `◢◤━━━━━━━━━━ 🖤 ━━━━━━━━━━◥◣\n` +
+                `◢◤━━━━━━━━ 🖤 ━━━━━━━◥◣\n` +
                 `                 إشـعـار إداري 🦆\n\n` +
-                `❖ ┠ الـمـرسـل:** 〖 المطور 〗\n` +
-                `❖ ┠ **الـرسـالـة:**\n` +
+                `❖ ┠ الـمـرسل: 〖 المطور 〗\n` +
+                `❖ ┠ الـرسـالـة:\n` +
                 `〖 ${text} 〗\n\n` +
                 `❖ ┠ الـتـوقـيـت: 〖 ${sendTime} 〗\n` +
-                `◥◣━━━━━━━━━━━━━━━━━━━━◢◤`;
+                `◥◣━━━━━━━━━━━━━━━━━━◢◤`;
 
             let successCount = 0;
             for (const thread of groupThreads) {
@@ -86,10 +86,10 @@ module.exports = {
             attachments.forEach(s => { if (fs.existsSync(s.path)) fs.unlinkSync(s.path); });
 
             return api.sendMessage(
-                `◢◤━━━━━━━━━ 🖤 ━━━━━━━━━◥◣\n` +
+                `◢◤━━━━━━━━ 🖤 ━━━━━━━◥◣\n` +
                 `✅ تم بنجاح إرسال الإشعار الملكي\n` +
                 `❖ ┠ لعدد: 〖 ${successCount} 〗 مجموعة\n` +
-                `◥◣━━━━━━━━━━━━━━━━━━━━◢◤`,
+                `◥◣━━━━━━━━━━━━━━━━━━◢◤`,
                 threadID,
                 messageID
             );
