@@ -1,9 +1,9 @@
 module.exports = {
   config: {
     name: 'botJoinedGroup',
-    version: '6.0',
-    author: 'Hridoy / Dark Elite',
-    description: 'ترحيب انضمام البوت بنمط النخبة المظلمة.',
+    version: '2.5',
+    author: 'Hridoy / Minimal Style',
+    description: 'ترحيب انضمام البوت بنمط المربعات النخبوي.',
     eventType: ['log:subscribe'],
   },
 
@@ -19,24 +19,22 @@ module.exports = {
       const botName = global.client.config.botName || 'Kenji Cloud';
       const prefix = global.client.config.prefix || '!';
 
-      api.changeNickname(`〆 ${botName} 〆`, event.threadID, botID);
+      api.changeNickname(`[ ${prefix} ] • ${botName}`, event.threadID, botID);
 
-      // التصميم النخبوي (Dark Elite)
+      // تصميم المربعات النخبوي (Minimalist Squares)
       const welcomeMsg = `
-          × ──────────── ×
-             𝗦𝗬𝗦𝗧𝗘𝗠  𝗥𝗘𝗔𝗗𝗬
-          × ──────────── ×
+■━━━━━━━━━━━━━━━━━━■
+  .................
+■━━━━━━━━━━━━━━━━━━■
 
-          ⊹ 𝖭𝖺𝗆𝖾 : ${botName}
-          ⊹ 𝖯𝗋𝖾𝖿𝗂𝗑 : ( ${prefix} )
-          ⊹ 𝖧𝖾𝗅𝗉 : ${prefix}help
+  ▢ البوت : ${botName}
+  ▢ الرمز : ${prefix}
+  ▢ الدليل : أرسل [ ${prefix}help ]
 
-          ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-          ⌬ 𝖣𝖾𝗏𝖾𝗅𝗈𝗉𝖾𝗋 : 𝖲𝗂𝗇𝗄𝗈
-          ⌬ 𝖠𝗀𝖾 : 𝟣𝟩 𝖸𝖾𝖺𝗋𝗌
-          ⌬ ﷺ : صـلّوا علـى النبي
-          ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-          × ──────────── ×`;
+■━━━━━━━━━━━━━━━━━━■
+  ▣ المطور : سينكو ( 17Y )
+  ▣ الصلاة على النبي ﷺ 🌹
+■━━━━━━━━━━━━━━━━━━■`;
 
       setTimeout(() => {
         api.sendMessage(welcomeMsg, event.threadID);
