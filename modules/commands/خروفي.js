@@ -11,7 +11,7 @@ module.exports = {
     countDown: 3,
     prefix: true,
     adminOnly: false,
-    category: "متعة",
+    category: "fun",
     description: "رد على صورة شخص ليظهره على خروفك",
     guide: {
       en: "{pn} [رد أو منشن]"
