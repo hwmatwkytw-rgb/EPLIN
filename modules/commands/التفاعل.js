@@ -8,7 +8,7 @@ module.exports = {
     countDown: 5,
     prefix: true,
     adminOnly: false,
-    category: "إحصائيات",
+    category: "fun",
     description: "عرض قائمة أكثر 5 أشخاص نشطين في المجموعة مع منشن للأول",
     guide: {
       en: "{pn}"
