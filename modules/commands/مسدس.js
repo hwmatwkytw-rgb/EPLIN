@@ -5,60 +5,60 @@ const axios = require('axios');
 module.exports = {
     config: {
         name: 'مسدس',
-        version: '1.1',
-        author: 'Hridoy',
+        version: '1.2',
+        author: 'Hridoy / Style 8',
         countDown: 5,
         prefix: true,
         groupAdminOnly: false,
-        description: 'ينشئ ميم بمسدس باستخدام صورة البروفايل الخاصة بك والنص الذي تدخله.',
+        description: 'ينشئ ميم بمسدس باستخدام صورتك ونصك الخاص.',
         category: 'fun',
         guide: {
-            ar: '{pn}مسدس <نص>\nمثال: مسدس بانغ!'
+            ar: '‹ 𖤓 ─━⊱★⊰━─ 𖤓 ›\nاستخدام: {pn} <نص>\nمثال: {pn} مت!'
         }
     },
 
     onStart: async ({ api, event, args }) => {
-        const { senderID } = event;
+        const { senderID, threadID, messageID } = event;
 
         // نص المستخدم
         const userText = args.join(' ').trim();
         if (!userText) {
-            return api.sendMessage("❌ ادخل النص ليصنع الميم! مثال: مسدس بانغ!", event.threadID);
+            return api.sendMessage("⚠️ ‹ 𖤓 › يرجى كتابة النص أولاً!\nمثال: مسدس بانغ!", threadID, messageID);
         }
 
-        // رابط صورة البروفايل للشخص الذي كتب الامر
+        // رابط صورة البروفايل
         const profileImageUrl = `https://graph.facebook.com/${senderID}/picture?width=512&height=512&access_token=6628568379|c1e620fa708a1d5696fb991c1bde5662`;
-
         const apiUrl = `https://sus-apis-2.onrender.com/api/gun-meme?image=${encodeURIComponent(profileImageUrl)}&text=${encodeURIComponent(userText)}`;
 
         try {
-            // رسالة انتظار
-            const statusMsg = await new Promise((resolve, reject) => {
-                api.sendMessage("🔫 جاري إنشاء صورة الميم...", event.threadID, (err, info) => {
-                    if (err) reject(err);
-                    else resolve(info);
-                });
+            // رسالة انتظار مزخرفة
+            const statusMsg = await new Promise((resolve) => {
+                api.sendMessage("‹ 𖤓 ⊱★⊰ 𖤓 ›\n جـاري تـلـقيـم المـسـدس... 🔫", threadID, (err, info) => {
+                    resolve(info);
+                }, messageID);
             });
 
-            // جلب الصورة من الـ API
+            // جلب الصورة
             const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
 
-            // حفظ مؤقت للصورة
             const cacheDir = path.join(__dirname, 'cache');
             if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
-            const imagePath = path.join(cacheDir, `مسدس_${senderID}_${Date.now()}.png`);
+            const imagePath = path.join(cacheDir, `gun_${senderID}_${Date.now()}.png`);
             fs.writeFileSync(imagePath, Buffer.from(response.data, 'binary'));
 
-            // ارسال الصورة
-            api.sendMessage({ attachment: fs.createReadStream(imagePath) }, event.threadID, () => fs.unlinkSync(imagePath));
-
-            // إزالة رسالة الانتظار
-            if (statusMsg?.messageID) api.unsendMessage(statusMsg.messageID);
+            // إرسال النتيجة النهائية مع زخرفة بسيطة
+            api.sendMessage({
+                body: "‹ 𖤓 ─━━━━━━⊱⊰━━━━━━─ 𖤓 ›\nتـم تـنـفـيذ الـعـمـلـيـة بـنـجـاح 🎯",
+                attachment: fs.createReadStream(imagePath)
+            }, threadID, () => {
+                if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+                if (statusMsg?.messageID) api.unsendMessage(statusMsg.messageID);
+            }, messageID);
 
         } catch (error) {
-            console.error("خطأ في إنشاء أو إرسال صورة الميم:", error);
-            api.sendMessage("❌ عذراً، لم أتمكن من إنشاء صورة الميم الآن.", event.threadID);
+            console.error("خطأ في إنشاء ميم المسدس:", error);
+            api.sendMessage("❌ ‹ 𖤓 › عذراً، فشلت محاولة إطلاق النار (خطأ بالخادم).", threadID, messageID);
         }
     }
 };
