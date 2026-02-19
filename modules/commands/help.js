@@ -81,20 +81,20 @@ module.exports = {
             let detailMessage =
 `╭━━━━〔 ꕥ تـفـاصـيـل ꕥ 〕━━━━╮
 
-𓆩 ♢ 𓆪 الاسـم: 『 ${cmd.name} 』
-𓆩 ♢ 𓆪 الـوصف: 『 ${cmd.description} 』
-𓆩 ♢ 𓆪 الـمؤلف: 『 ${cmd.author} 』
+ 𓆩 ♢ 𓆪 الاسـم: 『 ${cmd.name} 』
+ 𓆩 ♢ 𓆪 الـوصف: 『 ${cmd.description} 』
+ 𓆩 ♢ 𓆪 الـمؤلف: 『 ${cmd.author} 』
  𓆩 ♢ 𓆪 الـإصدار: 『 ${cmd.version} 』`;
 
             if (cmd.aliases?.length) {
-                detailMessage += `\n 𓆩 ♢ 𓆪 الـأسماء: 『 ${cmd.aliases.join(' , ')} 』`;
+                detailMessage += `\n. 𓆩 ♢ 𓆪 الـأسماء: 『 ${cmd.aliases.join(' , ')} 』`;
             }
 
             if (cmd.guide?.ar) {
-                detailMessage += `\n\n 𓆩 ♢ 𓆪 طـريقة الـاستخدام:\n 〖 ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)} 〗`;
+                detailMessage += `\n. \n. 𓆩 ♢ 𓆪 طـريقة الـاستخدام:\n. 〖 ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)} 〗`;
             }
 
-            detailMessage += `\n\n`;
+            detailMessage += `\n. \n. `;
             return api.sendMessage(detailMessage, event.threadID);
         }
 
@@ -133,9 +133,9 @@ module.exports = {
             if (category === "الـمطور" && !adminList.includes(event.senderID)) continue;
 
             // عرض الأوامر في سطر واحد مفصل برمز ♢
-            finalMessage += `╭───〔 𓆩 ♢ ${category} ♢ 𓆪 〕──╮\n`;
+            finalMessage += `╭───〔 𓆩 ♢ ${category} ♢ 𓆪 〕───╮\n`;
             finalMessage += ` ${cmds.join(' ♢ ')}\n`;
-            finalMessage += `\n\n`;
+            finalMessage += `. \n\n`;
         }
 
         finalMessage += `ꕥ ─────────────── ꕥ\n`;
