@@ -8,7 +8,7 @@ module.exports = {
     countDown: 3,
     role: 1,
     description: "يعرض معلومات المطور بشكل فخم بزخارف مع تفاعل",
-    category: "معلومات",
+    category: "fun",
     guide: { ar: "اكتب المطور لعرض معلومات المطور" }
   },
 
