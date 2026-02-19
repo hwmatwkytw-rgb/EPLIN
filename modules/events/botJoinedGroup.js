@@ -1,63 +1,49 @@
 module.exports = {
   config: {
     name: 'botJoinedGroup',
-    version: '1.3',
-    author: 'Hridoy + Fix by ChatGPT',
-    description: 'Sets bot nickname and sends fancy welcome message when added to a group.',
+    version: '6.0',
+    author: 'Hridoy / Dark Elite',
+    description: 'ترحيب انضمام البوت بنمط النخبة المظلمة.',
     eventType: ['log:subscribe'],
   },
 
   onStart: async ({ api, event }) => {
     try {
       const { Threads } = require('../../database/database');
-
       const botID = api.getCurrentUserID();
       const addedParticipants = event.logMessageData?.addedParticipants || [];
 
-      console.log('[JOIN EVENT] Bot ID:', botID);
-      console.log('[JOIN EVENT] Added:', addedParticipants);
+      if (!addedParticipants.some(user => user.userFbId === botID)) return;
 
-      // تحقق إذا البوت اتضاف
-      const isBotAdded = addedParticipants.some(
-        user => user.userFbId === botID
-      );
-
-      if (!isBotAdded) return;
-
-      // إنشاء بيانات القروب
       await Threads.create(event.threadID, 'New Group');
-
       const botName = global.client.config.botName || 'Kenji Cloud';
       const prefix = global.client.config.prefix || '!';
 
-      // محاولة تغيير الكنية (حتى لو فشلت ما توقف الكود)
-      api.changeNickname(botName, event.threadID, botID, err => {
-        if (err) {
-          console.log('[WARN] Bot is not admin, nickname not changed');
-        }
-      });
+      api.changeNickname(`〆 ${botName} 〆`, event.threadID, botID);
 
+      // التصميم النخبوي (Dark Elite)
       const welcomeMsg = `
-◈━━━━━━━★━━━━━━━◈
- تم تفعيل البوت بنجاح
- اسم البوت: ${botName}
-🔰 البادئة: ${prefix}
-🧭 اكتب ${prefix}help لعرض الأوامر
-◈━━━━━━━★━━━━━━━◈
+          × ──────────── ×
+             𝗦𝗬𝗦𝗧𝗘𝗠  𝗥𝗘𝗔𝗗𝗬
+          × ──────────── ×
 
-┏━⊱🔹 المطوّر 🔹⊰━┓
-┃  سينكو
-┃  17 سنة
-┃ صلّوا على النبي ﷺ 🌹
-┗━━━━━━━━━━━━━━━┛
-`;
+          ⊹ 𝖭𝖺𝗆𝖾 : ${botName}
+          ⊹ 𝖯𝗋𝖾𝖿𝗂𝗑 : ( ${prefix} )
+          ⊹ 𝖧𝖾𝗅𝗉 : ${prefix}help
+
+          ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+          ⌬ 𝖣𝖾𝗏𝖾𝗅𝗈𝗉𝖾𝗋 : 𝖲𝗂𝗇𝗄𝗈
+          ⌬ 𝖠𝗀𝖾 : 𝟣𝟩 𝖸𝖾𝖺𝗋𝗌
+          ⌬ ﷺ : صـلّوا علـى النبي
+          ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+          × ──────────── ×`;
 
       setTimeout(() => {
         api.sendMessage(welcomeMsg, event.threadID);
       }, 1000);
 
     } catch (err) {
-      console.error('[ERROR botJoinedGroup]:', err);
+      console.error('[ERROR]:', err);
     }
   },
 };
