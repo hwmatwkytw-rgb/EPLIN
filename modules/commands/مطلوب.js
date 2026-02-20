@@ -5,7 +5,7 @@ const axios = require('axios');
 module.exports = {
     config: {
         name: 'مطلوب',
-        version: '1.2',
+        version: '1.3',
         author: 'Hridoy & Gemini',
         countDown: 10,
         prefix: true,
@@ -27,6 +27,7 @@ module.exports = {
         // 1. التفاعل بساعة عند البدء
         api.setMessageReaction("⏳", messageID, (err) => {}, true);
 
+        // تحديد الصورة
         if (messageReply && messageReply.attachments && messageReply.attachments.length > 0 && ['photo', 'sticker'].includes(messageReply.attachments[0].type)) {
             imageUrl = messageReply.attachments[0].url;
             targetIDForFilename = messageReply.senderID;
@@ -37,25 +38,29 @@ module.exports = {
                 targetID = args[0];
             }
             targetIDForFilename = targetID;
-            imageUrl = `https://graph.facebook.com/${targetID}/picture?width=1024&height=1024&access_token=6628568379|c1e620fa708a1d5696fb991c1bde5662`;
+            // استبدال token بصلاحية عامة إذا لزم
+            imageUrl = `https://graph.facebook.com/${targetID}/picture?width=1024&height=1024`;
         }
 
         const apiUrl = `https://tanjiro-api.onrender.com/canvas/wanted?url=${encodeURIComponent(imageUrl)}`;
 
         try {
-            const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+            // طلب الصورة من الـ API مع timeout 10 ثواني
+            const response = await axios.get(apiUrl, { 
+                responseType: 'arraybuffer',
+                timeout: 10000 
+            });
+
+            if (!response.data || response.data.length === 0) throw new Error('لم يتم استلام صورة من الخادم');
 
             const cacheDir = path.join(__dirname, 'cache');
-            if (!fs.existsSync(cacheDir)) {
-                fs.mkdirSync(cacheDir, { recursive: true });
-            }
+            if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
             const imagePath = path.join(cacheDir, `wanted_${targetIDForFilename}_${Date.now()}.png`);
             fs.writeFileSync(imagePath, Buffer.from(response.data, 'binary'));
 
             // 2. التفاعل بصح عند النجاح وإرسال الصورة
             api.setMessageReaction("✅", messageID, (err) => {}, true);
-            
             return api.sendMessage({
                 body: "💀 تم إدراجك في قائمة المطلوبين!",
                 attachment: fs.createReadStream(imagePath)
@@ -67,7 +72,10 @@ module.exports = {
             console.error("Error:", error.message);
             // 3. التفاعل بخطأ عند الفشل
             api.setMessageReaction("❌", messageID, (err) => {}, true);
-            return api.sendMessage("❌ فشل الاتصال بالخادم، حاول مرة أخرى.", threadID);
+            return api.sendMessage(
+                `❌ فشل الاتصال بالخادم. السبب: ${error.message}`, 
+                threadID
+            );
         }
     }
 };
