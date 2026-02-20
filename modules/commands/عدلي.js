@@ -7,12 +7,12 @@ const OSS = require('ali-oss');
 module.exports = {
   config: {
     name: 'عدلي',
-    version: '3.0',
-    author: 'AbuUbaida - Ultra Fixed',
+    version: '4.0',
+    author: 'AbuUbaida - Ultra Stable V4',
     countDown: 5,
     prefix: true,
     category: 'ai',
-    description: 'تعديل الصور بالذكاء الاصطناعي - نسخة ثابتة ومحسنة',
+    description: 'تعديل الصور بالذكاء الاصطناعي - نسخة قوية ومحسنة',
     guide: { ar: '{pn} <وصف التعديل>' },
   },
 
@@ -28,7 +28,7 @@ module.exports = {
       return api.sendMessage('⚠️ اكتب وصف التعديل بعد الأمر.', threadID, messageID);
     }
 
-    const processingMsg = await api.sendMessage('🎨 جاري التعديل... انتظر قليلاً.', threadID);
+    const processingMsg = await api.sendMessage('🎨 جاري التعديل القوي... انتظر قليلاً.', threadID);
 
     let tempPath = null;
     let finalPath = null;
@@ -52,7 +52,7 @@ module.exports = {
       const imgBuffer = await axios.get(messageReply.attachments[0].url, { responseType: 'arraybuffer' });
       fs.writeFileSync(tempPath, imgBuffer.data);
 
-      /* 4️⃣ إعداد جلسة */
+      /* 4️⃣ جلسة */
       const sessionCookie = `anonymous_user_id=${uuidv4()}; sbox-guid=${uuidv4()}`;
       const client = axios.create({
         headers: {
@@ -61,10 +61,10 @@ module.exports = {
           'Origin': 'https://notegpt.io',
           'Referer': 'https://notegpt.io/ai-image-editor'
         },
-        timeout: 60000
+        timeout: 90000
       });
 
-      /* 5️⃣ الحصول على STS */
+      /* 5️⃣ STS */
       const sts = await client.get('https://notegpt.io/api/v1/oss/sts-token');
 
       const oss = new OSS({
@@ -80,49 +80,46 @@ module.exports = {
 
       const imgUrl = `https://nc-cdn.oss-us-west-1.aliyuncs.com/${ossName}`;
 
-      /* 6️⃣ إرسال طلب التعديل (محاولة مع إعادة) */
-      let start;
-      let attempts = 0;
+      /* 6️⃣ إرسال طلب التعديل القوي */
+      const start = await client.post('https://notegpt.io/api/v2/images/handle', {
+        image_url: imgUrl,
+        user_prompt: `
+Apply this edit strongly and clearly: ${translatedText}.
+The change must be VERY visible and obvious.
+Do NOT keep original version.
+Keep same face and identity.
+High detail, realistic lighting.
+`,
+        negative_prompt: "unchanged image, original version, original hair color, low quality, blurry, distortion",
+        model: "stabilityai/stable-diffusion-xl-base-1.0",
+        type: 60,
+        sub_type: 4,
+        num: 1,
+        aspect_ratio: "match_input_image",
+        strength: 0.92
+      });
 
-      while (attempts < 2) {
-        start = await client.post('https://notegpt.io/api/v2/images/handle', {
-          image_url: imgUrl,
-          user_prompt: `Transform the image clearly and noticeably: ${translatedText}. 
-Keep same person identity but apply strong visible changes.`,
-          negative_prompt: "low quality, blurry, distorted, unchanged image",
-          model: "stabilityai/stable-diffusion-xl-base-1.0",
-          type: 60,
-          sub_type: 4,
-          num: 1,
-          aspect_ratio: "match_input_image",
-          strength: 0.7
-        });
-
-        if (start.data.code === 100000) break;
-
-        attempts++;
-        await new Promise(r => setTimeout(r, 2000));
-      }
-
-      if (!start || start.data.code !== 100000)
+      if (start.data.code !== 100000)
         throw new Error('السيرفر رفض الطلب.');
 
       /* 7️⃣ متابعة الحالة */
       let resultUrl = null;
 
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 35; i++) {
         await new Promise(r => setTimeout(r, 3000));
 
         const status = await client.get(
           `https://notegpt.io/api/v2/images/status?session_id=${start.data.data.session_id}`
         );
 
-        if (status.data.data.status === 'succeeded') {
+        const state = status.data.data.status;
+
+        if (state === 'succeeded') {
           resultUrl = status.data.data.results[0]?.url;
           break;
         }
 
-        if (status.data.data.status === 'failed') {
+        if (state === 'failed') {
           throw new Error('فشل المعالجة من السيرفر.');
         }
       }
@@ -144,7 +141,6 @@ Keep same person identity but apply strong visible changes.`,
       await api.editMessage(`❌ فشل التعديل:\n${err.message}`, processingMsg.messageID);
     } finally {
 
-      /* 9️⃣ تنظيف */
       [tempPath, finalPath].forEach(p => {
         if (p && fs.existsSync(p)) fs.unlinkSync(p);
       });
