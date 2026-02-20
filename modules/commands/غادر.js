@@ -7,7 +7,7 @@ module.exports = {
     prefix: true,
     groupAdminOnly: true, 
     description: 'يجعل البوت يغادر المجموعة الحالية أو كل المجموعات (للمطور فقط).',
-    category: 'group',
+    category: 'admin',
     guide: {
       en: '{pn} [groupID/all]'
     },
