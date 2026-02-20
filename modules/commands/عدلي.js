@@ -7,17 +7,17 @@ const OSS = require('ali-oss');
 module.exports = {
   config: {
     name: 'عدلي',
-    version: '2.0',
-    author: 'AbuUbaida - Modified',
+    version: '3.0',
+    author: 'AbuUbaida - Ultra Fixed',
     countDown: 5,
     prefix: true,
     category: 'ai',
-    description: 'تعديل الصور بالذكاء الاصطناعي - نسخة محسنة وثابتة',
+    description: 'تعديل الصور بالذكاء الاصطناعي - نسخة ثابتة ومحسنة',
     guide: { ar: '{pn} <وصف التعديل>' },
   },
 
   onStart: async ({ api, event, args }) => {
-    const { threadID, messageID, senderID, messageReply } = event;
+    const { threadID, messageID, messageReply } = event;
     const description = args.join(' ').trim();
 
     if (!messageReply || !messageReply.attachments || messageReply.attachments[0].type !== 'photo') {
@@ -30,25 +30,29 @@ module.exports = {
 
     const processingMsg = await api.sendMessage('🎨 جاري التعديل... انتظر قليلاً.', threadID);
 
+    let tempPath = null;
+    let finalPath = null;
+
     try {
+
       /* 1️⃣ ترجمة */
       const trans = await axios.get(
         `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(description)}`
       );
       const translatedText = trans.data[0][0][0];
 
-      /* 2️⃣ تجهيز مجلد الكاش */
+      /* 2️⃣ تجهيز الكاش */
       const cacheDir = path.resolve(__dirname, 'cache');
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
-      const tempPath = path.join(cacheDir, `input_${uuidv4()}.jpg`);
-      const finalPath = path.join(cacheDir, `output_${uuidv4()}.jpg`);
+      tempPath = path.join(cacheDir, `input_${uuidv4()}.jpg`);
+      finalPath = path.join(cacheDir, `output_${uuidv4()}.jpg`);
 
       /* 3️⃣ تحميل الصورة */
       const imgBuffer = await axios.get(messageReply.attachments[0].url, { responseType: 'arraybuffer' });
       fs.writeFileSync(tempPath, imgBuffer.data);
 
-      /* 4️⃣ إعداد جلسة NoteGPT */
+      /* 4️⃣ إعداد جلسة */
       const sessionCookie = `anonymous_user_id=${uuidv4()}; sbox-guid=${uuidv4()}`;
       const client = axios.create({
         headers: {
@@ -56,10 +60,11 @@ module.exports = {
           'User-Agent': 'Mozilla/5.0',
           'Origin': 'https://notegpt.io',
           'Referer': 'https://notegpt.io/ai-image-editor'
-        }
+        },
+        timeout: 60000
       });
 
-      /* 5️⃣ رفع الصورة لـ OSS */
+      /* 5️⃣ الحصول على STS */
       const sts = await client.get('https://notegpt.io/api/v1/oss/sts-token');
 
       const oss = new OSS({
@@ -75,42 +80,55 @@ module.exports = {
 
       const imgUrl = `https://nc-cdn.oss-us-west-1.aliyuncs.com/${ossName}`;
 
-      /* 6️⃣ إرسال طلب التعديل (نسخة قوية) */
-      const start = await client.post('https://notegpt.io/api/v2/images/handle', {
-        image_url: imgUrl,
-        user_prompt: `Ultra realistic detailed edit, clearly modify the image: ${translatedText}, keep same face and identity`,
-        negative_prompt: "low quality, blurry, distorted, unchanged image",
-        model: "stabilityai/stable-diffusion-xl-base-1.0",
-        type: 60,
-        sub_type: 4,
-        num: 1,
-        aspect_ratio: "match_input_image",
-        strength: 0.9
-      });
+      /* 6️⃣ إرسال طلب التعديل (محاولة مع إعادة) */
+      let start;
+      let attempts = 0;
 
-      if (start.data.code !== 100000)
+      while (attempts < 2) {
+        start = await client.post('https://notegpt.io/api/v2/images/handle', {
+          image_url: imgUrl,
+          user_prompt: `Transform the image clearly and noticeably: ${translatedText}. 
+Keep same person identity but apply strong visible changes.`,
+          negative_prompt: "low quality, blurry, distorted, unchanged image",
+          model: "stabilityai/stable-diffusion-xl-base-1.0",
+          type: 60,
+          sub_type: 4,
+          num: 1,
+          aspect_ratio: "match_input_image",
+          strength: 0.7
+        });
+
+        if (start.data.code === 100000) break;
+
+        attempts++;
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      if (!start || start.data.code !== 100000)
         throw new Error('السيرفر رفض الطلب.');
 
       /* 7️⃣ متابعة الحالة */
       let resultUrl = null;
 
-      for (let i = 0; i < 25; i++) {
+      for (let i = 0; i < 30; i++) {
         await new Promise(r => setTimeout(r, 3000));
+
         const status = await client.get(
           `https://notegpt.io/api/v2/images/status?session_id=${start.data.data.session_id}`
         );
 
         if (status.data.data.status === 'succeeded') {
-          resultUrl = status.data.data.results[0].url;
+          resultUrl = status.data.data.results[0]?.url;
           break;
+        }
+
+        if (status.data.data.status === 'failed') {
+          throw new Error('فشل المعالجة من السيرفر.');
         }
       }
 
       if (!resultUrl)
         throw new Error('انتهت المهلة، السيرفر بطيء.');
-
-      if (resultUrl === imgUrl)
-        throw new Error('لم يتم تعديل الصورة (رجع نفس الأصل).');
 
       /* 8️⃣ تحميل النتيجة */
       const resImg = await axios.get(resultUrl, { responseType: 'arraybuffer' });
@@ -121,13 +139,18 @@ module.exports = {
         attachment: fs.createReadStream(finalPath)
       }, threadID);
 
-      /* 9️⃣ تنظيف */
-      [tempPath, finalPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
-      api.deleteMessage(processingMsg.messageID);
-
     } catch (err) {
       console.error(err);
-      api.editMessage(`❌ فشل التعديل:\n${err.message}`, processingMsg.messageID);
+      await api.editMessage(`❌ فشل التعديل:\n${err.message}`, processingMsg.messageID);
+    } finally {
+
+      /* 9️⃣ تنظيف */
+      [tempPath, finalPath].forEach(p => {
+        if (p && fs.existsSync(p)) fs.unlinkSync(p);
+      });
+
+      if (processingMsg?.messageID)
+        api.deleteMessage(processingMsg.messageID).catch(() => {});
     }
   }
 };
