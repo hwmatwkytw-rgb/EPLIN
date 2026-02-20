@@ -36,8 +36,8 @@ module.exports = {
       Threads.set(threadID, threadData);
 
       // --- الميزة الجديدة: تغيير كنية البوت ---
-      const botName = "سينكو"; // يمكنك تغيير اسم البوت هنا
-      const newNickname = newPrefix === '' ? `[ بدون بادئة ] ${botName}` : `[ ${newPrefix} ] ${botName}`;
+      const botName = "𝕖𝕡𝕚𝕝𝕚𝕟🕸 "; // يمكنك تغيير اسم البو
+      const newNickname = newPrefix === '' ? `[ بدون بادئة ] ${botName}` : ` 𝑳 ${newPrefix} ❁ ${botName}`;
       
       await api.changeNickname(newNickname, threadID, botID);
 
