@@ -1,12 +1,12 @@
 module.exports = {
   config: {
     name: 'غادر',
-    version: '1.0',
+    version: '1.2',
     author: 'XaviaTeam',
     countDown: 5,
     prefix: true,
-    groupAdminOnly: true, // فقط أدمن البوت
-    description: 'Makes the bot leave the current group or all groups.',
+    groupAdminOnly: true, 
+    description: 'يجعل البوت يغادر المجموعة الحالية أو كل المجموعات (للمطور فقط).',
     category: 'group',
     guide: {
       en: '{pn} [groupID/all]'
@@ -15,11 +15,22 @@ module.exports = {
 
   onStart: async ({ api, event, args }) => {
     try {
+      const developerID = '61588108307572'; // أيديك
+      const senderID = event.senderID;
+
+      // إذا لم يكن المرسل هو المطور، تفاعل بـ ❌ وتوقف
+      if (senderID !== developerID) {
+        return api.setMessageReaction("❌", event.messageID, (err) => {}, true);
+      }
+
+      // إذا كان المطور، تفاعل بـ ✅ واستمر في التنفيذ
+      api.setMessageReaction("✅", event.messageID, (err) => {}, true);
+
       const botID = api.getCurrentUserID?.() || global.botID;
       const input = args[0]?.toLowerCase();
       const threadIDs = [];
 
-      // إذا المستخدم كتب "all"، يغادر كل الجروبات ما عدا الجروب الحالي
+      // منطق تحديد المجموعات
       if (input === 'all') {
         const threadList = (await api.getThreadList(100, null, ['INBOX'])) || [];
         const groups = threadList.filter(
@@ -30,28 +41,24 @@ module.exports = {
         );
         threadIDs.push(...groups.map((t) => t.threadID));
       } else if (args.length > 0) {
-        // تحويل المدخلات إلى threadIDs صحيحة
         const inputThreadIDs = args
           .map((id) => id.replace(/[^0-9]/g, ''))
-          .filter((id) => id.length >= 16 && !isNaN(id));
+          .filter((id) => id.length >= 15 && !isNaN(id));
         threadIDs.push(...inputThreadIDs);
       } else {
         threadIDs.push(event.threadID);
       }
 
-      // الخروج من كل thread
+      // الخروج من المجموعات المحددة
       for (const threadID of threadIDs) {
         await new Promise((resolve) => {
           api.removeUserFromGroup(botID, threadID, () => resolve(true));
         });
-        await new Promise((r) => setTimeout(r, 300)); // تأخير بسيط بين كل خروج
+        await new Promise((r) => setTimeout(r, 500)); // تأخير بسيط لتجنب الحظر
       }
-
-      api.sendMessage('تم خروج البوت من الجروبات المحددة بنجاح.', event.threadID);
 
     } catch (error) {
       console.error('Error in غادر command:', error);
-      api.sendMessage('حدث خطأ أثناء محاولة خروج البوت.', event.threadID);
     }
   },
 };
