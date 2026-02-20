@@ -1,52 +1,47 @@
 module.exports = {
     config: {
         name: "الطلبات",
-        version: "6.0",
-        author: "wsky & Abu Obaida",
+        version: "6.5",
+        author: "سينكو",
         countDown: 5,
         role: 2,
         prefix: true,
-        description: "إدارة طلبات تفعيل البوت الملكية",
+        description: "إدارة طلبات تفعيل البوت بزخرفة المسار الطولي.",
         category: "المطور"
     },
 
     onReply: async ({ api, event, handleReply }) => {
         const { body, threadID, messageID, senderID } = event;
         
-        // التحقق من أن الشخص الذي يرد هو المطور الذي طلب القائمة
         if (senderID !== handleReply.author) return;
 
         try {
             const args = body.split(/\s+/);
-            const num = parseInt(args[0]); // استخراج الرقم الأول
+            const num = parseInt(args[0]);
             const isBan = body.includes("حظر");
             const isRefuse = body.includes("رفض");
             
-            // التأكد من وجود الطلب في القائمة
             const target = handleReply.pending[num - 1];
             if (!target) {
-                return api.sendMessage("ꕥ ┋ ❌ الرقم الذي اخترته غير موجود في القائمة.", threadID, messageID);
+                return api.sendMessage("●───── ⌬ ─────●\n┇ ❌ الرقم غير موجود في القائمة.\n●───── ⌬ ─────●", threadID, messageID);
             }
 
             if (isBan || isRefuse) {
-                // في حالة الرفض أو الحظر
-                await api.sendMessage(`ꕥ ┋ ⚠️ تم ${isBan ? "حـظـر" : "رفـض"} طلب تفعيل المجموعة من قبل المطور.`, target.threadID);
+                await api.sendMessage(`●───── ⌬ ─────●\n┇ ⚠️ تـم ${isBan ? "حـظـر" : "رفـض"} طـلـبكم.\n●───── ⌬ ─────●`, target.threadID);
                 await api.removeUserFromGroup(api.getCurrentUserID(), target.threadID);
                 
-                api.sendMessage(`╭───〔 𓆩 ❌ تـم الـرفـض 𓆪 〕───╮\n┃ ꕥ الـمجموعة: ${target.name}\n┃ ꕥ الـإجراء: ${isBan ? "حـظر طـرد" : "رفـض فقط"}\n╰──────────────────╯`, threadID);
+                api.sendMessage(`●───── ⌬ ─────●\n┇ ⦿ ⟬ تـم الـرفـض ❌ ⟭\n┇\n┇ 𓋰 الـمجموعة: ${target.name}\n┇ 𓋰 الإجـراء: ${isBan ? "حـظر طـرد" : "رفـض"}\n●───── ⌬ ─────●`, threadID);
             } else {
-                // في حالة القبول
-                await api.sendMessage(`ꕥ ┋ ✅ تـم تـفعيل الـبوت بـنجاح!\nꕥ ┋ اكـتب (اوامر) لـاستكشاف الـميزات.`, target.threadID);
+                await api.sendMessage(`●───── ⌬ ─────●\n┇ ✅ تـم تـفعيل الـبوت بـنجاح!\n┇ 𓋰 اكتب (اوامر) للبدء.\n●───── ⌬ ─────●`, target.threadID);
                 
-                api.sendMessage(`╭───〔 𓆩 ✅ تـم الـتـفـعـيـل 𓆪 〕───╮\n┃ ꕥ الـمجموعة: ${target.name}\n┃ ꕥ الـحالة: نـاجح\n╰──────────────────╯`, threadID);
+                api.sendMessage(`●───── ⌬ ─────●\n┇ ⦿ ⟬ تـم الـتـفـعـيـل ✅ ⟭\n┇\n┇ 𓋰 الـمجموعة: ${target.name}\n┇ 𓋰 الـحالة: نـاجح\n●───── ⌬ ─────●`, threadID);
             }
 
-            // حذف رسالة الطلبات القديمة لتنظيم الشات
             api.unsendMessage(handleReply.messageID);
 
         } catch (e) {
             console.error(e);
-            api.sendMessage("ꕥ ┋ ❌ حـدث خطأ أثناء تنفيذ الإجراء.", threadID);
+            api.sendMessage("❌ حدث خطأ أثناء التنفيذ.", threadID);
         }
     },
 
@@ -54,32 +49,28 @@ module.exports = {
         const { threadID, senderID } = event;
 
         if (!config.adminUIDs.includes(senderID)) {
-            return api.sendMessage("ꕥ ┋ ❌ هـذا الأمر مخصص لعرش المطور فقط.", threadID);
+            return api.sendMessage("●───── ⌬ ─────●\n┇ ❌ هـذا الأمـر لـلـمـطـوࢪ فـقـط.\n●───── ⌬ ─────●", threadID);
         }
 
-        // جلب قائمة الطلبات المعلقة (Pending)
         const list = await api.getThreadList(50, null, ["PENDING", "OTHER"]);
-        const pendingGroups = list.filter(t => t.isGroup); // تصفية المجموعات فقط
+        const pendingGroups = list.filter(t => t.isGroup);
 
         if (!pendingGroups.length) {
-            return api.sendMessage("ꕥ ┋ 𓆩 📭 𓆪 لا توجد طلبات تفعيل حالياً.", threadID);
+            return api.sendMessage("●───── ⌬ ─────●\n┇ 𓆩 📭 𓆪 لا تـوجـد طـلـبـات حـالـيـاً.\n●───── ⌬ ─────●", threadID);
         }
 
-        let msg = `ꕥ ─────────────── ꕥ\n`;
-        msg += `  𓆩  𓆪  طـلـبات الـتـفـعـيـل  𓆩  𓆪\n`;
-        msg += `ꕥ ─────────────── ꕥ\n\n`;
+        let msg = `●───── ⌬ ─────●\n┇ ⦿ ⟬ طـلـبـات الـتـفـعـيـل ⟭\n┇\n`;
 
         pendingGroups.forEach((t, i) => {
-            msg += `╭───〔 𓆩 ${i + 1} 𓆪 〕───╮\n`;
-            msg += ` ꕥ الـاسم: ${t.name || "مجموعة غير معروفة"}\n`;
-            msg += ` 🆔 الـآيدي: ${t.threadID}\n`;
-            msg += `\n\n`;
+            msg += `┇ ⟬ ${i + 1} ⟭ ❪ ${t.name || "مجموعة غير معروفة"} ❫\n`;
+            msg += `┇ 🆔 𝖨𝖣: ${t.threadID}\n`;
+            if (i < pendingGroups.length - 1) msg += `┇ ╼╼╼╼╼╼╼╼╼╼╼╼╼\n`;
         });
 
-        msg += `ꕥ ─────────────── ꕥ\n`;
-        msg += `💡 رد بالـرقم لـلقبول\n`;
-        msg += `💡 رد بـ (رفض + الرقم) لـلخروج\n`;
-        msg += `💡 رد بـ (حظر + الرقم) لـلخروج الـنهائي`;
+        msg += `┇\n●───── ⌬ ─────●\n`;
+        msg += ` ⠇رد بـ الـرقم للـقـبـول\n`;
+        msg += ` ⠇رد بـ (رفض + الرقم) لـلـطـرد\n`;
+        msg += ` ⠇رد بـ (حظر + الرقم) لـلـحـظـر`;
 
         api.sendMessage(msg, threadID, (err, info) => {
             if (err) return console.error(err);
