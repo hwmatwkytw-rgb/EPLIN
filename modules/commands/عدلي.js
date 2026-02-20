@@ -7,109 +7,113 @@ const OSS = require('ali-oss');
 module.exports = {
     config: {
         name: 'عدلي',
-        version: '1.1',
+        version: '1.3',
         author: 'محمد',
         countDown: 5,
         prefix: true,
         category: 'ai',
-        description: 'تعديل الصور بالذكاء الاصطناعي مع ترجمة تلقائية للأوامر',
-        guide: { en: '{pn} <الوصف بالترجمة>' },
+        description: 'تعديل الصور بالذكاء الاصطناعي - نسخة مستقرة',
+        guide: { en: '{pn} <الوصف>' },
     },
 
     onStart: async ({ api, event, args }) => {
         const { threadID, messageID, senderID, messageReply } = event;
-        let description = args.join(' ').trim();
+        const description = args.join(' ').trim();
 
         if (!messageReply || !messageReply.attachments || messageReply.attachments[0].type !== 'photo') {
-            return api.sendMessage('•-• ⚠️ يرجى الرد على صورة مع كتابة الوصف (مثلاً: حولها لكرتون)', threadID, messageID);
+            return api.sendMessage('•-• ⚠️ رد على صورة واكتب التعديل المطلوب.', threadID, messageID);
         }
 
         if (!description) {
-            return api.sendMessage('•-• ⚠️ يرجى كتابة وصف للتعديل المطلوب', threadID, messageID);
+            return api.sendMessage('•-• ⚠️ يرجى كتابة وصف للتعديل (مثال: تغيير لون العين للأزرق).', threadID, messageID);
         }
 
-        const processingMsg = await api.sendMessage('•-• 🎨 جاري معالجة طلبك وترجمة الوصف...', threadID, messageID);
+        const processingMsg = await api.sendMessage('•-• 🎨 جاري التعديل... قد يستغرق الأمر 20 ثانية.', threadID, messageID);
 
         try {
-            // 1. ترجمة الوصف للإنجليزية لضمان أفضل نتيجة من الموديل
-            const translationRes = await axios.get(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(description)}`);
-            const translatedDescription = translationRes.data[0][0][0];
+            // 1. ترجمة الوصف (ضرورية لأن الموديل لا يدعم العربية في التعديل)
+            const trans = await axios.get(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(description)}`);
+            const translatedText = trans.data[0][0][0];
 
-            const attachmentUrl = messageReply.attachments[0].url;
-            const cacheDir = path.join(__dirname, 'cache');
+            const cacheDir = path.resolve(__dirname, 'cache');
             if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+            const tempPath = path.join(cacheDir, `in_${senderID}.png`);
 
-            const tempPath = path.join(cacheDir, `input_${senderID}.png`);
-            const imageResp = await axios.get(attachmentUrl, { responseType: 'arraybuffer' });
-            fs.writeFileSync(tempPath, imageResp.data);
+            // تحميل الصورة
+            const imgBuffer = await axios.get(messageReply.attachments[0].url, { responseType: 'arraybuffer' });
+            fs.writeFileSync(tempPath, imgBuffer.data);
 
-            // 2. إعداد جلسة NoteGPT
-            const timestamp = Date.now();
-            const anonymousId = uuidv4();
-            const cookies = `anonymous_user_id=${anonymousId}; i18n_redirected=en; sbox-guid=${uuidv4()}`;
-            const client = axios.create({ headers: { 'Cookie': cookies, 'User-Agent': 'Mozilla/5.0' } });
+            // 2. إعداد الاتصال بـ NoteGPT
+            const sessionCookie = `anonymous_user_id=${uuidv4()}; sbox-guid=${uuidv4()}`;
+            const client = axios.create({
+                headers: {
+                    'Cookie': sessionCookie,
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Origin': 'https://notegpt.io',
+                    'Referer': 'https://notegpt.io/ai-image-editor'
+                }
+            });
 
-            // 3. رفع الصورة
-            const stsRes = await client.get('https://notegpt.io/api/v1/oss/sts-token');
-            const stsData = stsRes.data.data;
-            const ossClient = new OSS({
+            // 3. الحصول على التوكن والرفع
+            const sts = await client.get('https://notegpt.io/api/v1/oss/sts-token');
+            const oss = new OSS({
                 region: 'oss-us-west-1',
-                accessKeyId: stsData.AccessKeyId,
-                accessKeySecret: stsData.AccessKeySecret,
-                stsToken: stsData.SecurityToken,
+                accessKeyId: sts.data.data.AccessKeyId,
+                accessKeySecret: sts.data.data.AccessKeySecret,
+                stsToken: sts.data.data.SecurityToken,
                 bucket: 'nc-cdn'
             });
 
-            const ossPath = `notegpt/web3in1/${uuidv4()}.jpg`;
-            await ossClient.put(ossPath, tempPath);
-            const uploadedUrl = `https://nc-cdn.oss-us-west-1.aliyuncs.com/${ossPath}`;
+            const ossName = `notegpt/web3in1/${uuidv4()}.jpg`;
+            await oss.put(ossName, tempPath);
+            const imgUrl = `https://nc-cdn.oss-us-west-1.aliyuncs.com/${ossName}`;
 
-            // 4. طلب التعديل (إرسال الوصف المترجم)
-            const startRes = await client.post('https://notegpt.io/api/v2/images/handle', {
-                image_url: uploadedUrl,
+            // 4. طلب التعديل الفعلي
+            // ملاحظة: استخدمنا sub_type: 4 وموديل SDXL لضمان التغيير
+            const start = await client.post('https://notegpt.io/api/v2/images/handle', {
+                image_url: imgUrl,
+                user_prompt: `High quality edit, ${translatedText}`,
+                negative_prompt: "low quality, blurry, distorted",
+                model: "stabilityai/stable-diffusion-xl-base-1.0",
                 type: 60,
-                user_prompt: translatedDescription, // النص المترجم هنا
-                aspect_ratio: 'match_input_image',
-                num: 1, // صورة واحدة لسرعة الاستجابة
-                model: 'google/nano-banana',
-                sub_type: 3
+                sub_type: 4,
+                num: 1,
+                aspect_ratio: "match_input_image",
+                strength: 0.75 // القوة هنا تضمن أن يتم التعديل وليس فقط النسخ
             });
 
-            if (startRes.data.code !== 100000) throw new Error('فشل بدء المعالجة');
-            const sessionId = startRes.data.data.session_id;
+            if (start.data.code !== 100000) throw new Error('السيرفر رفض الطلب، حاول لاحقاً.');
 
-            // 5. مراقبة الحالة
-            let results = null;
-            for (let i = 0; i < 20; i++) {
+            // 5. متابعة الحالة
+            let resultUrl = null;
+            for (let i = 0; i < 30; i++) {
                 await new Promise(r => setTimeout(r, 3000));
-                const statusRes = await client.get(`https://notegpt.io/api/v2/images/status?session_id=${sessionId}`);
-                if (statusRes.data.data.status === 'succeeded') {
-                    results = statusRes.data.data.results;
+                const status = await client.get(`https://notegpt.io/api/v2/images/status?session_id=${start.data.data.session_id}`);
+                if (status.data.data.status === 'succeeded') {
+                    resultUrl = status.data.data.results[0].url;
                     break;
-                } else if (statusRes.data.data.status === 'failed') throw new Error('فشلت العملية في السيرفر');
+                }
             }
 
-            if (!results) throw new Error('استغرق الأمر وقتاً طويلاً');
+            if (!resultUrl) throw new Error('انتهت المهلة، السيرفر بطيء جداً.');
 
             // 6. إرسال النتيجة
-            const resultUrl = results[0].url;
-            const finalImagePath = path.join(cacheDir, `result_${senderID}.png`);
-            const finalImgRes = await axios.get(resultUrl, { responseType: 'arraybuffer' });
-            fs.writeFileSync(finalImagePath, finalImgRes.data);
+            const finalPath = path.join(cacheDir, `out_${senderID}.png`);
+            const resImg = await axios.get(resultUrl, { responseType: 'arraybuffer' });
+            fs.writeFileSync(finalPath, resImg.data);
 
             await api.sendMessage({
-                body: `✨ تم التعديل بنجاح!\n📝 الوصف المترجم: ${translatedDescription}`,
-                attachment: fs.createReadStream(finalImagePath)
+                body: `✨ تم التعديل!\n📝 تم فهم طلبك كـ: ${translatedText}`,
+                attachment: fs.createReadStream(finalPath)
             }, threadID);
 
-            // تنظيف الملفات
-            fs.unlinkSync(tempPath);
-            fs.unlinkSync(finalImagePath);
-            await api.deleteMessage(processingMsg.messageID);
+            // تنظيف
+            [tempPath, finalPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
+            api.deleteMessage(processingMsg.messageID);
 
-        } catch (error) {
-            console.error(error);
-            api.sendMessage(`•-• ❌ خطأ: ${error.message}`, threadID, messageID);
+        } catch (e) {
+            console.error(e);
+            api.editMessage(`•-• ❌ فشل: ${e.message}`, processingMsg.messageID);
         }
     }
 };
