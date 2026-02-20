@@ -3,89 +3,98 @@ const axios = require('axios');
 module.exports = {
     config: {
         name: 'ابلين',
-        version: '1.0',
-        author: 'محمد',
+        version: '2.6',
+        author: 'محمد & Gemini',
         countDown: 3,
-        prefix: false,        // الآن يشتغل بدون بادئة
-        noPrefix: true,       // يخلي معالج الأوامر يتعرف عليه بدون بادئة
+        prefix: false,
+        noPrefix: true,
         groupAdminOnly: false,
-        description: 'ذكاء اصطناعي سوداني',
+        description: 'ذكاء اصطناعي يتفاعل برياكشن ويرسل الرد مباشرة',
         category: 'ai',
-        guide: {
-            en: '{pn} <سؤالك>'
-        },
+        guide: { en: 'تكلم مع ابلين مباشرة أو رد على رسائلها' },
     },
 
     conversations: new Map(),
 
-    onStart: async ({ api, event, args }) => {
-        const threadID = event.threadID;
-        const messageID = event.messageID;
-        const userId = event.senderID;
-        const query = args.join(' ').trim();
+    // وظيفة لتحديد نوع التفاعل (Reaction)
+    getReaction: (text) => {
+        const words = text.toLowerCase();
+        if (words.match(/(هخه|ههه|يضحك|مضحك|اضحك|هههه|ايي|😂)/)) return "😂";
+        if (words.match(/(حب|احبك|يا روحي|جميل|حلو|قلبي|عسل|❤️)/)) return "❤️";
+        if (words.match(/(حزين|زعلان|يبكي|ليه|اهي|مكسور|🥺)/)) return "🥺";
+        if (words.match(/(كيف|متى|وين|مين|شنو|ليه|لماذا|مالك|🤔)/)) return "🤔";
+        if (words.match(/(شكرا|تسلم|يسلمو|كفو|يا ذوق|🌹)/)) return "🌹";
+        if (words.match(/(غبي|سيء|اكرهك|بايخ|حيوان|😒)/)) return "😒";
+        return "✨"; 
+    },
 
-        if (!query) {
-            return api.sendMessage('•-•وات ', threadID, messageID);
+    onStart: async function ({ api, event }) {
+        const { threadID, messageID, senderID, messageReply, body } = event;
+        if (!body) return;
+
+        // 1. نظام كشف المناداة أو الرد (Reply)
+        const isReplyToBot = messageReply && messageReply.senderID === api.getCurrentUserID();
+        const isCallingName = body.toLowerCase().startsWith("ابلين");
+        
+        let query = "";
+        if (isCallingName) {
+            query = body.slice(5).trim(); 
+        } else if (isReplyToBot) {
+            query = body.trim(); 
+        } else {
+            return; 
         }
 
-        if (query.toLowerCase() === 'مسح' || query.toLowerCase() === 'reset') {
-            module.exports.conversations.delete(userId);
-            return api.sendMessage('•-•  تم مسح المحادثة', threadID, messageID);
+        if (!query && isCallingName) {
+            api.setMessageReaction("💖", messageID, () => {}, true);
+            return api.sendMessage('•-• أيوة، ابلين معاك.. قولي في شنو؟', threadID, messageID);
         }
 
-        const infoMsg = await api.sendMessage('•-• جاري المعالجة...', threadID, messageID);
-        const processingID = infoMsg.messageID;
+        // 2. التفاعل برياكشن (Reaction) على رسالة المستخدم مباشرة
+        const reaction = this.getReaction(query);
+        api.setMessageReaction(reaction, messageID, (err) => {
+             if (err) console.error("فشل وضع التفاعل");
+        }, true);
 
         try {
-            if (!module.exports.conversations.has(userId)) {
-                module.exports.conversations.set(userId, []);
+            if (!this.conversations.has(senderID)) {
+                this.conversations.set(senderID, []);
             }
 
-            const history = module.exports.conversations.get(userId);
-            history.push({ role: 'user', content: query });
+            const history = this.conversations.get(senderID);
+            
+            // توجيهات شخصية ابلين
+            const systemPrompt = "أنتِ فتاة ذكية ولطيفة تدعين 'ابلين'. تحدثي بلهجة سودانية واضحة ومحببة. اذكري اسمك 'ابلين' في ردودك أحياناً. كوني ذكية وتفاعلي مع كلام المستخدم كأنك إنسانة حقيقية.";
+            
+            const messages = [
+                { role: 'system', content: systemPrompt },
+                ...history,
+                { role: 'user', content: query }
+            ];
 
-            if (history.length > 20) history.splice(0, history.length - 20);
-
-            const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
-            let formData = "";
-            formData += `--${boundary}\r\n`;
-            formData += `Content-Disposition: form-data; name="chat_style"\r\n\r\nchat\r\n`;
-            formData += `--${boundary}\r\n`;
-            formData += `Content-Disposition: form-data; name="chatHistory"\r\n\r\n${JSON.stringify(history)}\r\n`;
-            formData += `--${boundary}--\r\n`;
-
-            const response = await axios({
-                method: 'POST',
-                url: 'https://api.deepai.org/hacking_is_a_serious_crime',
-                headers: {
-                    'content-type': `multipart/form-data; boundary=${boundary}`,
-                    'origin': 'https://deepai.org',
-                    'user-agent': 'Mozilla/5.0'
-                },
-                data: formData
+            // 3. طلب الرد من الذكاء الاصطناعي
+            const response = await axios.post('https://api.deepai.org/hacking_is_a_serious_crime', 
+                `chat_style=chat&chatHistory=${encodeURIComponent(JSON.stringify(messages))}`, {
+                headers: { 
+                    'content-type': 'application/x-www-form-urlencoded', 
+                    'user-agent': 'Mozilla/5.0',
+                    'origin': 'https://deepai.org'
+                }
             });
 
-            let reply = '';
-            if (response.data) {
-                if (typeof response.data === 'string') reply = response.data;
-                else if (response.data.output) reply = response.data.output;
-                else if (response.data.text) reply = response.data.text;
-            }
-
-            reply = reply
-                .replace(/\\n/g, '\n')
-                .replace(/\\u0021/g, '!')
-                .replace(/\\"/g, '"')
-                .trim();
-
-            if (reply.length > 2000) reply = reply.substring(0, 1997) + '...';
-
+            let reply = response.data.output || response.data.text || "ابلين ما عرفت ترد، حاول تاني؟";
+            
+            // تحديث الذاكرة
+            history.push({ role: 'user', content: query });
             history.push({ role: 'assistant', content: reply });
+            if (history.length > 20) history.splice(0, 2);
 
-            await api.editMessage(`•-• ${reply}`, processingID);
+            // 4. إرسال الرد النهائي مباشرة
+            return api.sendMessage(`•-• ${reply}`, threadID, messageID);
 
         } catch (error) {
-            api.editMessage(`•-• ❌ حصل خطأ: ${error.message}`, processingID);
+            console.error(error);
+            api.sendMessage(`•-• حصلت مشكلة تقنية مع ابلين.. حاول لاحقاً.`, threadID, messageID);
         }
     },
 };
