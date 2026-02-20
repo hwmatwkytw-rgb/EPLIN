@@ -37,7 +37,7 @@ module.exports = {
             smart: { keywords: ["احشك", "متى", "اين", "لماذا", "من هو", "سؤال"], emojis: ["🤔", "💡", "🧠", "🧐"] }
         };
 
-        let chosenEmoji = "🔍"; // الافتراضي
+        let chosenEmoji = "🌚"; // الافتراضي
         const lowerQuery = query.toLowerCase();
 
         // اختيار إيموجي عشوائي من التصنيف المناسب
