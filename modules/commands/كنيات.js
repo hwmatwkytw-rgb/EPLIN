@@ -9,7 +9,7 @@ module.exports = {
     prefix: true,
     groupAdminOnly: false,
     description: "تعيين كنيات موحدة لـ 250 عضو مع استبدال كلمة اسم بالاسم الأول",
-    category: "group",
+    category: "admin",
     guide: {
       ar: "   {pn} <النمط> - استبدل كلمة 'اسم' بالاسم الأول لكل عضو"
     }
