@@ -2,17 +2,16 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const OSS = require('ali-oss');
 
 module.exports = {
   config: {
     name: 'عدلي',
-    version: '4.0',
-    author: 'AbuUbaida - Ultra Stable V4',
+    version: '5.0',
+    author: 'AbuUbaida - Hum API Edition',
     countDown: 5,
     prefix: true,
     category: 'ai',
-    description: 'تعديل الصور بالذكاء الاصطناعي - نسخة قوية ومحسنة',
+    description: 'تعديل الصور بالذكاء الاصطناعي باستخدام Hum API - نسخة سريعة وبسيطة',
     guide: { ar: '{pn} <وصف التعديل>' },
   },
 
@@ -28,125 +27,47 @@ module.exports = {
       return api.sendMessage('⚠️ اكتب وصف التعديل بعد الأمر.', threadID, messageID);
     }
 
-    const processingMsg = await api.sendMessage('🎨 جاري التعديل القوي... انتظر قليلاً.', threadID);
-
-    let tempPath = null;
-    let finalPath = null;
+    const processingMsg = await api.sendMessage('🎨 جاري تعديل الصورة... انتظر قليلاً.', threadID);
 
     try {
-
-      /* 1️⃣ ترجمة */
-      const trans = await axios.get(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(description)}`
-      );
-      const translatedText = trans.data[0][0][0];
-
-      /* 2️⃣ تجهيز الكاش */
+      // تجهيز مجلد مؤقت
       const cacheDir = path.resolve(__dirname, 'cache');
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
-      tempPath = path.join(cacheDir, `input_${uuidv4()}.jpg`);
-      finalPath = path.join(cacheDir, `output_${uuidv4()}.jpg`);
+      const tempPath = path.join(cacheDir, `input_${uuidv4()}.jpg`);
+      const finalPath = path.join(cacheDir, `output_${uuidv4()}.jpg`);
 
-      /* 3️⃣ تحميل الصورة */
+      // تحميل الصورة المرفقة
       const imgBuffer = await axios.get(messageReply.attachments[0].url, { responseType: 'arraybuffer' });
       fs.writeFileSync(tempPath, imgBuffer.data);
 
-      /* 4️⃣ جلسة */
-      const sessionCookie = `anonymous_user_id=${uuidv4()}; sbox-guid=${uuidv4()}`;
-      const client = axios.create({
-        headers: {
-          'Cookie': sessionCookie,
-          'User-Agent': 'Mozilla/5.0',
-          'Origin': 'https://notegpt.io',
-          'Referer': 'https://notegpt.io/ai-image-editor'
+      // إرسال الصورة + وصف التعديل للـ Hum API
+      const response = await axios.post(
+        'https://pastebin-api.vercel.app/raw/YqSChU', // ضع هنا رابط API الفعلي
+        {
+          description: description,
+          image: fs.createReadStream(tempPath)
         },
-        timeout: 90000
-      });
+        { responseType: 'arraybuffer' }
+      );
 
-      /* 5️⃣ STS */
-      const sts = await client.get('https://notegpt.io/api/v1/oss/sts-token');
+      // حفظ النتيجة محلياً
+      fs.writeFileSync(finalPath, response.data);
 
-      const oss = new OSS({
-        region: 'oss-us-west-1',
-        accessKeyId: sts.data.data.AccessKeyId,
-        accessKeySecret: sts.data.data.AccessKeySecret,
-        stsToken: sts.data.data.SecurityToken,
-        bucket: 'nc-cdn'
-      });
-
-      const ossName = `notegpt/web3in1/${uuidv4()}.jpg`;
-      await oss.put(ossName, tempPath);
-
-      const imgUrl = `https://nc-cdn.oss-us-west-1.aliyuncs.com/${ossName}`;
-
-      /* 6️⃣ إرسال طلب التعديل القوي */
-      const start = await client.post('https://notegpt.io/api/v2/images/handle', {
-        image_url: imgUrl,
-        user_prompt: `
-Apply this edit strongly and clearly: ${translatedText}.
-The change must be VERY visible and obvious.
-Do NOT keep original version.
-Keep same face and identity.
-High detail, realistic lighting.
-`,
-        negative_prompt: "unchanged image, original version, original hair color, low quality, blurry, distortion",
-        model: "stabilityai/stable-diffusion-xl-base-1.0",
-        type: 60,
-        sub_type: 4,
-        num: 1,
-        aspect_ratio: "match_input_image",
-        strength: 0.92
-      });
-
-      if (start.data.code !== 100000)
-        throw new Error('السيرفر رفض الطلب.');
-
-      /* 7️⃣ متابعة الحالة */
-      let resultUrl = null;
-
-      for (let i = 0; i < 35; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-
-        const status = await client.get(
-          `https://notegpt.io/api/v2/images/status?session_id=${start.data.data.session_id}`
-        );
-
-        const state = status.data.data.status;
-
-        if (state === 'succeeded') {
-          resultUrl = status.data.data.results[0]?.url;
-          break;
-        }
-
-        if (state === 'failed') {
-          throw new Error('فشل المعالجة من السيرفر.');
-        }
-      }
-
-      if (!resultUrl)
-        throw new Error('انتهت المهلة، السيرفر بطيء.');
-
-      /* 8️⃣ تحميل النتيجة */
-      const resImg = await axios.get(resultUrl, { responseType: 'arraybuffer' });
-      fs.writeFileSync(finalPath, resImg.data);
-
+      // إرسال الصورة المعدلة في المحادثة
       await api.sendMessage({
-        body: `✨ تم التعديل بنجاح!\n📝 التعديل المفهوم: ${translatedText}`,
+        body: `✨ تم التعديل بنجاح!\n📝 التعديل: ${description}`,
         attachment: fs.createReadStream(finalPath)
       }, threadID);
+
+      // حذف الملفات المؤقتة
+      [tempPath, finalPath].forEach(p => { if (fs.existsSync(p)) fs.unlinkSync(p); });
 
     } catch (err) {
       console.error(err);
       await api.editMessage(`❌ فشل التعديل:\n${err.message}`, processingMsg.messageID);
     } finally {
-
-      [tempPath, finalPath].forEach(p => {
-        if (p && fs.existsSync(p)) fs.unlinkSync(p);
-      });
-
-      if (processingMsg?.messageID)
-        api.deleteMessage(processingMsg.messageID).catch(() => {});
+      if (processingMsg?.messageID) api.deleteMessage(processingMsg.messageID).catch(() => {});
     }
   }
 };
