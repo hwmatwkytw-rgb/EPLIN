@@ -6,11 +6,11 @@ module.exports = {
     config: {
         name: 'إشعار',
         version: '1.2',
-        author: 'Hridoy',
+        author: 'سينكو',
         countDown: 5,
         prefix: true,
         adminOnly: true,
-        description: 'إرسال إشعار ملكي إلى جميع المجموعات (للمشرف فقط).',
+        description: 'إرسال إشعار إلى جميع المجموعات بزخرفة المسار الطولي.',
         category: 'admin',
         guide: {
             ar: '{pn} <النص> (أو الرد على صورة/فيديو مع النص)'
@@ -23,9 +23,9 @@ module.exports = {
         const text = args.join(' ').trim();
         if (!text) {
             return api.sendMessage(
-                "◢◤━━━━━━━━ 🖤 ━━━━━━━◥◣\n" +
-                "⚠️ يرجى كتابة نص الإشعار بعد الأمر\n" +
-                "◥◣━━━━━━━━━━━━━━━━━━◢◤",
+                "●───── ⌬ ─────●\n" +
+                "┇ ⚠️ يرجى كتابة النص\n" +
+                "●───── ⌬ ─────●",
                 threadID,
                 messageID
             );
@@ -59,15 +59,17 @@ module.exports = {
                 }
             }
 
-            // --- صياغة الرسالة بالموديل 16 الفخم ---
+            // --- صياغة الرسالة بالستايل الطولي المختار ---
             const notificationMessage =
-                `◢◤━━━━━━━━ 🖤 ━━━━━━━◥◣\n` +
-                `                 إشـعـار إداري 🦆\n\n` +
-                `❖ ┠ الـمـرسل: 〖 المطور 〗\n` +
-                `❖ ┠ الـرسـالـة:\n` +
-                `〖 ${text} 〗\n\n` +
-                `❖ ┠ الـتـوقـيـت: 〖 ${sendTime} 〗\n` +
-                `◥◣━━━━━━━━━━━━━━━━━━◢◤`;
+                `●───── ⌬ ─────●\n` +
+                `┇ ⦿ ⟬ إشـعـار إداري ⟭\n` +
+                `┇\n` +
+                `┇ 𓋰 الـمـرسل: المطور\n` +
+                `┇ 𓋰 الـرسـالـة: \n` +
+                `┇ 『 ${text} 』\n` +
+                `┇\n` +
+                `┇ 𓋰 الـتـوقـيـت: ${sendTime}\n` +
+                `●───── ⌬ ─────●`;
 
             let successCount = 0;
             for (const thread of groupThreads) {
@@ -86,10 +88,10 @@ module.exports = {
             attachments.forEach(s => { if (fs.existsSync(s.path)) fs.unlinkSync(s.path); });
 
             return api.sendMessage(
-                `◢◤━━━━━━━━ 🖤 ━━━━━━━◥◣\n` +
-                `✅ تم بنجاح إرسال الإشعار الملكي\n` +
-                `❖ ┠ لعدد: 〖 ${successCount} 〗 مجموعة\n` +
-                `◥◣━━━━━━━━━━━━━━━━━━◢◤`,
+                `●───── ⌬ ─────●\n` +
+                `┇ ✅ تـم الإرسـال بـنـجـاح\n` +
+                `┇ 𓋰 لـعـدد: 〖 ${successCount} 〗 مـجـمـوعـة\n` +
+                `●───── ⌬ ─────●`,
                 threadID,
                 messageID
             );
