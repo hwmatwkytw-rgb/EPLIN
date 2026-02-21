@@ -1,29 +1,38 @@
 module.exports = {
     config: {
         name: "عنك",
-        version: "1.0",
-        author: "Kenji Agent",
+        version: "1.5",
+        author: "سينكو",
         countDown: 5,
         role: 2,
         prefix: true,
-        description: "عرض معلومات تفصيلية عن مستخدم",
+        description: "عرض معلومات تفصيلية عن المستخدم بزخرفة المسار الطولي.",
         category: "المطور",
         guide: { ar: "{pn} [@منشن | ID]" }
     },
     onStart: async function ({ api, event, args }) {
-        const targetID = Object.keys(event.mentions)[0] || args[0] || event.senderID;
+        const { threadID, messageID, senderID, mentions } = event;
+        const targetID = Object.keys(mentions)[0] || args[0] || senderID;
+
         api.getUserInfo(targetID, (err, info) => {
-            if (err) return api.sendMessage("❌ فشل في جلب المعلومات.", event.threadID);
+            if (err) return api.sendMessage("●───── ⌬ ─────●\n┇ ❌ فشل في جلب المعلومات.\n●───── ⌬ ─────●", threadID, messageID);
+            
             const user = info[targetID];
-            const msg = `👤 معلومات المستخدم:
-━━━━━━━━━━━━━
-📝 الاسم: ${user.name}
-🆔 المعرف: ${targetID}
-🔗 الرابط: fb.com/${targetID}
-🚻 الجنس: ${user.gender == 2 ? "ذكر" : "أنثى"}
-🌍 اللغة: ${user.vanity || "غير معروفة"}
-━━━━━━━━━━━━━`;
-            api.sendMessage(msg, event.threadID);
+            if (!user) return api.sendMessage("●───── ⌬ ─────●\n┇ ❌ لم يتم العثور على هذا المستخدم.\n●───── ⌬ ─────●", threadID, messageID);
+
+            const msg = `●───── ⌬ ─────●
+┇ ⦿ ⟬ مـعـلـومـات الـمـسـتـخـدم ⟭
+┇
+┇ 𓋰 الإسـم: ${user.name}
+┇ 𓋰 الـمـعـرف: ${targetID}
+┇ 𓋰 الـجـنـس: ${user.gender == 2 ? "ذكـر" : "أنـثـى"}
+┇ 𓋰 الـلـغـة: ${user.vanity || "عربي"}
+┇ 𓋰 الـرابـط: fb.com/${targetID}
+┇
+●───── ⌬ ─────●
+  𓆩☆𓆪`;
+
+            api.sendMessage(msg, threadID, messageID);
         });
     }
 };
