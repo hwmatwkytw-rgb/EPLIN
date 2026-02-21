@@ -138,7 +138,7 @@ module.exports = {
             finalMessage += `┇ ⦿ ⟬ قـسـم ${category.toUpperCase()} ⟭\n`;
             
             for (let j = 0; j < cmds.length; j += 3) {
-                const row = cmds.slice(j, j + 3).map(c => `⬩ ${c}`).join("  ");
+                const row = cmds.slice(j, j + 3).map(c => `◍ ${c}`).join("  ");
                 finalMessage += `┇ ${row}\n`;
             }
             finalMessage += `┇\n`;
