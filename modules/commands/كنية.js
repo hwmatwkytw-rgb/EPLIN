@@ -1,12 +1,12 @@
 module.exports = {
   config: {
     name: 'كنية',
-    version: '2.0',
+    version: '2.5',
     author: 'Hridoy + Fix',
     countDown: 5,
     prefix: true,
-    groupAdminOnly: true,
-    description: 'تعيين أو حذف كنية (بالرد، المنشن، أو على نفسك)',
+    groupAdminOnly: true, // متاح فقط للمسؤولين كما طلبت
+    description: 'تعيين أو حذف كنية مع تفاعلات تلقائية',
     category: 'group',
     guide: {
       ar: '{pn} [بالرد | @منشن] [كنية جديدة]'
@@ -15,58 +15,50 @@ module.exports = {
 
   onStart: async ({ api, event, args }) => {
     try {
-      let targetID = null;
-      let newNickname = '';
+      const { threadID, messageID, senderID, messageReply, mentions, type } = event;
       const botID = api.getCurrentUserID();
+      let targetID = null;
+      let newNickname = "";
 
-      // ✅ 1️⃣ لو في رد
-      if (event.type === "message_reply" && event.messageReply) {
-        targetID = event.messageReply.senderID;
-        newNickname = args.join(' ');
-      }
-
-      // ✅ 2️⃣ لو في منشن
-      else if (event.mentions && Object.keys(event.mentions).length > 0) {
-        targetID = Object.keys(event.mentions)[0];
-        newNickname = args.slice(1).join(' ');
-      }
-
-      // ✅ 3️⃣ بدون رد ولا منشن → على نفسو
+      // 1️⃣ تحديد المستهدف واستخلاص الكنية الجديدة
+      if (type === "message_reply") {
+        targetID = messageReply.senderID;
+        newNickname = args.join(" ");
+      } 
+      else if (Object.keys(mentions).length > 0) {
+        targetID = Object.keys(mentions)[0];
+        // إزالة اسم المنشن من النص المكتوب للحصول على الكنية فقط
+        const mentionName = mentions[targetID];
+        newNickname = args.join(" ").replace(mentionName, "").trim();
+      } 
       else {
-        targetID = event.senderID;
-        newNickname = args.join(' ');
+        targetID = senderID;
+        newNickname = args.join(" ");
       }
 
-      // 🔁 لو المنشن كان البوت → امسح كنية الكاتب
-      if (targetID === botID) {
-        targetID = event.senderID;
-        newNickname = '';
-      }
+      // حماية: لو المنشن للبوت، نطبق الأمر على المرسل
+      if (targetID === botID) targetID = senderID;
 
-      // ⚡ تغيير الكنية
-      api.changeNickname(newNickname, event.threadID, targetID, (err) => {
+      // 2️⃣ تنفيذ تغيير الكنية
+      api.changeNickname(newNickname, threadID, targetID, (err) => {
         if (err) {
           console.error(err);
-          return api.sendMessage(
-            'عايزه ادمن  😺.',
-            event.threadID
-          );
+          return api.sendMessage('❌ محتاج صلاحيات أدمن لتغيير الكنية.', threadID, messageID);
         }
 
-        api.sendMessage(
-          newNickname
-            ? ''
-            : '',
-          event.threadID
-        );
+        // 3️⃣ ميزة التفاعل الذكي
+        if (!newNickname || newNickname.trim() === "") {
+          // لو كتب كنية "ساي" (بدون اسم جديد) -> تفاعل بسلة الزبالة
+          api.setMessageReaction("🗑️", messageID, () => {}, true);
+        } else {
+          // لو كتب كنية مع اسم جديد -> تفاعل بصح
+          api.setMessageReaction("✅", messageID, () => {}, true);
+        }
       });
 
     } catch (error) {
       console.error(error);
-      api.sendMessage(
-        '⚠️ حصل خطأ أثناء تنفيذ الأمر.',
-        event.threadID
-      );
+      api.sendMessage('⚠️ حصل خطأ أثناء تنفيذ الأمر.', event.threadID);
     }
   },
 };
