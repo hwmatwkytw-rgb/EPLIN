@@ -3,12 +3,12 @@ const axios = require('axios');
 module.exports = {
   config: {
     name: 'بانكاي',
-    version: '1.2',
+    version: '1.3',
     author: 'Hridoy',
     countDown: 5,
     prefix: true,
     groupAdminOnly: true,
-    description: 'يقوم بطرد عضو من المجموعة مع تفاعل ساخر.',
+    description: 'يقوم بطرد عضو من المجموعة مع تفاعل ساخر (محمي ضد طرد البوت).',
     category: 'group',
     guide: {
       ar: '{pn} @منشن | UID | بالرد على رسالة'
@@ -16,26 +16,21 @@ module.exports = {
   },
 
   onStart: async ({ api, event, args }) => {
-    const { threadID, messageID } = event;
+    const { threadID, messageID, senderID } = event;
+    const botID = api.getCurrentUserID(); // الحصول على ID البوت
 
-    // إضافة التفاعل الساخر 😆 على رسالة الشخص الذي نفذ الأمر
-    api.setMessageReaction("😆", messageID, (err) => {}, true);
+    // إضافة التفاعل الساخر 
+    api.setMessageReaction("🦆", messageID, (err) => {}, true);
 
     try {
       let targetID = null;
 
-      // 1️⃣ لو في منشن
+      // 1️⃣ تحديد الهدف
       if (event.mentions && Object.keys(event.mentions).length > 0) {
         targetID = Object.keys(event.mentions)[0];
-      }
-
-      // 2️⃣ لو الأمر بالرد على رسالة
-      else if (event.messageReply) {
+      } else if (event.messageReply) {
         targetID = event.messageReply.senderID;
-      }
-
-      // 3️⃣ لو كتب UID مباشر
-      else if (args[0]) {
+      } else if (args[0]) {
         targetID = args[0];
       }
 
@@ -43,6 +38,15 @@ module.exports = {
       if (!targetID) {
         return api.sendMessage(
           '❌ استخدم الأمر مع منشن أو UID أو بالرد على رسالة.',
+          threadID,
+          messageID
+        );
+      }
+
+      // 🛡️ الحماية: التأكد أن الهدف ليس البوت نفسه
+      if (targetID == botID) {
+        return api.sendMessage(
+          'قاعده في بيتكم؟ ',
           threadID,
           messageID
         );
@@ -57,7 +61,7 @@ module.exports = {
       // إرسال التحذير مع الصورة
       await api.sendMessage(
         {
-          body: '⚠️ بانكاي مفعل!\nسيتم طرد العضو الآن...',
+          body: '🌚!\n كان رقاصة ...',
           attachment: img.data
         },
         threadID
