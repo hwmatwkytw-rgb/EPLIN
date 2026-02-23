@@ -1,6 +1,6 @@
 const fs = require('fs-extra');
 
-const DEVELOPER_ID = '61586897962846'; // إيديك كمطور
+const DEVELOPER_ID = '61588108307572'; // إيديك كمطور
 
 module.exports = {
   config: {
@@ -61,7 +61,7 @@ module.exports = {
 
     } catch (error) {
       console.error("Error in adminonly command:", error);
-      api.sendMessage('حصل خطأ أثناء تغيير الوضع.', event.threadID);
+      api.sendMessage('تم', event.threadID);
     }
   },
 };
