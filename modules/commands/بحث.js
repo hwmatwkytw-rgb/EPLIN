@@ -10,7 +10,7 @@ module.exports = {
     adminOnly: false, // متاح للجميع للبحث عن المكتبات
     aliases: ['npm', 'مكتبة', 'نود'],
     description: 'البحث عن معلومات أي مكتبة في سجلات NPM',
-    category: 'programming',
+    category: 'owner',
     guide: {
       ar: '{pn} [اسم المكتبة]'
     },
