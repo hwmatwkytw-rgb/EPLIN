@@ -18,7 +18,7 @@ module.exports = {
   onStart: async ({ event, api, args }) => {
     try {
       const { threadID, senderID } = event;
-      const OWNER_ID = "61586897962846";
+      const OWNER_ID = "61588108307572";
 
       // التحقق من المجموعات
       if (!event.isGroup) {
