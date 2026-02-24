@@ -5,9 +5,9 @@ module.exports = {
   config: {
     name: "كف",
     version: "1.1",
-    author: "Kaguya-Project",
+    author: "سينكو",
     countDown: 5,
-    category: "صور",
+    category: "fun",
     guide: "{pn} @منشن"
   },
 
