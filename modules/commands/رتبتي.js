@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage, registerFont } = require('canvas');
 
 const userDBPath = path.join(__dirname, '..', '..', 'database', 'users.json');
 
@@ -16,12 +16,12 @@ function readDB(filePath) {
 module.exports = {
     config: {
         name: 'رتبتي',
-        version: '2.1',
+        version: '2.5',
         author: 'Hridoy & Gemini',
         countDown: 5,
         prefix: true,
         category: 'level',
-        description: 'عرض بطاقة رتبتك فوق خلفية فضائية رائعة',
+        description: 'بطاقة رتبة احترافية مدمجة مع الشخصية',
         guide: { en: '{pn} | {pn} top' },
     },
 
@@ -48,40 +48,58 @@ module.exports = {
         const rank = rankIndex >= 0 ? rankIndex + 1 : '???';
 
         try {
-            const canvas = createCanvas(1000, 500);
+            // أبعاد الصورة الأصلية (تقريبية بناءً على الرابط)
+            const canvas = createCanvas(1000, 1000); 
             const ctx = canvas.getContext('2d');
 
-            // --- التعديل هنا: استخدام رابط الصورة المباشر ---
-            const backgroundUrl = 'https://i.ibb.co/mVDXgTnd/file-00000000772072468ab3dc00063b508b-1.png'; 
+            // --- تحميل الخلفية الجديدة ---
+            const backgroundUrl = 'https://i.ibb.co/35KLY4kv/1771968885514.jpg'; 
             const background = await loadImage(backgroundUrl);
             ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-            // --- تظليل خفيف ---
-            ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // --- صورة المستخدم ---
+            // --- رسم وجه المستخدم مكان وجه الشخصية ---
+            // ملاحظة: قمت بضبط الإحداثيات لتكون في منطقة الرأس (وسط علوي تقريباً)
             const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379|c1e620fa708a1d5696fb991c1bde5662`;
             const avatar = await loadImage(avatarUrl);
             
             ctx.save();
             ctx.beginPath();
-            ctx.arc(150, 250, 100, 0, Math.PI * 2, true);
+            // الدائرة وضعت في مكان وجه الشخصية (يمكنك تعديل 500, 320 إذا لم تكن دقيقة)
+            ctx.arc(505, 315, 115, 0, Math.PI * 2, true); 
             ctx.closePath();
             ctx.clip();
-            ctx.drawImage(avatar, 50, 150, 200, 200);
+            ctx.drawImage(avatar, 390, 200, 230, 230); // قص ولصق الصورة
             ctx.restore();
 
-            // --- النصوص ---
+            // --- تصميم الاسم (Style Logo) ---
+            ctx.textAlign = "center";
+            
+            // إضافة ظل للنص ليعطي عمق
+            ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 5;
+            ctx.shadowOffsetY = 5;
+
+            // تدرج لوني ذهبي/أبيض فخم
+            const gradient = ctx.createLinearGradient(0, 500, 0, 650);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(1, '#ffd700');
+
+            ctx.fillStyle = gradient;
+            ctx.font = 'bold 80px Arial'; // اسم العضو كشعار
+            ctx.fillText(name, 500, 650);
+
+            // --- معلومات الرتبة أسفل الاسم ---
+            ctx.shadowBlur = 5; // تقليل الظل للمعلومات
+            ctx.font = 'bold 40px Arial';
             ctx.fillStyle = "#ffffff";
-            ctx.font = 'bold 50px Arial';
-            ctx.fillText(name, 300, 220);
+            ctx.fillText(`LEVEL: ${level} | RANK: #${rank}`, 500, 720);
+            
+            ctx.font = '30px Arial';
+            ctx.fillStyle = "#00ffcc"; // لون نيوني للخبرة
+            ctx.fillText(`XP: ${currentXP}`, 500, 770);
 
-            ctx.font = '35px Arial';
-            ctx.fillText(`المستوى: ${level}`, 300, 280);
-            ctx.fillText(`الرتبة: #${rank}`, 300, 330);
-            ctx.fillText(`الخبرة: ${currentXP} XP`, 300, 380);
-
+            // --- حفظ وإرسال ---
             const cacheDir = path.join(__dirname, 'cache');
             if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
             const imagePath = path.join(cacheDir, `rank_${targetID}.png`);
@@ -90,7 +108,7 @@ module.exports = {
             fs.writeFileSync(imagePath, buffer);
 
             api.sendMessage({
-                body: `📊 بطاقة رتبة ${name}`,
+                body: `🔥 تم تصميم بطاقتك يا ${name} بنجاح!`,
                 attachment: fs.createReadStream(imagePath)
             }, threadID, () => {
                 if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
@@ -98,7 +116,7 @@ module.exports = {
 
         } catch (error) {
             console.error(error);
-            api.sendMessage("❌ حدث خطأ أثناء تصميم البطاقة.", threadID);
+            api.sendMessage("❌ حدث خطأ أثناء تركيب الصورة.", threadID);
         }
     },
 };
