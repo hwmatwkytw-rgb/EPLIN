@@ -1,11 +1,11 @@
 module.exports = {
   config: {
     name: "eval",
-    version: "1.2",
+    version: "2.0",
     author: "Kenji Cloud",
     countDown: 5,
     prefix: true,
-    description: "تنفيذ كود JavaScript (للمطور فقط)",
+    description: "تنفيذ كود JavaScript مع دعم await و global variables (للمطور فقط)",
     category: "owner"
   },
 
@@ -17,14 +17,20 @@ module.exports = {
 
     try {
       // حوّل الكود ل async function مؤقتة
-      let result = await (async () => { 
-        return eval(args.join(" ")); 
-      })();
+      // ومرّر أي متغيرات globals لو حبيت
+      let result = await (async (globals) => {
+        const { Users, global } = globals; // أي متغيرات خارجية تحب تمررها
+        return eval(args.join(" "));
+      })({
+        Users: global.Users, // لازم يكون مخزن Users في global
+        global: global
+      });
 
       if (typeof result !== "string") {
-        result = require("util").inspect(result, { depth: 0 });
+        result = require("util").inspect(result, { depth: 1 });
       }
 
+      // إرسال النتيجة
       return api.sendMessage(result, event.threadID, event.messageID);
 
     } catch (err) {
