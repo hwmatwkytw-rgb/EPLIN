@@ -6,7 +6,7 @@ module.exports = {
     name: "مطلوب",
     version: "1.0",
     author: "Kaguya-Project",
-    category: "صور",
+    category: "fun",
     guide: "{pn} [أو منشن]"
   },
 
