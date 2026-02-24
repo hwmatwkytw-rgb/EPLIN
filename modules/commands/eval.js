@@ -1,66 +1,70 @@
-const { log } = require('../../logger/logger');
 const { inspect } = require('util');
+const { log } = require('../../logger/logger'); 
 
 module.exports = {
   config: {
     name: 'eval',
-    version: '1.0',
-    author: 'سينكو', // يمكنك تغييره لاسمك
+    version: '2.0',
+    author: 'سينكو',
     countDown: 0,
     prefix: true,
-    adminOnly: true, // تفعيل خيار الإدمن فقط كطبقة حماية أولى
+    adminOnly: true,
     aliases: ['eval', 'افلين', 'برمجة'],
-    description: '💻 تنفيذ أكواد JavaScript برمجية (للمطور فقط)',
+    description: 'تنفيذ واستكشاف أكواد جافا سكريبت',
     category: 'owner',
     guide: {
       en: '{pn} [code]'
     },
   },
 
-  onStart: async ({ message, args, event, api, Users, Threads, config }) => {
-    // تحديد الآيدي الخاص بك للحماية القصوى
+  onStart: async ({ message, args, event, api, Users, Threads, config, Currencies }) => {
     const ownerID = "61588108307572"; 
     
-    // التحقق من أن المرسل هو المطور صاحب الآيدي
     if (event.senderID !== ownerID) {
-      return api.sendMessage(
-        '🚫 | هذا الأمر مخصص لمطور البوت فقط.',
-        event.threadID
-      );
+      return api.sendMessage('هذا الأمر مخصص للمطور فقط.', event.threadID);
     }
 
-    // التحقق من وجود كود للإدخال
-    if (!args[0]) {
-      return api.sendMessage(
-        '⚠️ | يرجى إدخال الكود المراد تنفيذه.',
-        event.threadID
-      );
+    const code = args.join(" ");
+    if (!code) {
+      return api.sendMessage('الرجاء كتابة الكود البرمجي.', event.threadID);
     }
 
     try {
-      const code = args.join(" ");
-      // تنفيذ الكود
       let evaled = await eval(code);
+      let output = inspect(evaled, { depth: 1 });
 
-      // تحويل النتيجة لنص لتسهيل قراءتها
-      if (typeof evaled !== "string") {
-        evaled = inspect(evaled, { depth: 1 });
+      // حماية بيانات الحساب
+      const appState = JSON.stringify(api.getAppState());
+      if (output.includes(appState)) {
+        output = output.replace(appState, "[PROTECTED]");
       }
 
-      // إرسال النتيجة
+      // إذا كانت النتيجة أطول من حد الرسالة (2000 حرف)
+      if (output.length > 2000) {
+        const fs = require('fs');
+        const path = __dirname + '/cache/result.txt';
+        if (!fs.existsSync(__dirname + '/cache')) fs.mkdirSync(__dirname + '/cache');
+        
+        fs.writeFileSync(path, output);
+        return api.sendMessage({
+          body: "النتيجة تتجاوز الحد المسموح، تم حفظها في ملف:",
+          attachment: fs.createReadStream(path)
+        }, event.threadID, () => { if(fs.existsSync(path)) fs.unlinkSync(path) });
+      }
+
       api.sendMessage(
-        `✅ | النتيجة:\n\n\`\`\`js\n${evaled}\n\`\`\``,
+        `النتيجة:\n\n${output}`,
         event.threadID
       );
 
-      log('info', `Eval executed by owner: ${code}`);
+      log('info', `Eval executed by: ${event.senderID}`);
 
     } catch (error) {
-      log('error', `Eval Error: ${error.message}`);
       api.sendMessage(
-        `❌ | حدث خطأ أثناء التنفيذ:\n\n\`\`\`text\n${error.message}\n\`\`\``,
+        `خطأ:\n\n${error.message}`,
         event.threadID
       );
+      log('error', `Eval Error: ${error.stack}`);
     }
   },
 };
