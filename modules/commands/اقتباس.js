@@ -1,4 +1,4 @@
-module.exports = {
+Module.exports = {
   config: {
     name: 'اقتباس',
     aliases: ['quote', 'حكمة'],
@@ -20,21 +20,19 @@ module.exports = {
     ];
     const randQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-    api.setMessageReaction("🌼", messageID, (err) => {}, true);
+    api.setMessageReaction("🖤", messageID, (err) => {}, true);
 
     const message = 
-`       
-    ●───ฅ──────────ฅ───●
-    ┇
-    ⦿ ⟬ اقـتـبـاس الـيـوم ⟭
-    ┇ 
-    ┇ 𓆸 『 ${randQuote} 』
-    ┇ 
-    ⦿ ⟬ الـمـصدر ⟭
-    ┇ 𓆸 الـمـكان: قـلـب ابلين ✨
-    ┇
-    ●──────── 𓆰 ────────●
-       𝑮𝑨𝑻𝑨 𝑸𝑼𝑶𝑻𝑬𝑺 𝑺𝒀𝑺𝑻𝑬𝑴`;
+` ──────── ✇ ──────── 
+    
+     ⟦ اقـتـبـاس  ⟧
+    
+      『 ${randQuote} 』
+ ───────────────────
+     ⟦ الـمـصـدر ⟧
+      الـمـكـان: قـلـب ابلين 
+    
+ ──────── ✇ ──────── `;
 
     api.sendMessage(message, threadID, messageID);
   }
