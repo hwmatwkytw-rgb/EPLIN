@@ -8,7 +8,7 @@ module.exports = {
     aliases: ['uptime', 'حالة_البوت'],
     version: '1.4',
     author: 'Hridoy',
-    description: 'معلومات تشغيل النظام والبوت بموديل 24 الفخم',
+    description: 'معلومات تشغيل النظام والبوت بموديل الدبدوب المبتسم',
     countDown: 5,
     prefix: true,
     category: 'utility',
@@ -18,11 +18,11 @@ module.exports = {
   onStart: async ({ api, event }) => {
     const { threadID, messageID } = event;
 
-    // التفاعل برمز التاج لتعزيز الهيبة
-    api.setMessageReaction("🦋", messageID, (err) => {}, true);
+    // التفاعل برمز الفراشة كما في كودكِ
+    api.setMessageReaction("🕸", messageID, (err) => {}, true);
 
     const waitingMsg = await api.sendMessage(
-      '◄جاري استخراج البيانات...►',
+      '◄ جاري استخراج البيانات... ►',
       threadID,
       messageID
     );
@@ -41,31 +41,35 @@ module.exports = {
       const time = moment().format('hh:mm:ss A');
       const date = moment().format('YYYY/MM/DD');
 
-      // --- تطبيق الموديل (24) ---
+      // --- تطبيق الموديل الجديد (الدبدوب المبتسم مع يديه) ---
       const message = 
-`◄▬▬▬▬▬ ● ▬▬▬▬▬▬►
-      ꗴ═〘𝑼𝑷𝑻𝑰𝑴𝑬〙═ꗴ
-
-◈ الـتـشـغيل:    『 ${uptime} 』
-
-◈ الاسـتهلاك:   『 ${ramUsage} 』
-
-◈ الاسـتجابة:   『 ${ping} 』
-
-◈ الـتـوقـيت:     『 ${time} 』
-
-◈ الـتـاريخ:      『 ${date} 』
-
-◈ الـحـالـ 『 مـسـتـقـر ✨ 』
-
-◄▬▬▬▬▬▬▬▬▬▬▬▬▬►
-      ꗴ═〘 🖤〙 𝑺𝒀𝑺𝑻𝑬𝑴 `;
+`       (◍•ᴗ•◍) 🖤
+    ●───ฅ──────────ฅ───●
+    ┇
+    ⦿ ⟬ الـتـشـغـيـل ⟭
+    ┇ 𓆸 الـوقت: 『 ${uptime} 』
+    ┇
+    ⦿ ⟬ الاسـتـهـلاك ⟭
+    ┇ 𓆸 الـرام: 『 ${ramUsage} 』
+    ┇
+    ⦿ ⟬ الاسـتـجـابـة ⟭
+    ┇ 𓆸 الـبـنـغ: 『 ${ping} 』
+    ┇
+    ⦿ ⟬ الـمـعـلومـات ⟭
+    ┇ 𓆸 الـتـوقـيت: ${time}
+    ┇ 𓆸 الـتـاريـخ: ${date}
+    ┇
+    ⦿ ⟬ الـحـالـة ⟭
+    ┇ 𓆸 الـوضع: 『 مـسـتـقـر ✨ 』
+    ┇
+    ●──────── 🕸 ────────●
+       `;
 
       api.editMessage(message, processingID);
 
     } catch (error) {
       console.error('Uptime error:', error);
-      api.editMessage('◄▬▬▬ ❌ فشل في جلب الحالة ▬▬▬►', processingID);
+      api.editMessage('●─────── ❌ فشل الجلب ───────●', processingID);
     }
   },
 };
