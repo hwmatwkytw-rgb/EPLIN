@@ -6,9 +6,9 @@ module.exports = {
   config: {
     name: 'ابتايم',
     aliases: ['uptime', 'حالة_البوت'],
-    version: '1.4',
+    version: '1.5',
     author: 'Hridoy',
-    description: 'معلومات تشغيل النظام والبوت بموديل الدبدوب المبتسم',
+    description: 'معلومات تشغيل النظام والبوت بموديل الفتات الفخم',
     countDown: 5,
     prefix: true,
     category: 'utility',
@@ -18,6 +18,7 @@ module.exports = {
   onStart: async ({ api, event }) => {
     const { threadID, messageID } = event;
 
+    // التفاعل برمز العنكبوت المفضل لديكِ
     api.setMessageReaction("🕸", messageID, (err) => {}, true);
 
     const waitingMsg = await api.sendMessage(
@@ -40,29 +41,29 @@ module.exports = {
       const time = moment().format('hh:mm:ss A');
       const date = moment().format('YYYY/MM/DD');
 
-      // تم إضافة علامة ``` لضمان ثبات الخط وعدم تشتت الزخرفة
+      // تطبيق التصميم المختار (المنحني مع خطوط الوسط)
       const message = 
-`        (◍•ᴗ•◍) 🖤
+`      (◍•ᴗ•◍) 🖤
 \`\`\`
-●───ฅ──────────ฅ───●
-
-⦿ ⟬ الـتـشـغـيـل ⟭
- 𓆸 الـوقت: 『 ${uptime} 』
-
-⦿ ⟬ الاسـتـهـلاك ⟭
- 𓆸 الـرام: 『 ${ramUsage} 』
-
-⦿ ⟬ الاسـتـجـابـة ⟭
- 𓆸 الـبـنـغ: 『 ${ping} ms 』
-
-⦿ ⟬ الـمـعـلومـات ⟭
-  𓆸 الـتـوقـيت: ${time}
-  𓆸 الـتـاريـخ: ${date}
-
-⦿ ⟬ الـحـالـة ⟭
-  𓆸 الـوضع: 『 مـسـتـقـر ✨ 』
-
-●──────── 🕸 ────────●
+╭───ฅ──────────ฅ───╮
+│ ⦿ ⟬ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑰𝑵𝑭𝑶 ⟭
+├───────────────┤
+│
+│ 🕸 الـتـوقـيت ⪼ ${time}
+│
+├───────────────┤
+│
+│ 🕸 الـسـرعـة ⪼ ${ping}
+│
+├───────────────┤
+│
+│ 🕸 الـرامــات ⪼ ${ramUsage}
+│
+├───────────────┤
+│
+│ 🕸 الـتـشـغـيل ⪼ ${uptime}
+│
+╰───── 𓆩 🕸 𓆪 ─────╯
 \`\`\``;
 
       api.editMessage(message, processingID);
