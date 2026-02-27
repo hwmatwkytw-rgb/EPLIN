@@ -7,7 +7,7 @@ module.exports = {
         role: 2,
         prefix: true,
         description: "عرض معلومات تفصيلية عن المستخدم بزخرفة المسار الطولي.",
-        category: "المطور",
+        category: "fun",
         guide: { ar: "{pn} [@منشن | ID]" }
     },
     onStart: async function ({ api, event, args }) {
@@ -23,11 +23,11 @@ module.exports = {
             const msg = `●───── ⌬ ─────●
 ┇ ⦿ ⟬ مـعـلـومـات الـمـسـتـخـدم ⟭
 ┇
-┇ 𓋰 الإسـم: ${user.name}
-┇ 𓋰 الـمـعـرف: ${targetID}
-┇ 𓋰 الـجـنـس: ${user.gender == 2 ? "ذكـر" : "أنـثـى"}
-┇ 𓋰 الـلـغـة: ${user.vanity || "عربي"}
-┇ 𓋰 الـرابـط: fb.com/${targetID}
+┇  الإسـم: ${user.name}
+┇  الـمـعـرف: ${targetID}
+┇  الـجـنـس: ${user.gender == 2 ? "ذكـر" : "أنـثـى"}
+┇  الـلـغـة: ${user.vanity || "عربي"}
+┇  الـرابـط: fb.com/${targetID}
 ┇
 ●───── ⌬ ─────●
   𓆩☆𓆪`;
