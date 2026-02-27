@@ -4,10 +4,10 @@ const fs = require('fs-extra');
 module.exports = {
     config: {
         name: "ازالة",
-        version: "1.0",
+        version: "1.1",
         author: "سينكو 17Y",
         countDown: 10,
-        description: "إزالة خلفية الصور باستخدام الذكاء الاصطناعي",
+        description: "إزالة خلفية الصور باستخدام الذكاء الاصطناعي مع تفاعلات",
         category: "أدوات",
         guide: { ar: "{pn} [قم بالرد على صورة]" }
     },
@@ -18,11 +18,12 @@ module.exports = {
             return api.sendMessage("⚠️ يرجى الرد على الصورة التي تريد إزالة خلفيتها.", event.threadID);
         }
 
-        const apiKey = "CNYjGk9RRUB6XRmP4UsuceoU"; // مفتاحك الذي أرسلته
+        const apiKey = "CNYjGk9RRUB6XRmP4UsuceoU"; 
         const imageUrl = event.messageReply.attachments[0].url;
         const path = __dirname + `/cache/removed_bg.png`;
 
-        api.sendMessage("⏳ جاري معالجة الصورة.. يرجى الانتظار", event.threadID);
+        // التفاعل بالساعة لبدء العملية
+        api.setMessageReaction("⏳", event.messageID, (err) => {}, true);
 
         try {
             const response = await axios({
@@ -40,27 +41,21 @@ module.exports = {
 
             fs.writeFileSync(path, response.data);
 
-            const msg = `
-╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
-      ✨ تـم إزالـة الـخـلفـية ✨
+            // التفاعل بعلامة الصح عند النجاح
+            api.setMessageReaction("✅", event.messageID, (err) => {}, true);
 
-
-  •——◤ 🖼️ الـحالة : نـجـاح ◥——•
-  •——◤ 🛠️ الأداة : Remove.bg ◥——•
-  •——◤ 👤 ◥——•
-
-
-      
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
-
-            api.sendMessage({
-                body: msg,
+            await api.sendMessage({
+                body: "✨ تم إزالة الخلفية بنجاح",
                 attachment: fs.createReadStream(path)
-            }, event.threadID, () => fs.unlinkSync(path));
+            }, event.threadID);
+            
+            fs.unlinkSync(path);
 
         } catch (error) {
             console.error(error);
-            api.sendMessage("❌ حدث خطأ! ربما نفد رصيد المفتاح أو أن الصورة غير مدعومة.", event.threadID);
+            // التفاعل بعلامة الخطأ في حال الفشل
+            api.setMessageReaction("❌", event.messageID, (err) => {}, true);
+            api.sendMessage("❌ حدث خطأ! تأكد من رصيد المفتاح أو جودة الصورة.", event.threadID);
         }
     }
 };
