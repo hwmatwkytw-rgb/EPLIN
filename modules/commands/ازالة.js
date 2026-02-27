@@ -8,7 +8,7 @@ module.exports = {
         author: "سينكو 17Y",
         countDown: 10,
         description: "إزالة خلفية الصور باستخدام الذكاء الاصطناعي مع تفاعلات",
-        category: "أدوات",
+        category: "fun",
         guide: { ar: "{pn} [قم بالرد على صورة]" }
     },
 
