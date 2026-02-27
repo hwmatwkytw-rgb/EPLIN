@@ -7,7 +7,7 @@ module.exports = {
         role: 2,
         prefix: true,
         description: "إدارة طلبات تفعيل البوت بزخرفة المسار الطولي.",
-        category: "المطور"
+        category: "owner"
     },
 
     onReply: async ({ api, event, handleReply }) => {
@@ -30,11 +30,11 @@ module.exports = {
                 await api.sendMessage(`●───── ⌬ ─────●\n┇ ⚠️ تـم ${isBan ? "حـظـر" : "رفـض"} طـلـبكم.\n●───── ⌬ ─────●`, target.threadID);
                 await api.removeUserFromGroup(api.getCurrentUserID(), target.threadID);
                 
-                api.sendMessage(`●───── ⌬ ─────●\n┇ ⦿ ⟬ تـم الـرفـض ❌ ⟭\n┇\n┇ 𓋰 الـمجموعة: ${target.name}\n┇ 𓋰 الإجـراء: ${isBan ? "حـظر طـرد" : "رفـض"}\n●───── ⌬ ─────●`, threadID);
+                api.sendMessage(`●───── ⌬ ─────●\n┇ ⦿ ⟬ تـم الـرفـض ❌ ⟭\n┇\n┇  الـمجموعة: ${target.name}\n┇  الإجـراء: ${isBan ? "حـظر طـرد" : "رفـض"}\n●───── ⌬ ─────●`, threadID);
             } else {
-                await api.sendMessage(`●───── ⌬ ─────●\n┇ ✅ تـم تـفعيل الـبوت بـنجاح!\n┇ 𓋰 اكتب (اوامر) للبدء.\n●───── ⌬ ─────●`, target.threadID);
+                await api.sendMessage(`●───── ⌬ ─────●\n┇ ✅ تـم تـفعيل الـبوت بـنجاح!\n┇  اكتب (اوامر) للبدء.\n●───── ⌬ ─────●`, target.threadID);
                 
-                api.sendMessage(`●───── ⌬ ─────●\n┇ ⦿ ⟬ تـم الـتـفـعـيـل ✅ ⟭\n┇\n┇ 𓋰 الـمجموعة: ${target.name}\n┇ 𓋰 الـحالة: نـاجح\n●───── ⌬ ─────●`, threadID);
+                api.sendMessage(`●───── ⌬ ─────●\n┇ ⦿ ⟬ تـم الـتـفـعـيـل ✅ ⟭\n┇\n┇  الـمجموعة: ${target.name}\n┇  الـحالة: نـاجح\n●───── ⌬ ─────●`, threadID);
             }
 
             api.unsendMessage(handleReply.messageID);
