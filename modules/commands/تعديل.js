@@ -5,7 +5,7 @@ module.exports = {
   config: {
     name: "تعديل",
     aliases: ["edit"],
-    version: "3.0",
+    version: "3.1",
     author: "AYOUB",
     description: "تعديل احترافي باستخدام API رسمي",
     countDown: 15,
@@ -16,7 +16,7 @@ module.exports = {
   onStart: async function({ api, event, args }) {
     const { threadID, messageID } = event;
     
-    // ⚠️ ضع مفتاحك هنا ليعمل الكود للأبد
+    // تأكد أن المفتاح يبدأ بكلمة Bearer في الهيدر تلقائياً
     const EDEN_AI_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZjA5NTY5M2EtODA5Zi00YjFjLWE5M2EtYWVkYTA3YmVjZDNjIiwidHlwZSI6ImFwaV90b2tlbiJ9.JrOW2coSBACDWmEWSSymfFAAIIe1C0WSbnxfpuH5P_o"; 
 
     if (event.type !== "message_reply" || !event.messageReply.attachments || event.messageReply.attachments[0].type !== "photo") {
@@ -33,23 +33,21 @@ module.exports = {
       ✨ جـاري الـتـعديـل ✨
   •——◤ 🛠️ الـمـحرك : Eden AI ◥——•
 ──────────────────
-  •——◤ ⏳ الـحالة : معالجة رسمية ◥——•
+  •——◤ ⏳ الـحالة : معالجة  ◥——•
 ╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`, threadID);
 
     try {
-      const imageUrl = event.messageReply.attachments[0].url;
-
-      // إرسال الطلب لـ API الرسمي
+      // إرسال الطلب باستخدام مزود خدمة Replicate (أكثر استقراراً للمجاني)
       const response = await axios.post('https://api.edenai.run/v2/image/generation', {
-        providers: "openai", // أو "replicate"
+        providers: "replicate", 
         text: prompt,
-        resolution: "512x512",
-        fallback_providers: ""
+        resolution: "512x512"
       }, {
         headers: { Authorization: `Bearer ${EDEN_AI_KEY}` }
       });
 
-      const resultUrl = response.data.openai.items[0].image_resource_url;
+      // استخراج الرابط الصحيح بناءً على المزود المختار
+      const resultUrl = response.data.replicate.items[0].image_resource_url;
       const path = __dirname + `/cache/final_${Date.now()}.png`;
       
       const imgRes = await axios.get(resultUrl, { responseType: 'arraybuffer' });
@@ -69,8 +67,8 @@ module.exports = {
       }, threadID, () => fs.unlinkSync(path), messageID);
 
     } catch (error) {
-      console.error(error);
-      api.editMessage("╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n  ❌ خطأ: تأكد من مفتاح الـ API\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯", waitingMsg.messageID);
+      console.error(error.response ? error.response.data : error);
+      api.editMessage("╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n  ❌ خطأ: الحساب المجاني انتهى أو المزود غير متاح\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯", waitingMsg.messageID);
     }
   }
 };
