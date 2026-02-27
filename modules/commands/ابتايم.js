@@ -8,7 +8,7 @@ module.exports = {
     aliases: ['uptime', 'up'],
     version: '1.5',
     author: 'Hridoy',
-    description: 'معلومات تشغيل النظام والبوت بموديل الفتات الفخم',
+    description: 'معلومات تشغيل النظام والبوت بالزخرفة والخطوط الوسطى',
     countDown: 5,
     prefix: true,
     category: 'utility',
@@ -18,7 +18,6 @@ module.exports = {
   onStart: async ({ api, event }) => {
     const { threadID, messageID } = event;
 
-    // التفاعل برمز العنكبوت المفضل لديكِ
     api.setMessageReaction("🕸", messageID, (err) => {}, true);
 
     const waitingMsg = await api.sendMessage(
@@ -39,32 +38,21 @@ module.exports = {
       const ramUsage = (process.memoryUsage().rss / 1024 / 1024).toFixed(2) + ' MB';
       const ping = Math.floor(performance.now() % 1000) + ' ms';
       const time = moment().format('hh:mm:ss A');
-      const date = moment().format('YYYY/MM/DD');
 
-      // تطبيق التصميم المختار (المنحني مع خطوط الوسط)
+      // التصميم المدمج: زخرفة خارجية + خطوط فاصلة بالداخل
       const message = 
-`      (◍•ᴗ•◍) 🖤
-\`\`\`
-╭───ฅ──────────ฅ───╮
- ⦿ ⟬ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑰𝑵𝑭𝑶 ⟭🖤😼
+`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
+  
+
+◤ ⏰ الـتـوقـيت : ${time} ▣
 ──────────────────
-
-    🕸 الـتـوقـيت ⪼ ${time}
-
+◤ 🕸 الـسـرعـة : ${ping} ▣
 ──────────────────
-
-   🕸 الـسـرعـة ⪼ ${ping}
-
+◤ 🕸 الـرامات : ${ramUsage} ▣
 ──────────────────
-
-   🕸 الـرامــات ⪼ ${ramUsage}
-
-───────────────────
-
-   🕸 الـتـشـغـيل ⪼ ${uptime}
-
-╰─────── 𓆩 🕸 𓆪 ──────╯
-\`\`\``;
+◤ 🕸 الـتـشغيل : ${uptime} ▣
+      
+╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
 
       api.editMessage(message, processingID);
 
