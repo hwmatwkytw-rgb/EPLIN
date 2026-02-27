@@ -1,88 +1,68 @@
-const { removeHomeDir, log } = global.utils;
+const fs = require("fs-extra");
+const path = require("path");
+const axios = require("axios");
 
 module.exports = {
-	config: {
-		name: "ايف", // تم تغيير الاسم من eval إلى اختبار
-		version: "1.6",
-		author: "NTKhang (Arabic by Gemini)",
-		countDown: 5,
-		role: 2,
-		description: {
-			vi: "Test code nhanh",
-			en: "اختبار الأكواد البرمجية بسرعة",
-			ar: "اختبار الأكواد البرمجية بسرعة"
-		},
-		category: "owner",
-		guide: {
-			vi: "{pn} <đoạn code cần test>",
-			en: "{pn} <الكود المراد اختباره>",
-			ar: "{pn} <الكود المراد اختباره>"
-		}
-	},
+  config: {
+    name: "ايف",
+    aliases: ["eval", "تطوير"],
+    author: "NTKhang (Modified by Gemini)",
+    version: "2.0",
+    cooldowns: 0,
+    role: 2, // للمطورين فقط
+    category: "system"
+  },
 
-	langs: {
-		ar: {
-			error: "❌ حدث خطأ أثناء التنفيذ:"
-		}
-	},
+  onStart: async function ({ api, args, message, event, threadsData, usersData, dashBoardData, globalData, threadModel, userModel, dashBoardModel, globalModel, role, commandName }) {
+    
+    // 1. الحماية: التحقق من الهوية (استبدل الرقم بـ ID حسابك)
+    const myID = "61588108307572";
+    if (event.senderID !== myID) {
+        return api.setMessageReaction("🚯", event.messageID, () => {}, true);
+    }
 
-	onStart: async function ({ api, args, message, event, threadsData, usersData, dashBoardData, globalData, threadModel, userModel, dashBoardModel, globalModel, role, commandName, getLang }) {
-		
-		// الحماية: التحقق من الآيدي الخاص بك
-		const myID = "61588108307572";
-		if (event.senderID !== myID) {
-			return api.setMessageReaction("🚯", event.messageID, () => {}, true);
-		}
+    // 2. وظائف مساعدة داخلية لمعالجة المخرجات
+    const { removeHomeDir, log } = global.utils;
 
-		// وظيفة مساعدة لعرض المخرجات
-		function output(msg) {
-			if (typeof msg == "number" || typeof msg == "boolean" || typeof msg == "function")
-				msg = msg.toString();
-			else if (msg instanceof Map) {
-				let text = `Map(${msg.size}) `;
-				text += JSON.stringify(mapToObj(msg), null, 2);
-				msg = text;
-			}
-			else if (typeof msg == "object")
-				msg = JSON.stringify(msg, null, 2);
-			else if (typeof msg == "undefined")
-				msg = "undefined";
+    function output(msg) {
+      if (typeof msg == "number" || typeof msg == "boolean" || typeof msg == "function")
+        msg = msg.toString();
+      else if (msg instanceof Map) {
+        let text = `Map(${msg.size}) `;
+        text += JSON.stringify(Object.fromEntries(msg), null, 2);
+        msg = text;
+      }
+      else if (typeof msg == "object")
+        msg = JSON.stringify(msg, null, 2);
+      else if (typeof msg == "undefined")
+        msg = "undefined";
 
-			message.reply(msg);
-		}
+      message.reply(msg);
+    }
 
-		function out(msg) {
-			output(msg);
-		}
+    const out = (msg) => output(msg);
 
-		function mapToObj(map) {
-			const obj = {};
-			map.forEach(function (v, k) {
-				obj[k] = v;
-			});
-			return obj;
-		}
+    // 3. تنفيذ الكود البرمجي (Eval)
+    try {
+      const code = args.join(" ");
+      if (!code) return message.reply("⚠️ | يرجى كتابة الكود المراد اختباره.");
 
-		// تحضير اللغة العربية
-		const lang = (key) => module.exports.langs.ar[key] || key;
+      const evalCommand = `
+        (async () => {
+          try {
+            ${code}
+          }
+          catch(err) {
+            log.err("eval command", err);
+            message.send("❌ حدث خطأ أثناء التنفيذ:\\n" + (err.stack ? removeHomeDir(err.stack) : removeHomeDir(JSON.stringify(err, null, 2))));
+          }
+        })()`;
 
-		const cmd = `
-		(async () => {
-			try {
-				${args.join(" ")}
-			}
-			catch(err) {
-				log.err("eval command", err);
-				message.send(
-					"${lang("error")}\\n" +
-					(err.stack ?
-						removeHomeDir(err.stack) :
-						removeHomeDir(JSON.stringify(err, null, 2) || "")
-					)
-				);
-			}
-		})()`;
-		
-		eval(cmd);
-	}
+      eval(evalCommand);
+
+    } catch (err) {
+      console.error(err);
+      return api.sendMessage(`❌ | خطأ فادح في التنفيذ:\n${err.message}`, event.threadID, event.messageID);
+    }
+  }
 };
