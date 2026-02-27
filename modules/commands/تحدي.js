@@ -8,7 +8,7 @@ module.exports = {
     countDown: 5,
     prefix: true,
     description: "تحدي المعلومات العامة العالمية",
-    category: "ألعاب",
+    category: "fun",
     guide: {
       en: '{pn}'
     }
