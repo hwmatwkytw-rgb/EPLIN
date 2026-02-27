@@ -37,7 +37,7 @@ module.exports = {
       // لو ما في أي هدف
       if (!targetID) {
         return api.sendMessage(
-          '❌ استخدم الأمر مع منشن أو UID أو بالرد على رسالة.',
+          'هات رد منشنن.',
           threadID,
           messageID
         );
