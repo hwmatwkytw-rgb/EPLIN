@@ -9,7 +9,7 @@ module.exports = {
     countDown: 15,
     role: 2, 
     description: "عرض قائمة المجموعات مع منشن وتفاعل (Reaction) لغير المطور",
-    category: "المطور",
+    category: "owner",
     guide: { ar: "{pn}" }
   },
 
