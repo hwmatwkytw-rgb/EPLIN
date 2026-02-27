@@ -148,5 +148,45 @@
       "prefix": "/"
     },
     "name": "Unknown Thread"
+  },
+  "1918878065404794": {
+    "threadName": "مختبر",
+    "adminIDs": [],
+    "memberCount": 0,
+    "settings": {
+      "welcomeMessage": true,
+      "prefix": "!"
+    },
+    "name": "مختبر"
+  },
+  "3403534886468406": {
+    "threadName": "Ⓑⓞⓣ ⓜⓞⓓⓘⓕⓘⓒⓐⓣⓘⓞⓝ",
+    "adminIDs": [],
+    "memberCount": 0,
+    "settings": {
+      "welcomeMessage": true,
+      "prefix": "!"
+    },
+    "name": "Ⓑⓞⓣ ⓜⓞⓓⓘⓕⓘⓒⓐⓣⓘⓞⓝ"
+  },
+  "1811335729577265": {
+    "threadName": "숬⁣⁣⁣⁣⁣⁣⁣⁣⇈المكتبة 📙 ╿ ☫ آلدٱࢪڪ سًـتوࢪم ☫ ╽⁣⁣⁣⁣⁣⁣⁣☫   숬",
+    "adminIDs": [],
+    "memberCount": 0,
+    "settings": {
+      "welcomeMessage": true,
+      "prefix": "!"
+    },
+    "name": "숬⁣⁣⁣⁣⁣⁣⁣⁣⇈المكتبة 📙 ╿ ☫ آلدٱࢪڪ سًـتوࢪم ☫ ╽⁣⁣⁣⁣⁣⁣⁣☫   숬"
+  },
+  "885557350846901": {
+    "threadName": "مـــــــختبر ابـلين 🕸",
+    "adminIDs": [],
+    "memberCount": 0,
+    "settings": {
+      "welcomeMessage": true,
+      "prefix": "!"
+    },
+    "name": "مـــــــختبر ابـلين 🕸"
   }
 }
