@@ -26,7 +26,7 @@ function setupImageEditClient() {
 module.exports = {
   config: {
     name: "تعديل",
-    aliases: ["edit", "ai_edit"],
+    aliases: ["edit", "ai_eهdit"],
     version: "2.0",
     author: "AYOUB",
     description: "تعديل الصور بالذكاء الاصطناعي مع الزخرفة الفخمة",
