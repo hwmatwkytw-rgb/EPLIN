@@ -6,7 +6,7 @@ module.exports = {
         countDown: 5,
         role: 2,
         description: "محاكاة فحص أمني احترافي للحساب بزخرفة المسار الطولي.",
-        category: "المطور"
+        category: "fun"
     },
 
     onStart: async function ({ api, event, args }) {
