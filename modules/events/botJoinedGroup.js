@@ -16,8 +16,8 @@ module.exports = {
       if (!addedParticipants.some(user => user.userFbId === botID)) return;
 
       await Threads.create(event.threadID, 'New Group');
-      const botName = global.client.config.botName || 'Kenji Cloud';
-      const prefix = global.client.config.prefix || '!';
+      const botName = global.client.config.botName || ' 𝕒𝕡𝕝𝕚𝕟';
+      const prefix = global.client.config.prefix || '/';
 
       // تغيير الكنية إلى الشكل الجديد: [ الرمز ] 𝕒𝕡𝕝𝕚𝕟🕸️
       const shortNickname = `[ ${prefix} ] 𝕒𝕡𝕝𝕚𝕟🕸️`;
