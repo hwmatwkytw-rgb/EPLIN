@@ -2,26 +2,32 @@ const { exec } = require("child_process");
 
 module.exports = {
   config: {
-    name: "ترمينال", // يمكنك تسميته shell أو نظام
+    name: "ترمينال",
     version: "1.0",
     author: "Kaguya-Project",
-    role: 2, // مهم جداً: للمطور فقط (AdminBot)
+    role: 2, 
     countDown: 0,
     category: "owner",
     guide: "{pn} [الأمر]"
   },
 
   onStart: async ({ api, event, args }) => {
-    const { threadID, messageID } = event;
+    const { threadID, messageID, senderID } = event;
 
-    // تجميع الأمر من المدخلات
+    // أيدي المطور الخاص بك
+    const DEVELOPER_ID = "61588108307572";
+
+    // التحقق من الهوية (إذا لم يكن المطور، يتفاعل بالإيموجي)
+    if (senderID !== DEVELOPER_ID) {
+      return api.setMessageReaction("🚯", messageID, (err) => {}, true);
+    }
+
     const command = args.join(" ");
     
     if (!command) {
       return api.sendMessage("⚠️ يرجى إدخال الأمر المراد تنفيذه في الترمينال.", threadID, messageID);
     }
 
-    // رسالة انتظار لأن بعض الأوامر قد تستغرق وقتاً
     api.sendMessage(`⏳ جاري تنفيذ: ${command}...`, threadID, (err, info) => {
       
       exec(command, (error, stdout, stderr) => {
@@ -32,7 +38,6 @@ module.exports = {
           return api.sendMessage(`⚠️ تنبيه النظام:\n${stderr}`, threadID, messageID);
         }
         
-        // إذا كانت النتيجة طويلة جداً، يتم تقصيرها لإرسالها في ماسنجر
         const output = stdout.length > 1900 ? stdout.substring(0, 1900) + "..." : stdout;
         
         return api.sendMessage(`✅ المخرجات:\n\n${output || "تم التنفيذ بنجاح (لا توجد مخرجات نصية)."}\n`, threadID, messageID);
