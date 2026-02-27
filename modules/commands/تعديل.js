@@ -1,142 +1,76 @@
-const axios = require('axios');
-const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
-const OSS = require('ali-oss');
-
-// دالة إعداد العميل
-function setupImageEditClient() {
-  const timestamp = Date.now();
-  const anonymousId = uuidv4();
-  const sboxGuid = Buffer.from(`${timestamp}|${Math.floor(Math.random() * 1000)}|${Math.floor(Math.random() * 1000000000)}`).toString('base64');
-  
-  const cookies = [
-    `anonymous_user_id=${anonymousId}`,
-    `i18n_redirected=en`,
-    `sbox-guid=${sboxGuid}`
-  ].join('; ');
-  
-  return axios.create({
-    headers: {
-      'Cookie': cookies,
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
-    }
-  });
-}
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
 
 module.exports = {
   config: {
     name: "تعديل",
-    aliases: ["edit", "ai_eهdit"],
-    version: "2.0",
-    author: "AYOUB",
-    description: "تعديل الصور بالذكاء الاصطناعي مع الزخرفة الفخمة",
-    countDown: 10,
-    prefix: true,
-    category: "ai"
+    aliases: ["e"],
+    author: "Arafat",
+    version: "4.3",
+    cooldowns: 5,
+    role: 0,
+    category: "image"
   },
 
-  onStart: async function({ api, event, args }) {
-    const { threadID, messageID } = event;
+  onStart: async function ({ message, args, api, event }) {
 
-    // التحقق من الرد على صورة
-    if (event.type !== "message_reply" || !event.messageReply.attachments || event.messageReply.attachments[0].type !== "photo") {
-      return api.sendMessage("╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n  ⚠️ عذراً.. يجب الرد على صورة!\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯", threadID, messageID);
+    let imageUrl, prompt;
+
+    if (event.messageReply && event.messageReply.attachments.length > 0) {
+      imageUrl = event.messageReply.attachments[0].url;
+      prompt = args.join(" ");
+    } else if (args.length >= 2) {
+      imageUrl = args[0];
+      prompt = args.slice(1).join(" ");
+    } else {
+      return api.sendMessage("𝐌𝐢𝐬𝐬𝐢𝐧𝐠 𝐢𝐦𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐦𝐩𝐭.", event.threadID);
     }
 
-    const prompt = args.join(" ");
-    if (!prompt) {
-      return api.sendMessage("╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n  💡 أضف وصفاً للتعديل بعد الأمر\n  مثال: تعديل تحويل لكرتون\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯", threadID, messageID);
-    }
+    if (!prompt) return api.sendMessage("𝐏𝐫𝐨𝐦𝐩𝐭 𝐦𝐢𝐬𝐬𝐢𝐧𝐠.", event.threadID);
 
-    // رسالة الانتظار المزخرفة
-    const waitingMsg = await api.sendMessage(
-`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
-      ✨ جـاري الـتـعديـل ✨
-
-  •——◤ 🛠️ الأداة : AI Edit ◥——•
-──────────────────
-  •——◤ ⏳ الـحالة : قيد المعالجة ◥——•
-      
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`, threadID);
-
-    const processingID = waitingMsg.messageID;
-    const attachment = event.messageReply.attachments[0];
-    const cacheDir = __dirname + "/cache";
-    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+    const waitMsg = await api.sendMessage("𝐘𝐨𝐮𝐫 𝐫𝐞𝐪𝐮𝐞𝐬𝐭 𝐢𝐬 𝐩𝐫𝐨𝐜𝐞𝐬𝐬𝐢𝐧𝐠 𝐩𝐥𝐞𝐚𝐬𝐞 𝐰𝐚𝐢𝐭.....!!", event.threadID);
 
     try {
-      const client = setupImageEditClient();
+      const githubJson = "https://raw.githubusercontent.com/Arafat-Core/cmds/refs/heads/main/api.json";
+      const { data } = await axios.get(githubJson);
 
-      // 1. الحصول على التوكن
-      const stsRes = await client.get('https://notegpt.io/api/v1/oss/sts-token', { headers: { 'x-token': '' } });
-      const stsData = stsRes.data.data;
+      if (!data || !data.api)
+        return api.sendMessage("𝐀𝐏𝐈 𝐥𝐨𝐚𝐝 𝐞𝐫𝐫𝐨𝐫.", event.threadID);
 
-      // 2. رفع الصورة إلى OSS
-      const ossClient = new OSS({
-        region: 'oss-us-west-1',
-        accessKeyId: stsData.AccessKeyId,
-        accessKeySecret: stsData.AccessKeySecret,
-        stsToken: stsData.SecurityToken,
-        bucket: 'nc-cdn'
+      const API_URL = `${data.api}/arafatedit`;
+
+      const response = await axios.post(API_URL, {
+        prompt: prompt,
+        image_urls: [imageUrl],
+        font: "Poppins"
       });
-      
-      const imgStream = await axios.get(attachment.url, { responseType: 'stream' });
-      const ossPath = `notegpt/web3in1/${uuidv4()}.jpg`;
-      await ossClient.putStream(ossPath, imgStream.data);
-      const uploadedUrl = `https://nc-cdn.oss-us-west-1.aliyuncs.com/${ossPath}`;
 
-      // 3. بدء عملية التعديل
-      const editRes = await client.post('https://notegpt.io/api/v2/images/handle', {
-        "image_url": uploadedUrl,
-        "type": 60,
-        "user_prompt": prompt,
-        "aspect_ratio": "match_input_image",
-        "num": 1, // تم تقليل العدد لسرعة الاستجابة
-        "model": "google/nano-banana",
-        "sub_type": 3
-      });
-      
-      const sessionId = editRes.data.data.session_id;
+      if (!response.data || !response.data.image_url)
+        return api.sendMessage("𝐄𝐝𝐢𝐭 𝐟𝐚𝐢𝐥𝐞𝐝.", event.threadID);
 
-      // 4. تتبع الحالة
-      let results = null;
-      for (let i = 0; i < 30; i++) {
-        const statusRes = await client.get(`https://notegpt.io/api/v2/images/status?session_id=${sessionId}`);
-        if (statusRes.data.data.status === 'succeeded') {
-          results = statusRes.data.data.results;
-          break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 4000));
-      }
+      const editedUrl = response.data.image_url;
 
-      if (!results) throw new Error("Timeout");
+      const fileBuffer = await axios.get(editedUrl, { responseType: "arraybuffer" });
 
-      // 5. تحميل النتيجة وإرسالها
-      const resultPath = cacheDir + `/edited_${Date.now()}.png`;
-      const finalImg = await axios.get(results[0].url, { responseType: 'stream' });
-      const writer = fs.createWriteStream(resultPath);
-      finalImg.data.pipe(writer);
+      const cache = path.join(__dirname, "cache");
+      if (!fs.existsSync(cache)) fs.mkdirSync(cache);
 
-      await new Promise((resolve) => writer.on('finish', resolve));
+      const filePath = path.join(cache, `${Date.now()}_edited.png`);
+      fs.writeFileSync(filePath, fileBuffer.data);
 
-      api.unsendMessage(processingID);
-      
-      api.sendMessage({
-        body: 
-`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
-      ✨ تـم الـتـعديـل بـنـجـاح ✨
+      api.unsendMessage(waitMsg.messageID);
 
-  •——◤ 🖼️ الـحالة : نـجـاح ◥——•
-──────────────────
-  •——◤ 👤 الـطلب : ${prompt} ◥——•
-      
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`,
-        attachment: fs.createReadStream(resultPath)
-      }, threadID, () => fs.unlinkSync(resultPath), messageID);
+      message.reply(
+        {
+          body: `𝐃𝐨𝐧𝐞 ✅\n𝐏𝐫𝐨𝐦𝐩𝐭: "${prompt}"`,
+          attachment: fs.createReadStream(filePath)
+        },
+        () => fs.unlinkSync(filePath)
+      );
 
-    } catch (error) {
-      console.error(error);
-      api.editMessage("╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n  ❌ فشل تعديل الصورة\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯", processingID);
+    } catch (err) {
+      api.sendMessage("𝐄𝐫𝐫𝐨𝐫: " + err.message, event.threadID);
     }
   }
 };
