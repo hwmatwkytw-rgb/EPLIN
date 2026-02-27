@@ -1,40 +1,88 @@
-const axios = require("axios");
-const fs = require("fs-extra");
+const { removeHomeDir, log } = global.utils;
 
 module.exports = {
-  config: {
-    name: "ايف",
-    version: "1.0",
-    author: "Kaguya-Project",
-    countDown: 0,
-    role: 2, // للمطورين فقط
-    category: "owner",
-    guide: "{pn} [كود جافا سكريبت]"
-  },
+	config: {
+		name: "ايف", // تم تغيير الاسم من eval إلى اختبار
+		version: "1.6",
+		author: "NTKhang (Arabic by Gemini)",
+		countDown: 5,
+		role: 2,
+		description: {
+			vi: "Test code nhanh",
+			en: "اختبار الأكواد البرمجية بسرعة",
+			ar: "اختبار الأكواد البرمجية بسرعة"
+		},
+		category: "owner",
+		guide: {
+			vi: "{pn} <đoạn code cần test>",
+			en: "{pn} <الكود المراد اختباره>",
+			ar: "{pn} <الكود المراد اختباره>"
+		}
+	},
 
-  onStart: async function ({ api, event, args, Users, Threads, Currencies }) {
-    const { threadID, messageID, senderID } = event;
-    
-    // أيدي المطور الخاص بك
-    const DEVELOPER_ID = "61588108307572";
+	langs: {
+		ar: {
+			error: "❌ حدث خطأ أثناء التنفيذ:"
+		}
+	},
 
-    // التحقق من الهوية: إذا لم يكن المطور، يتفاعل بـ 🚯 ويخرج
-    if (senderID !== DEVELOPER_ID) {
-      return api.setMessageReaction("🚯", messageID, (err) => {}, true);
-    }
+	onStart: async function ({ api, args, message, event, threadsData, usersData, dashBoardData, globalData, threadModel, userModel, dashBoardModel, globalModel, role, commandName, getLang }) {
+		
+		// الحماية: التحقق من الآيدي الخاص بك
+		const myID = "61588108307572";
+		if (event.senderID !== myID) {
+			return api.setMessageReaction("🚯", event.messageID, () => {}, true);
+		}
 
-    try {
-      const code = args.join(" ");
-      if (!code) return api.sendMessage("⚠️ يرجى إدخال كود لتنفيذه.", threadID, messageID);
+		// وظيفة مساعدة لعرض المخرجات
+		function output(msg) {
+			if (typeof msg == "number" || typeof msg == "boolean" || typeof msg == "function")
+				msg = msg.toString();
+			else if (msg instanceof Map) {
+				let text = `Map(${msg.size}) `;
+				text += JSON.stringify(mapToObj(msg), null, 2);
+				msg = text;
+			}
+			else if (typeof msg == "object")
+				msg = JSON.stringify(msg, null, 2);
+			else if (typeof msg == "undefined")
+				msg = "undefined";
 
-      const evaled = eval(code);
-      
-      // تحويل النتيجة لنص لإرسالها
-      let response = typeof evaled !== "string" ? JSON.stringify(evaled, null, 2) : evaled;
-      
-      return api.sendMessage(response || "تم التنفيذ (لا توجد مخرجات).", threadID, messageID);
-    } catch (e) {
-      return api.sendMessage(`❌ خطأ: ${e.message}`, threadID, messageID);
-    }
-  }
+			message.reply(msg);
+		}
+
+		function out(msg) {
+			output(msg);
+		}
+
+		function mapToObj(map) {
+			const obj = {};
+			map.forEach(function (v, k) {
+				obj[k] = v;
+			});
+			return obj;
+		}
+
+		// تحضير اللغة العربية
+		const lang = (key) => module.exports.langs.ar[key] || key;
+
+		const cmd = `
+		(async () => {
+			try {
+				${args.join(" ")}
+			}
+			catch(err) {
+				log.err("eval command", err);
+				message.send(
+					"${lang("error")}\\n" +
+					(err.stack ?
+						removeHomeDir(err.stack) :
+						removeHomeDir(JSON.stringify(err, null, 2) || "")
+					)
+				);
+			}
+		})()`;
+		
+		eval(cmd);
+	}
 };
