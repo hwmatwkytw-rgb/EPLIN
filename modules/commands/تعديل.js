@@ -17,7 +17,7 @@ module.exports = {
     const { threadID, messageID } = event;
     
     // ⚠️ ضع مفتاحك هنا ليعمل الكود للأبد
-    const EDEN_AI_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMTBjYzM2NmMtNmVjOC00MDQyLTg1ZTUtZjQwMzFmZTZmMmZhIiwidHlwZSI6ImFwaV90b2tlbiJ9.ke9DNkk_iV7WuuIBwpGI_9FaQRJ__6ZrXwXQrCKn7FM"; 
+    const EDEN_AI_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZjA5NTY5M2EtODA5Zi00YjFjLWE5M2EtYWVkYTA3YmVjZDNjIiwidHlwZSI6ImFwaV90b2tlbiJ9.JrOW2coSBACDWmEWSSymfFAAIIe1C0WSbnxfpuH5P_o"; 
 
     if (event.type !== "message_reply" || !event.messageReply.attachments || event.messageReply.attachments[0].type !== "photo") {
       return api.sendMessage("╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n  ⚠️ يجب الرد على صورة لتعديلها\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯", threadID, messageID);
