@@ -4,8 +4,8 @@ const path = require("path");
 
 module.exports = {
   config: {
-    name: 'تخيل',
-    aliases: ['sd', 'dream'],
+    name: 'عدلي',
+    aliases: ['sd', 'افلين'],
     version: '2.2.1',
     author: 'RI F AT',
     description: 'توليد صور باستخدام الذكاء الاصطناعي بناءً على صورة ومطالبة',
