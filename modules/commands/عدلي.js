@@ -11,7 +11,7 @@ module.exports = {
     description: 'توليد صور باستخدام الذكاء الاصطناعي (للمطور فقط)',
     countDown: 5,
     prefix: true,
-    category: 'ai',
+    category: 'owner',
     adminOnly: false 
   },
 
