@@ -8,29 +8,37 @@ module.exports = {
     aliases: ['sd', 'dream'],
     version: '2.2.1',
     author: 'RI F AT',
-    description: 'توليد صور باستخدام الذكاء الاصطناعي بناءً على صورة ومطالبة',
+    description: 'توليد صور باستخدام الذكاء الاصطناعي (للمطور فقط)',
     countDown: 5,
     prefix: true,
     category: 'ai',
-    adminOnly: false
+    adminOnly: false 
   },
 
   onStart: async ({ api, event, args }) => {
-    const { threadID, messageID } = event;
+    const { threadID, messageID, senderID } = event;
+    const developerID = "61586897962846"; // أيدي حسابك
+
+    // التحقق مما إذا كان المستخدم هو المطور
+    if (senderID !== developerID) {
+      // التفاعل بالرمز 🚯 فقط دون إرسال رسالة
+      return api.setMessageReaction("🚯", messageID, (err) => {}, true);
+    }
+
     const prompt = args.join(" ");
 
-    // التفاعل الأولي بالرموز
+    // التفاعل الأولي بالرموز للمطور فقط
     api.setMessageReaction("⚙️", messageID, (err) => {}, true);
 
-    // رسالة الانتظار بنفس نمط الكود الأول
+    // رسالة الانتظار للمطور
     const waitingMsg = await api.sendMessage(
-      '◄ جاري معالجة وتوليد الصورة... ►',
+      '◄ جاري معالجة  الصورة... ►',
       threadID,
       messageID
     );
     const processingID = waitingMsg.messageID;
 
-    // التحقق من المدخلات
+    // التحقق من وجود وصف
     if (!prompt) {
       return api.editMessage('●─────── ❌ يرجى كتابة وصف ───────●', processingID);
     }
@@ -59,7 +67,6 @@ module.exports = {
         timeout: 120000
       });
 
-      // التأكد من وجود مجلد التخزين المؤقت
       if (!fs.existsSync(path.join(__dirname, "cache"))) {
         fs.mkdirSync(path.join(__dirname, "cache"));
       }
@@ -72,7 +79,6 @@ module.exports = {
         writer.on('error', reject);
       });
 
-      // التصميم النهائي بنفس زخرفة الكود الأول
       const messageBody = 
 `╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
       ✨ نـتـيـجـة الـتـولـيـد ✨
@@ -83,12 +89,11 @@ module.exports = {
       
 ╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
 
-      // إرسال الصورة مع النص المزخرف وحذف رسالة الانتظار
       await api.sendMessage({
         body: messageBody,
         attachment: fs.createReadStream(cachePath)
       }, threadID, () => {
-        fs.unlinkSync(cachePath);
+        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
         api.unsendMessage(processingID);
       }, messageID);
 
