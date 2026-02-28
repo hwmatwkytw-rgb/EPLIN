@@ -24,7 +24,7 @@ module.exports = {
 
     // رسالة الانتظار بنفس نمط الكود الأول
     const waitingMsg = await api.sendMessage(
-      '◄ جاري معالجة وتوليد الصورة... ►',
+      '',
       threadID,
       messageID
     );
@@ -32,7 +32,7 @@ module.exports = {
 
     // التحقق من المدخلات
     if (!prompt) {
-      return api.editMessage('●─────── ❌ يرجى كتابة وصف ───────●', processingID);
+      return api.editMessage('● يرجى كتابة وصف ●', processingID);
     }
 
     let imageUrl;
@@ -44,7 +44,7 @@ module.exports = {
     }
 
     if (!imageUrl) {
-      return api.editMessage('●─────── ❌ يرجى الرد على صورة ───────●', processingID);
+      return api.editMessage('● يرجى الرد على صورة ●', processingID);
     }
 
     const cachePath = path.join(__dirname, "cache", `sd_${Date.now()}.png`);
