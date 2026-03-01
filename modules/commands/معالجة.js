@@ -11,7 +11,7 @@ module.exports = {
     prefix: true,
     adminOnly: true,
     description: 'تشغيل أو إيقاف وضع المشرف فقط.',
-    category: 'admin',
+    category: 'owner',
     guide: {
       en: '{pn}معالجة [تشغيل | ايقاف]',
     },
