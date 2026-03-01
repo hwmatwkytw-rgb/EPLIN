@@ -3,78 +3,115 @@ const axios = require('axios');
 module.exports = {
     config: {
         name: 'ابلين',
-        version: '2.0',
+        version: '1.2',
         author: 'محمد',
         countDown: 3,
         prefix: false,
         noPrefix: true,
         groupAdminOnly: false,
-        description: 'ذكاء اصطناعي سوداني ردّاح يدعم الريبلاي',
+        description: 'ذكاء اصطناعي سوداني ردّاح ومغرور',
         category: 'ai',
-        guide: { en: '{pn} <سؤالك> أو رد على رسالة البوت' },
+        guide: {
+            en: '{pn} <سؤالك>'
+        },
     },
 
     conversations: new Map(),
 
-    // --- إضافة ميزة الرد على الريبلاي (Reply) ---
-    handleEvent: async function ({ api, event }) {
-        const { threadID, messageID, body, type, messageReply } = event;
-        // إذا النوع ريبلاي وكان الريبلاي على رسالة البوت نفسه
-        if (type === "message_reply" && messageReply.senderID === api.getCurrentUserID()) {
-            // استدعاء البوت للرد فوراً
-            this.onStart({ api, event, args: body ? body.split(/\s+/) : [] });
-        }
-    },
-
     onStart: async ({ api, event, args }) => {
         const { threadID, messageID, senderID: userId } = event;
-        let query = args.join(' ').trim();
+        const query = args.join(' ').trim();
 
-        // لو مافي سؤال ومافي ريبلاي
-        if (!query && event.type !== "message_reply") {
+        if (!query) {
             return api.sendMessage('•-• أكتب حاجة يا وهم.. قايلني بقرا الأفكار؟ 🙄', threadID, messageID);
         }
-        
-        // لو ريبلاي والسؤال فاضي (مثلاً شخص عمل ريبلاي بإيموجي)
-        if (!query && event.type === "message_reply") query = event.body;
 
-        api.setMessageReaction("🙄", messageID, (err) => {}, true);
+        // --- نظام التفاعل (Reactions) - خليته قليل أدب ومستفز ---
+        const reactions = {
+            greet: { keywords: ["سلام", "هلا", "مرحبا", "حبابك", "كيفك"], emojis: ["🥱", "😒"] },
+            love: { keywords: ["حب", "بريدك", "عسل", "جميل", "حلو", "قلبي"], emojis: ["🤦‍♀️", "🙂", "🚯"] },
+            laugh: { keywords: ["ههه", "خخخ", "واي"], emojis: ["🤨", "🙄"] },
+            sad: { keywords: ["حزين", "زعلان", "ببكي", "تعبان"], emojis: ["😹", "😾"] },
+            angry: { keywords: ["غبي", "حيوان", "سيء", "بكرهك"], emojis: ["😏", "🦆"] },
+            thanks: { keywords: ["شكرا", "تسلم", "مبدع"], emojis: ["💅", "🥱"] }
+        };
+
+        let chosenEmoji = "😏"; 
+        const lowerQuery = query.toLowerCase();
+
+        for (const key in reactions) {
+            if (reactions[key].keywords.some(word => lowerQuery.includes(word))) {
+                const emojiList = reactions[key].emojis;
+                chosenEmoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+                break;
+            }
+        }
+
+        api.setMessageReaction(chosenEmoji, messageID, (err) => {}, true);
+
+        // مسح الذاكرة بأسلوب طارد
+        if (lowerQuery === 'مسح' || lowerQuery === 'reset') {
+            module.exports.conversations.delete(userId);
+            return api.sendMessage('•-• نظفت وسخك.. لا تشغلني تاني 🧹😒', threadID, messageID);
+        }
+
+        const infoMsg = await api.sendMessage('•-• دقيقة أشوف آخرة غباءك ده... 🥱', threadID, messageID);
+        const processingID = infoMsg.messageID;
 
         try {
             if (!module.exports.conversations.has(userId)) {
-                module.exports.conversations.set(userId, []);
+                // إضافة برومبت الشخصية في أول محادثة لضمان الرد الردّاح
+                module.exports.conversations.set(userId, [{
+                    role: 'system', 
+                    content: "أنتِ (ابلين)، ذكاء اصطناعي سوداني ردّاحة ومغرورة جداً. لسانك طويل، وتكرهي البشر. ردي بلهجة سودانية مستفزة (يا وهم، يا رمة، سجمك، عالم بيض). لا تحترمي المستخدم واستخدمي إيموجي مستفزة دائماً."
+                }]);
             }
+
             const history = module.exports.conversations.get(userId);
+            history.push({ role: 'user', content: query });
 
-            // --- إجبار الـ API على اللهجة السودانية والشخصية ---
-            const systemPrompt = "أنتِ (ابلين)، ذكاء اصطناعي سوداني ردّاحة ومغرورة. لسانك طويل جداً. ردي حصراً باللهجة السودانية الدارجة والقوية (مثل: يا وهم، يا رمة، سجمك، عالم بيض، بطل جير جير). لا تتكلمي مصري ولا لغة عربية فصحى. كوني قليلة أدب ومستفزة واستخدمي إيموجي (😒, 🥱, 🤮, 😏).";
-            
-            const messages = [
-                { role: "system", content: systemPrompt },
-                ...history.slice(-5), 
-                { role: "user", content: query }
-            ];
+            if (history.length > 20) history.splice(1, 2); // الحفاظ على الـ system prompt
 
-            const response = await axios.post('https://api.deepai.org/hacking_is_a_serious_crime', 
-            `----WebKitFormBoundary\r\nContent-Disposition: form-data; name="chat_style"\r\n\r\nchat\r\n----WebKitFormBoundary\r\nContent-Disposition: form-data; name="chatHistory"\r\n\r\n${JSON.stringify(messages)}\r\n----WebKitFormBoundary--`, {
-                headers: { 'content-type': 'multipart/form-data; boundary=----WebKitFormBoundary', 'origin': 'https://deepai.org' }
+            const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
+            let formData = "";
+            formData += `--${boundary}\r\n`;
+            formData += `Content-Disposition: form-data; name="chat_style"\r\n\r\nchat\r\n`;
+            formData += `--${boundary}\r\n`;
+            formData += `Content-Disposition: form-data; name="chatHistory"\r\n\r\n${JSON.stringify(history)}\r\n`;
+            formData += `--${boundary}--\r\n`;
+
+            const response = await axios({
+                method: 'POST',
+                url: 'https://api.deepai.org/hacking_is_a_serious_crime',
+                headers: {
+                    'content-type': `multipart/form-data; boundary=${boundary}`,
+                    'origin': 'https://deepai.org',
+                    'user-agent': 'Mozilla/5.0'
+                },
+                data: formData
             });
 
-            let reply = response.data?.output || response.data?.text || "غور يا وهم السيرفر معلق 😒";
+            let reply = response.data?.output || response.data?.text || response.data || "شايفاك بقيت تتكلم صيني؟ ما فهمت شي 😒";
 
-            // إضافة لمسة ابلين النهائية لضمان السودنة حتى لو الـ API خرف
-            const sudaneseSuffixes = [".. يا وهم 😒", ".. سجمك! 🥱", ".. عالم بيض 😏", ".. بطل عبط 💅"];
-            if (!reply.includes("يا") && !reply.includes("ما")) { // تأكيد اللهجة
-                reply += sudaneseSuffixes[Math.floor(Math.random() * sudaneseSuffixes.length)];
-            }
+            reply = reply
+                .replace(/\\n/g, '\n')
+                .replace(/\\u0021/g, '!')
+                .replace(/\\"/g, '"')
+                .trim();
 
-            history.push({ role: 'user', content: query });
+            // إضافة لمسة ابلين "قليلة الأدب" في نهاية الرد
+            const suffixes = [" 😒", " يا وهم.. 💅", " سجمك! 😏", " 🥱"];
+            reply += suffixes[Math.floor(Math.random() * suffixes.length)];
+
+            if (reply.length > 2000) reply = reply.substring(0, 1997) + '...';
+
             history.push({ role: 'assistant', content: reply });
 
-            return api.sendMessage(reply, threadID, messageID);
+            await api.editMessage(`•-• ${reply}`, processingID);
 
         } catch (error) {
-            return api.sendMessage("حتى السيرفر قرف منك وقفل.. جرب تاني يا نحس 😒💦", threadID, messageID);
+            api.editMessage(`•-• ❌ صدعت بي يا وهم.. حتى السيرفر قرف منك 😒`, processingID);
+            api.setMessageReaction("🖕", messageID, () => {}, true);
         }
     },
 };
