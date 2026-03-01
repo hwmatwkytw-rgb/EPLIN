@@ -1,57 +1,61 @@
-const config = {
+const { Threads } = require('../../database/database');
+
+module.exports = {
+  config: {
     name: "antiGuard",
     eventType: ["log:subscribe", "log:unsubscribe", "log:thread-name", "log:thread-icon", "log:user-nickname"],
     version: "1.0.0",
-    credits: "Gemini ✨",
-    description: "الحدث المسؤول عن تنفيذ حمايات المجموعة"
-};
+    author: "Gemini",
+    description: "مراقبة وتنفيذ حمايات المجموعة"
+  },
 
-async function onCall({ message, event, data, api }) {
+  onStart: async ({ api, event }) => {
     const { threadID, logMessageType, logMessageData, author } = event;
-    
-    // جلب الإعدادات التي قمنا بحفظها في الكود السابق
-    const settings = data.thread.data?.antiSettings || {};
     const botID = api.getCurrentUserID();
 
-    // إذا كان البوت هو من قام بالتغيير، نتجاهل الحدث لعدم الدخول في حلقة مفرغة
+    // تجاهل الأكشن إذا كان الفاعل هو البوت نفسه
     if (author == botID) return;
 
-    // 1. حماية الكنيات (antiChangeNickname)
-    if (logMessageType === "log:user-nickname" && settings.antiChangeNickname) {
-        const { participantID, nickname } = logMessageData;
-        const oldNickname = data.thread.info.nicknames[participantID] || "";
-        
-        api.sendMessage(`🛡️ [حماية الكنيات] عذراً، ممنوع تغيير الكنية حالياً!`, threadID);
-        return api.changeNickname(oldNickname, threadID, participantID);
-    }
+    // جلب بيانات المجموعة من قاعدة البيانات
+    const threadData = Threads.get(threadID) || {};
+    const anti = threadData.settings?.anti || {};
 
-    // 2. حماية اسم المجموعة (antiChangeGroupName)
-    if (logMessageType === "log:thread-name" && settings.antiChangeGroupName) {
-        const oldName = data.thread.info.threadName;
-        
-        api.sendMessage(`🛡️ [حماية الاسم] تم استعادة اسم المجموعة الأصلي.`, threadID);
-        return api.setTitle(oldName, threadID);
-    }
+    try {
+      // 1. حماية اسم المجموعة
+      if (logMessageType === "log:thread-name" && anti.antiName) {
+        const oldName = threadData.threadName || "الاسم الأصلي";
+        api.setTitle(oldName, threadID);
+        return api.sendMessage(`🛡️ [ قـفـل الاسـم ]\nعذراً، حماية الاسم مفعلة. تم استعادة الاسم الأصلي.`, threadID);
+      }
 
-    // 3. حماية صورة المجموعة (antiChangeGroupImage)
-    if (logMessageType === "log:thread-icon" && settings.antiChangeGroupImage) {
-        // ملاحظة: استعادة الصورة تتطلب تخزين رابط الصورة مسبقاً، هنا نقوم بالتنبيه فقط
-        // أو يمكنك منع الشخص الذي غيرها إذا أردت
-        api.sendMessage(`🛡️ [حماية الصورة] تم اكتشاف تغيير في صورة المجموعة!`, threadID);
-    }
-
-    // 4. منع الخروج (antiOut)
-    if (logMessageType === "log:unsubscribe" && settings.antiOut) {
-        if (logMessageData.leftParticipantFbId != botID) {
-            api.addUserToGroup(logMessageData.leftParticipantFbId, threadID, (err) => {
-                if (!err) api.sendMessage(`🛡️ [ممنوع الخروج] تم إعادة العضو رغماً عنه!`, threadID);
-                else api.sendMessage(`🛡️ [ممنوع الخروج] فشلت الإعادة، قد يكون العضو حظر البوت.`, threadID);
-            });
+      // 2. منع الخروج (إعادة الإضافة فوراً)
+      if (logMessageType === "log:unsubscribe" && anti.antiOut) {
+        const leftID = logMessageData.leftParticipantFbId;
+        if (leftID !== botID) {
+          api.addUserToGroup(leftID, threadID, (err) => {
+            if (!err) api.sendMessage(`🛡️ [ مـمـنـوع الـخـروج ]\nتم إعادة العضو بنجاح.`, threadID);
+          });
         }
-    }
-}
+      }
 
-export default {
-    config,
-    onCall
+      // 3. حماية الكنيات
+      if (logMessageType === "log:user-nickname" && anti.antiNickname) {
+        const { participantID } = logMessageData;
+        const oldNicknames = threadData.nicknames || {};
+        const oldNick = oldNicknames[participantID] || "";
+        
+        api.changeNickname(oldNick, threadID, participantID);
+        return api.sendMessage(`🛡️ [ قـفـل الـكـنـيـة ]\nممنوع تغيير الألقاب حالياً.`, threadID);
+      }
+
+      // 4. حماية صورة المجموعة
+      if (logMessageType === "log:thread-icon" && anti.antiIcon) {
+         api.sendMessage(`🛡️ [ قـفـل الـصـورة ]\nتم اكتشاف تغيير في صورة المجموعة، يرجى مراجعة المسؤولين.`, threadID);
+         // ملحوظة: استعادة الصورة برمجياً تتطلب رابط تخزين مسبق.
+      }
+
+    } catch (err) {
+      console.error("خطأ في حدث الحماية:", err);
+    }
+  }
 };
