@@ -17,7 +17,7 @@ module.exports = {
     countDown: 5,
     prefix: true,
     description: 'عرض قائمة المحظورين بنمط الغسق الفخم',
-    category: 'أدوات',
+    category: 'owner',
     guide: {
       ar: '   {pn} - لعرض المحظورين بزخرفة ملكية'
     },
