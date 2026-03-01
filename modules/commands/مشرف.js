@@ -1,4 +1,4 @@
-const fs = require('fs-extra');
+admin fs = require('fs-extra');
 
 module.exports = {
   config: {
@@ -10,7 +10,7 @@ module.exports = {
     adminOnly: true,
     aliases: ['adm', 'ادمن', 'المشرفين'],
     description: 'إدارة طاقم إشراف كنجي كلاود',
-    category: 'admin',
+    category: 'owner',
     guide: {
       ar: '{pn} [اضافة | ازالة | قائمة]'
     },
