@@ -1,127 +1,113 @@
-const axios = require("axios");
-const fs = require('fs-extra'); // استخدام fs-extra لضمان توافق أفضل مع Kenji
+const axios = require('axios');
+const fs = require('fs-extra');
+const path = require('path');
 
-const baseApiUrl = async () => {
-    try {
-        const base = await axios.get(`https://raw.githubusercontent.com/cyber-ullash/cyber-ullash/refs/heads/main/UllashApi.json`);
-        return base.data.api;
-    } catch (e) {
-        return "https://api.kenji-api.site"; // رابط احتياطي في حال فشل الرابط الأساسي
-    }
-};
+module.exports = {
+    config: {
+        name: 'اغنية',
+        version: '2.0',
+        author: 'محمد',
+        countDown: 5,
+        prefix: true, // يفضل يكون ببريفكس عشان ما يشتغل مع كل كلمة
+        category: 'media',
+        description: 'تحميل أغاني من يوتيوب بلسان ابلين المستفز',
+        guide: {
+            en: '{pn} <اسم الأغنية>'
+        }
+    },
 
-module.exports.config = {
-    name: "اغنية",
-    version: "2.1.0",
-    aliases: ["music", "play"],
-    credits: "bela (Modified for Kenji)",
-    countDown: 5,
-    hasPermssion: 0,
-    description: "تحميل مقاطع صوتية من يوتيوب",
-    commandCategory: "media",
-    usages: "{pn} [اسم الأغنية أو الرابط]",
-    usePrefix: true
-};
+    onStart: async ({ api, event, args }) => {
+        const { threadID, messageID, senderID: userId } = event;
+        const query = args.join(' ').trim();
 
-module.exports.run = async ({ api, args, event }) => {
-    const { threadID, messageID, senderID } = event;
-    const checkurl = /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))((\w|-){11})(?:\S+)?$/;
-    
-    if (!args[0]) return api.sendMessage("⚠️ يرجى إدخال اسم الأغنية أو الرابط!", threadID, messageID);
-
-    try {
-        let videoID;
-        const urlYtb = checkurl.test(args[0]);
-
-        if (urlYtb) {
-            const match = args[0].match(checkurl);
-            videoID = match ? match[1] : null;
-            api.sendMessage("⏳ جارٍ التحميل، يرجى الانتظار...", threadID, messageID);
-            
-            const apiUrl = await baseApiUrl();
-            const { data } = await axios.get(`${apiUrl}/ytDl3?link=${videoID}&format=mp3`);
-            
-            const path = __dirname + `/cache/sing_${senderID}.mp3`;
-            const audioStream = await getStream(data.downloadLink, path);
-
-            return api.sendMessage({
-                body: `🎵 تم التحميل بنجاح:\n📌 العنوان: ${data.title}`,
-                attachment: audioStream
-            }, threadID, () => fs.unlinkSync(path), messageID);
+        if (!query) {
+            return api.sendMessage('•-• دايرة أغني ليك في إذنك؟ أكتب اسم الأغنية يا  🙄', threadID, messageID);
         }
 
-        let keyWord = args.join(" ");
-        const apiUrl = await baseApiUrl();
-        api.sendMessage(`🔍 جارٍ البحث عن: ${keyWord}...`, threadID, messageID);
+        const infoMsg = await api.sendMessage('•-• لحظه من وقتك... 🥱', threadID, messageID);
+        const processingID = infoMsg.messageID;
 
-        const res = await axios.get(`${apiUrl}/ytFullSearch?songName=${encodeURIComponent(keyWord)}`);
-        const result = res.data.slice(0, 6);
+        try {
+            // جلب رابط الـ API
+            const getApi = await axios.get(`https://raw.githubusercontent.com/cyber-ullash/cyber-ullash/refs/heads/main/UllashApi.json`);
+            const baseUrl = getApi.data.api;
 
-        if (result.length == 0) return api.sendMessage("❌ لم يتم العثور على نتائج.", threadID, messageID);
+            // البحث عن الأغنية
+            const searchRes = await axios.get(`${baseUrl}/ytFullSearch?songName=${encodeURIComponent(query)}`);
+            const results = searchRes.data.slice(0, 6);
 
-        let msg = "🎶 نتائج البحث:\n\n";
-        const thumbnails = [];
-        
-        for (let i = 0; i < result.length; i++) {
-            msg += `${i + 1}. ${result[i].title}\n⏱️ الوقت: ${result[i].time}\n\n`;
-            // تحميل الصور المصغرة للعرض
-            const thumbPath = __dirname + `/cache/thumb_${senderID}_${i}.jpg`;
-            thumbnails.push(getStream(result[i].thumbnail, thumbPath));
-        }
+            if (results.length === 0) {
+                return api.editMessage('•-• ما لقيت شي.. غايتو ذوقك ده إلا في سوق الجمعة 😒', processingID);
+            }
 
-        const streams = await Promise.all(thumbnails);
+            // تجهيز قائمة النتائج بأسلوب ابلين
+            let msg = "🎶 هاك دي الحاجات اللقيتها يا :\n\n";
+            const thumbnails = [];
 
-        return api.sendMessage({
-            body: msg + "🔢 رد برقم الأغنية للتحميل",
-            attachment: streams
-        }, threadID, (err, info) => {
+            // تأكد من وجود مجلد cache
+            const cachePath = path.join(__dirname, 'cache');
+            if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath);
+
+            for (let i = 0; i < results.length; i++) {
+                msg += `${i + 1}. ${results[i].title}\n⏱️ الزمن: ${results[i].time}\n\n`;
+            }
+
+            api.editMessage(msg + "🔢 رد برقم الأغنية عشان أحملها ليك وسكتنا.. 🥱", processingID);
+
+            // إضافة نظام الرد (Reply)
             if (global.client && global.client.handleReply) {
                 global.client.handleReply.push({
-                    name: this.config.name,
-                    messageID: info.messageID,
-                    author: senderID,
-                    result
+                    name: 'اغنية', // يجب أن يطابق اسم الأمر في الـ config
+                    messageID: processingID,
+                    author: userId,
+                    result: results,
+                    baseUrl: baseUrl
                 });
             }
-        }, messageID);
 
-    } catch (err) {
-        return api.sendMessage("❌ حدث خطأ: " + err.message, threadID, messageID);
-    }
-};
-
-module.exports.handleReply = async ({ event, api, handleReply }) => {
-    const { threadID, messageID, body, senderID } = event;
-    if (handleReply.author != senderID) return;
-
-    try {
-        const choice = parseInt(body);
-        if (isNaN(choice) || choice > handleReply.result.length || choice <= 0) {
-            return api.sendMessage("⚠️ اختيار غير صالح، اختر رقم من 1 إلى 6", threadID, messageID);
+        } catch (error) {
+            console.error(error);
+            api.editMessage(`•-• السيرفر قرف من أغانيك وضرب.. جرب تاني يا وهم 😒`, processingID);
         }
+    },
 
-        api.unsendMessage(handleReply.messageID);
-        api.sendMessage("📥 جارٍ معالجة طلبك...", threadID, messageID);
+    // نظام التعامل مع اختيار الرقم (Reply)
+    onReply: async ({ api, event, handleReply }) => {
+        const { threadID, messageID, body, senderID } = event;
+        if (handleReply.author != senderID) return;
 
-        const infoChoice = handleReply.result[choice - 1];
-        const apiUrl = await baseApiUrl();
-        const { data } = await axios.get(`${apiUrl}/ytDl3?link=${infoChoice.id}&format=mp3`);
+        try {
+            const choice = parseInt(body);
+            if (isNaN(choice) || choice > handleReply.result.length || choice <= 0) {
+                return api.sendMessage("•-• ركز  .. قلت ليك رقم من 1 لـ 6 🙄", threadID, messageID);
+            }
 
-        const path = __dirname + `/cache/sing_${senderID}.mp3`;
-        const audioStream = await getStream(data.downloadLink, path);
+            api.unsendMessage(handleReply.messageID);
+            const loading = await api.sendMessage("•-• جاري التحميل.. أصبر شوية ما تطير 📥🥱", threadID);
 
-        return api.sendMessage({
-            body: `✅ العنوان: ${data.title}\n🔝 الجودة: ${data.quality || 'Standard'}`,
-            attachment: audioStream
-        }, threadID, () => fs.unlinkSync(path), messageID);
+            const selected = handleReply.result[choice - 1];
+            const downloadRes = await axios.get(`${handleReply.baseUrl}/ytDl3?link=${selected.id}&format=mp3`);
+            
+            const filePath = path.join(__dirname, 'cache', `music_${senderID}.mp3`);
+            
+            // تحميل الملف
+            const response = await axios({
+                method: 'get',
+                url: downloadRes.data.downloadLink,
+                responseType: 'arraybuffer'
+            });
 
-    } catch (error) {
-        api.sendMessage("❌ عذراً، تعذر تحميل الملف (قد يتجاوز 25 ميجا)", threadID, messageID);
+            fs.writeFileSync(filePath, Buffer.from(response.data));
+
+            await api.sendMessage({
+                body: `•-• هاك أغنيتك يا مزه:\n📌 العنوان: ${selected.title}\nسجمك ما تسمعها عالي! 💅😒`,
+                attachment: fs.createReadStream(filePath)
+            }, threadID, () => fs.unlinkSync(filePath), messageID);
+
+            api.unsendMessage(loading.messageID);
+
+        } catch (e) {
+            api.sendMessage("•-• الملف كبير شديد على وشك ده.. ما قدرت أحمله 😒", threadID, messageID);
+        }
     }
 };
-
-async function getStream(url, pathName) {
-    const res = await axios.get(url, { responseType: "arraybuffer" });
-    fs.writeFileSync(pathName, Buffer.from(res.data));
-    return fs.createReadStream(pathName);
-}
