@@ -1,129 +1,68 @@
-const config = {
+const { Threads } = require('../../database/database');
+
+module.exports = {
+  config: {
     name: "اعدادات",
-    aliases: ["الضبط", "settings", "setting"],
-    description: "لوحة التحكم بحماية وخصائص المجموعة",
-    cooldown: 5,
-    permissions: [1], // للمشرفين فقط
-    credits: "Gemini ✨",
-};
+    version: "1.0",
+    author: "سينكو",
+    countDown: 5,
+    description: "إعدادات حماية المجموعة بنمط هندسي",
+    category: "group",
+  },
 
-const langData = {
-    ar_SY: {
-        menu: 
-`╔══════════════════╗
-       ⚙️ لوحة التحكم ⚙️
-╚══════════════════╝
-① 🛡️ مكافحة السبام: [{antiSpam}]
-② 🚫 منع الخروج: [{antiOut}]
-③ 🏷️ قفل الاسم: [{antiChangeGroupName}]
-④ 🖼️ قفل الصورة: [{antiChangeGroupImage}]
-⑤ 🎭 قفل الكنيات: [{antiChangeNickname}]
-⑥ 🔔 التنبيهات: [{notifyChange}]
-╚══════════════════╝
-↫ أرسل (رقم الخيار) لتغييره
-↫ يمكنك اختيار أكثر من رقم (مثلاً: 1 2 5)`,
-
-        notGroup: "❌ عذراً، هذا الأمر مخصص للمجموعات فقط.",
-        invalid: "⚠️ يرجى اختيار رقم صحيح من القائمة (1-6).",
-        success: "✅ تم تحديث إعدادات المجموعة وحفظها بنجاح!",
-        botNotAdmin: "⚠️ تنبيه: البوت ليس مشرفاً! تم تعطيل (منع الخروج والسبام) تلقائياً.",
-
-        confirm: 
-`╔══════════════════╗
-      📝 مراجعة التغييرات
-╚══════════════════╝
-① [{antiSpam}] | ② [{antiOut}]
-③ [{antiChangeGroupName}] | ④ [{antiChangeGroupImage}]
-⑤ [{antiChangeNickname}] | ⑥ [{notifyChange}]
-╚══════════════════╝
-↫ تفاعل بـ 👍 لتأكيد الحفظ`,
-    },
-};
-
-// دالة تأكيد التغيير عبر التفاعل (Reaction)
-async function confirmChange({ message, getLang, eventData }) {
-    if (message.reaction !== "👍") return;
-
+  onStart: async ({ api, event, args }) => {
     try {
-        await global.controllers.Threads.updateData(message.threadID, {
-            antiSettings: eventData.newSettings,
-        });
-        message.send(getLang("success"));
+      const { threadID, messageID } = event;
+      if (!event.isGroup) return api.sendMessage('❌ هذا الأمر متاح للمجموعات فقط.', threadID);
+
+      const threadData = Threads.get(threadID) || {};
+      threadData.settings = threadData.settings || {};
+      // نتحقق من وجود كائن الحماية أو ننشئه
+      threadData.settings.anti = threadData.settings.anti || {
+        antiSpam: false,
+        antiOut: false,
+        antiName: false,
+        antiIcon: false
+      };
+
+      const anti = threadData.settings.anti;
+
+      // --- حالة التعديل ---
+      if (args[0] === 'تغيير') {
+        const choice = args[1];
+        if (!choice || isNaN(choice)) return api.sendMessage('⚠️ يرجى كتابة رقم الخيار بعد كلمة تغيير (مثال: اعدادات تغيير 1)', threadID);
+
+        const keys = ["antiSpam", "antiOut", "antiName", "antiIcon"];
+        const index = parseInt(choice) - 1;
+
+        if (index >= 0 && index < keys.length) {
+          const key = keys[index];
+          anti[key] = !anti[key]; // تبديل الحالة
+          Threads.set(threadID, threadData);
+
+          return api.sendMessage(`✅ تم تحديث الخيار رقم (${choice}) بنجاح!`, threadID);
+        } else {
+          return api.sendMessage('❌ رقم خيار غير صحيح.', threadID);
+        }
+      }
+
+      // --- عرض القائمة (النمط الهندسي الحاد) ---
+      const status = (bool) => bool ? "✅ مـفـعـل" : "❌ مـعـطل";
+
+      let msg = `◈ ─── إعدادات الحماية ─── ◈\n\n`;
+      msg += `① ⠐ مكافحة السبام\n   ⭓ 『 ${status(anti.antiSpam)} 』\n\n`;
+      msg += `② ⠐ منع الخروج\n   ⭓ 『 ${status(anti.antiOut)} 』\n\n`;
+      msg += `③ ⠐ قفل اسم المجموعة\n   ⭓ 『 ${status(anti.antiName)} 』\n\n`;
+      msg += `④ ⠐ قفل صورة المجموعة\n   ⭓ 『 ${status(anti.antiIcon)} 』\n\n`;
+      msg += `━━━━━━━━━━━━━━━━━\n`;
+      msg += `│← للتغيير: اعدادات تغيير <الرقم>\n`;
+      msg += `│← الـحـالـة: جاهز للضبط 𓋹`;
+
+      api.sendMessage(msg, threadID, messageID);
+
     } catch (err) {
-        message.send("❌ حدث خطأ أثناء محاولة حفظ البيانات.");
+      console.error(err);
+      api.sendMessage('❌ حدث خطأ داخلي.', event.threadID);
     }
-}
-
-// دالة اختيار الخيارات من القائمة عبر الرد (Reply)
-async function chooseMenu({ message, getLang, data }) {
-    const input = message.args.map(Number).filter(n => n >= 1 && n <= 6);
-    if (input.length === 0) return message.reply(getLang("invalid"));
-
-    const currentSettings = data.thread.data?.antiSettings || {};
-    const keys = [
-        "antiSpam",
-        "antiOut",
-        "antiChangeGroupName",
-        "antiChangeGroupImage",
-        "antiChangeNickname",
-        "notifyChange",
-    ];
-
-    // إنشاء كائن الإعدادات الجديد بناءً على القديم
-    const newSettings = {};
-    keys.forEach(k => newSettings[k] = !!currentSettings[k]);
-
-    // تبديل القيم المختارة (Toggle)
-    input.forEach(n => {
-        const key = keys[n - 1];
-        newSettings[key] = !newSettings[key];
-    });
-
-    // التحقق من صلاحيات البوت
-    const isBotAdmin = data.thread.info.adminIDs.includes(global.botID);
-    if (!isBotAdmin) {
-        newSettings.antiOut = false;
-        newSettings.antiSpam = false;
-        await message.reply(getLang("botNotAdmin"));
-    }
-
-    // تجهيز العرض البصري (✅/❌)
-    const view = {};
-    keys.forEach(k => view[k] = newSettings[k] ? "✅" : "❌");
-
-    const msg = await message.reply(getLang("confirm", view));
-    
-    // إضافة حدث التفاعل للحفظ
-    msg.addReactEvent({ 
-        callback: confirmChange, 
-        newSettings 
-    });
-}
-
-// الدالة الأساسية عند استدعاء الأمر
-async function onCall({ message, getLang, data }) {
-    if (!data.thread?.info?.isGroup) {
-        return message.reply(getLang("notGroup"));
-    }
-
-    const settings = data.thread.data?.antiSettings || {};
-    const view = {};
-    
-    [
-        "antiSpam", "antiOut", "antiChangeGroupName", 
-        "antiChangeGroupImage", "antiChangeNickname", "notifyChange"
-    ].forEach(k => view[k] = settings[k] ? "✅" : "❌");
-
-    const msg = await message.reply(getLang("menu", view));
-
-    // إضافة حدث الرد لاختيار الأرقام
-    msg.addReplyEvent({ 
-        callback: chooseMenu 
-    });
-}
-
-export default {
-    config,
-    langData,
-    onCall,
+  }
 };
