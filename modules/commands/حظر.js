@@ -9,7 +9,7 @@ module.exports = {
     prefix: true,
     adminOnly: true,
     description: 'حظر أو فك حظر مستخدم من استخدام أوامر البوت',
-    category: 'الإدارة',
+    category: 'group',
     guide: {
       ar: '   {pn} [ايدي | منشن]'
     },
