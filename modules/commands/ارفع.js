@@ -6,7 +6,7 @@ module.exports = {
     countDown: 5,
     role: 1,
     description: "رفع عضو مسؤول بالرد عليه",
-    category: "الإدارة",
+    category: "group",
     guide: { ar: "رد على رسالة العضو واكتب ارفع" }
   },
 
