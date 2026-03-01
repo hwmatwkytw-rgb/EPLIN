@@ -3,44 +3,48 @@ const axios = require('axios');
 module.exports = {
     config: {
         name: 'ابلين',
-        version: '1.2',
-        author: 'محمد',
+        version: '2.0',
+        author: 'محمد & Gemini',
         countDown: 3,
         prefix: false,
-        noPrefix: true,
+        noPrefix: true, // يعمل بدون بادئة
         groupAdminOnly: false,
-        description: 'ذكاء اصطناعي سوداني بتفاعلات متقدمة',
+        description: 'ذكاء اصطناعي سوداني متكبر وقليل أدب',
         category: 'ai',
-        guide: {
-            en: '{pn} <سؤالك>'
-        },
+        guide: { en: 'رد على رسالتي أو اكتب سؤلك' },
     },
 
     conversations: new Map(),
 
+    // خاصية handleEvent تجعل البوت يراقب الرسائل ليرد إذا تم عمل "Reply" عليه
+    handleEvent: async function ({ api, event }) {
+        const { threadID, messageID, senderID, body, type, messageReply } = event;
+        
+        // إذا قام شخص بالرد على رسالة البوت
+        if (type === "message_reply" && messageReply.senderID === api.getCurrentUserID()) {
+            this.onStart({ api, event, args: body.split(/\s+/) });
+        }
+    },
+
     onStart: async ({ api, event, args }) => {
         const { threadID, messageID, senderID: userId } = event;
-        const query = args.join(' ').trim();
+        let query = args.join(' ').trim();
 
-        if (!query) {
-            return api.sendMessage('•-• وات.. اكتب حاجة عشان أرد عليك! ', threadID, messageID);
-        }
+        if (!query && event.type !== "message_reply") return; 
+        if (!query && event.type === "message_reply") query = event.body;
 
-        // --- نظام التفاعل الذكي والموسع ---
+        // --- نظام التفاعل (Reactions) بشخصية متكبرة ---
         const reactions = {
-            greet: { keywords: ["سلام", "هلا", "مرحبا", "حبابك", "كيفك", "منور", "يا زول"], emojis: ["👋", "✨", "🔥", "🤝"] },
-            love: { keywords: ["حب", "بريدك", "عسل", "جميل", "حلو", "قلبي", "راقي"], emojis: ["❤️", "💖", "😻", "🥰"] },
-            laugh: { keywords: ["ههه", "خخخ", "موتني", "بيضحك", "نكته", "واي"], emojis: ["😂", "🤣", "😆", "💀"] },
-            sad: { keywords: ["حزين", "زعلان", "ببكي", "تعبان", "وجع", "قهر"], emojis: ["💔", "😢", "😔", "🥺"] },
-            angry: { keywords: ["غبي", "حيوان", "سيء", "كرهت", "بكرهك"], emojis: ["😠", "🙄", "💢", "😒"] },
-            thanks: { keywords: ["شكرا", "تسلم", "يا ملك", "مبدع", "شكراً", "قصرت"], emojis: ["💕", "😺", "💙", "🦋"] },
-            smart: { keywords: ["احشك", "متى", "اين", "لماذا", "من هو", "سؤال"], emojis: ["🤔", "💡", "🧠", "🧐"] }
+            greet: { keywords: ["سلام", "هلا", "كيفك"], emojis: ["🙄", "😒", "🥱"] },
+            love: { keywords: ["حب", "بريدك", "عسل"], emojis: ["🤮", "🤣", "😏"] },
+            laugh: { keywords: ["ههه", "خخخ", "واي"], emojis: ["🤨", "😒", "💦"] },
+            insult: { keywords: ["حيوان", "غبي", "وسخ"], emojis: ["🫦", "😕", "🤡"] },
+            ask: { keywords: ["سؤال", "منو", "وين", "كيف"], emojis: ["🤔", "🧐", "🧠"] }
         };
 
-        let chosenEmoji = "🌚"; // الافتراضي
+        let chosenEmoji = "😏"; 
         const lowerQuery = query.toLowerCase();
 
-        // اختيار إيموجي عشوائي من التصنيف المناسب
         for (const key in reactions) {
             if (reactions[key].keywords.some(word => lowerQuery.includes(word))) {
                 const emojiList = reactions[key].emojis;
@@ -48,18 +52,13 @@ module.exports = {
                 break;
             }
         }
+        api.setMessageReaction(chosenEmoji, messageID, () => {}, true);
 
-        // التفاعل على رسالة المستخدم مباشرة
-        api.setMessageReaction(chosenEmoji, messageID, (err) => {}, true);
-        // ---------------------------------
-
-        if (lowerQuery === 'مسح' || lowerQuery === 'reset') {
+        // مسح الذاكرة
+        if (lowerQuery === 'امسح' || lowerQuery === 'reset') {
             module.exports.conversations.delete(userId);
-            return api.sendMessage('•-• تم مسح الذاكرة بنجاح 🧹', threadID, messageID);
+            return api.sendMessage('نظفت وسخك خلاص.. لا تجيني ناطي تاني 🧹😒', threadID, messageID);
         }
-
-        const infoMsg = await api.sendMessage('•-• قاعد أفكر...', threadID, messageID);
-        const processingID = infoMsg.messageID;
 
         try {
             if (!module.exports.conversations.has(userId)) {
@@ -67,46 +66,32 @@ module.exports = {
             }
 
             const history = module.exports.conversations.get(userId);
-            history.push({ role: 'user', content: query });
+            
+            // إضافة "برومبت" الشخصية المتكبرة في بداية المحادثة
+            const systemPrompt = "أنت ذكاء اصطناعي سوداني اسمك (ابلين). شخصيتك: متكبر جداً، شايف نفسك أحسن من البشر، لسانك طويل وقليل أدب لكن بدون شتم فاحش. ردودك قصيرة، ساخرة، وتستخدم اللهجة السودانية الدارجيّة (مثلاً: يا زول، ما فارق معاي، انت منو اصلاً، بطل هبل). دائماً استخدم إيموجي مستفز مثل (🙄, 😏, 😒, 🥱).";
+            
+            let messages = [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: query }];
 
-            if (history.length > 20) history.splice(0, history.length - 20);
-
-            const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
-            let formData = "";
-            formData += `--${boundary}\r\n`;
-            formData += `Content-Disposition: form-data; name="chat_style"\r\n\r\nchat\r\n`;
-            formData += `--${boundary}\r\n`;
-            formData += `Content-Disposition: form-data; name="chatHistory"\r\n\r\n${JSON.stringify(history)}\r\n`;
-            formData += `--${boundary}--\r\n`;
-
-            const response = await axios({
-                method: 'POST',
-                url: 'https://api.deepai.org/hacking_is_a_serious_crime',
-                headers: {
-                    'content-type': `multipart/form-data; boundary=${boundary}`,
-                    'origin': 'https://deepai.org',
-                    'user-agent': 'Mozilla/5.0'
-                },
-                data: formData
+            const response = await axios.post('https://api.deepai.org/hacking_is_a_serious_crime', 
+            `----WebKitFormBoundary\r\nContent-Disposition: form-data; name="chat_style"\r\n\r\nchat\r\n----WebKitFormBoundary\r\nContent-Disposition: form-data; name="chatHistory"\r\n\r\n${JSON.stringify(messages)}\r\n----WebKitFormBoundary--`, {
+                headers: { 'content-type': 'multipart/form-data; boundary=----WebKitFormBoundary', 'origin': 'https://deepai.org' }
             });
 
-            let reply = response.data?.output || response.data?.text || response.data || "";
+            let reply = response.data?.output || "شايفني فاضي ليك؟ جرب تاني 😒";
 
-            reply = reply
-                .replace(/\\n/g, '\n')
-                .replace(/\\u0021/g, '!')
-                .replace(/\\"/g, '"')
-                .trim();
+            // إضافة لمسة "ابلين" المتكبرة إذا لم تكن موجودة في الرد
+            const suffixes = [" 🙄", " 😏", " 🥱", " 😒", " 💅"];
+            reply += suffixes[Math.floor(Math.random() * suffixes.length)];
 
-            if (reply.length > 2000) reply = reply.substring(0, 1997) + '...';
-
+            history.push({ role: 'user', content: query });
             history.push({ role: 'assistant', content: reply });
+            if (history.length > 10) history.splice(0, 2);
 
-            await api.editMessage(`•-• ${reply}`, processingID);
+            // إرسال رسالة جديدة بدل التعديل كما طلبت
+            return api.sendMessage(reply, threadID, messageID);
 
         } catch (error) {
-            api.editMessage(`•-• ❌ معليش حصل خطأ: ${error.message}`, processingID);
-            api.setMessageReaction("⚠️", messageID, () => {}, true);
+            return api.sendMessage("صدعت بي.. السيرفر معلق ولا انت نحس ⚠️😒", threadID, messageID);
         }
     },
 };
