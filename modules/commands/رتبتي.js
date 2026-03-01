@@ -20,7 +20,7 @@ module.exports = {
         author: 'Hridoy & Gemini',
         countDown: 5,
         prefix: true,
-        category: 'level',
+        category: 'fun',
         description: 'بطاقة رتبة احترافية مع نجوم ودعم كامل للأسماء المزخرفة',
         guide: { en: '{pn} | {pn} top' },
     },
