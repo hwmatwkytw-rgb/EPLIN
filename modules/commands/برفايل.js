@@ -10,7 +10,7 @@ module.exports = {
     countDown: 5,
     prefix: true,
     description: 'يعرض صورة ملفك الشخصي أو صورة المستخدم المحدد.',
-    category: 'أدوات',
+    category: 'fun',
     guide: {
       ar: '   {pn} [@الإشارة (اختياري)]'
     },
