@@ -11,7 +11,7 @@ module.exports = {
     adminOnly: false,
     aliases: ['au', 'addu', 'اضافة'],
     description: '➕ إضافة عضو إلى شات المجموعة',
-    category: 'box chat',
+    category: 'group ',
     guide: {
       en: '   {pn}اضافة_عضو [رابط الحساب | UID]'
     },
