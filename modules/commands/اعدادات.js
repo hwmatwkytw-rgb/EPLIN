@@ -3,7 +3,7 @@ const { Threads } = require('../../database/database');
 module.exports = {
   config: {
     name: "اعدادات",
-    version: "1.0",
+    version: "1.1",
     author: "سينكو",
     countDown: 5,
     description: "إعدادات حماية المجموعة بنمط هندسي",
@@ -17,12 +17,14 @@ module.exports = {
 
       const threadData = Threads.get(threadID) || {};
       threadData.settings = threadData.settings || {};
-      // نتحقق من وجود كائن الحماية أو ننشئه
+      
+      // تحديث كائن الحماية ليشمل ميزة الألقاب
       threadData.settings.anti = threadData.settings.anti || {
         antiSpam: false,
         antiOut: false,
         antiName: false,
-        antiIcon: false
+        antiIcon: false,
+        antiNickname: false // الميزة الجديدة
       };
 
       const anti = threadData.settings.anti;
@@ -30,14 +32,15 @@ module.exports = {
       // --- حالة التعديل ---
       if (args[0] === 'تغيير') {
         const choice = args[1];
-        if (!choice || isNaN(choice)) return api.sendMessage('⚠️ يرجى كتابة رقم الخيار بعد كلمة تغيير (مثال: اعدادات تغيير 1)', threadID);
+        if (!choice || isNaN(choice)) return api.sendMessage('⚠️ يرجى كتابة رقم الخيار بعد كلمة تغيير (مثال: اعدادات تغيير 5)', threadID);
 
-        const keys = ["antiSpam", "antiOut", "antiName", "antiIcon"];
+        // إضافة antiNickname للمصفوفة للتحكم بها عبر الرقم 5
+        const keys = ["antiSpam", "antiOut", "antiName", "antiIcon", "antiNickname"];
         const index = parseInt(choice) - 1;
 
         if (index >= 0 && index < keys.length) {
           const key = keys[index];
-          anti[key] = !anti[key]; // تبديل الحالة
+          anti[key] = !anti[key]; // تبديل الحالة (True/False)
           Threads.set(threadID, threadData);
 
           return api.sendMessage(`✅ تم تحديث الخيار رقم (${choice}) بنجاح!`, threadID);
@@ -54,6 +57,7 @@ module.exports = {
       msg += `② ⠐ منع الخروج\n   ⭓ 『 ${status(anti.antiOut)} 』\n\n`;
       msg += `③ ⠐ قفل اسم المجموعة\n   ⭓ 『 ${status(anti.antiName)} 』\n\n`;
       msg += `④ ⠐ قفل صورة المجموعة\n   ⭓ 『 ${status(anti.antiIcon)} 』\n\n`;
+      msg += `⑤ ⠐ قفل الألقاب (الكنية)\n   ⭓ 『 ${status(anti.antiNickname)} 』\n\n`; // عرض الميزة في القائمة
       msg += `━━━━━━━━━━━━━━━━━\n`;
       msg += `│← للتغيير: اعدادات تغيير <الرقم>\n`;
       msg += `│← الـحـالـة: جاهز للضبط 𓋹`;
