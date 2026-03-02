@@ -4,9 +4,9 @@ module.exports = {
   config: {
     name: "antiGuard",
     eventType: ["log:subscribe", "log:unsubscribe", "log:thread-name", "log:thread-icon", "log:user-nickname"],
-    version: "1.1.0",
+    version: "1.2.0",
     author: "سينكو / Gemini",
-    description: "نظام حماية المجموعات المتقدم (نمط هندسي)"
+    description: "نظام حماية المجموعات (مختصر ومطور)"
   },
 
   onStart: async ({ api, event }) => {
@@ -14,19 +14,17 @@ module.exports = {
       const { threadID, logMessageType, logMessageData, author } = event;
       const botID = api.getCurrentUserID();
 
-      // تجاهل أي إجراء يقوم به البوت نفسه لتجنب التكرار (Loop)
       if (author == botID) return;
 
-      // جلب بيانات المجموعة وإعدادات الحماية
-      const threadData = Threads.get(threadID) || {};
+      const threadData = (await Threads.get(threadID)) || {};
       const settings = threadData.settings || {};
       const anti = settings.anti || {};
 
-      // 1. [ حماية اسم المجموعة ]
+      // 1. [ حماية الاسم ]
       if (logMessageType === "log:thread-name" && anti.antiName) {
-        const oldName = threadData.threadName || "الاسم الأصلي";
+        const oldName = threadData.threadName || "المجموعة";
         await api.setTitle(oldName, threadID);
-        return api.sendMessage(`🛡️ [  اسي مالك معا الاسم؟ ]\n◈ ─── ◈\n ،.\n.`, threadID);
+        return api.sendMessage("🛡️ تم استعادة اسم المجموعة (الحماية مفعلة).", threadID);
       }
 
       // 2. [ منع الخروج ]
@@ -34,29 +32,28 @@ module.exports = {
         const leftID = logMessageData.leftParticipantFbId;
         if (leftID !== botID) {
           api.addUserToGroup(leftID, threadID, (err) => {
-            if (!err) api.sendMessage(`🛡️ [  مارق وين بكرامتك 🥹 ]\n◈ ─── ◈\n. `, threadID);
+            if (!err) api.sendMessage("🛡️ عذراً، الخروج ممنوع حالياً.", threadID);
           });
         }
       }
 
-      // 3. [ حماية الكنيات / الألقاب ] (الميزة الجديدة)
+      // 3. [ حماية الكنيات ]
       if (logMessageType === "log:user-nickname" && anti.antiNickname) {
-        const participantID = logMessageData.participantID;
-        // جلب اللقب القديم المخزن في قاعدة البيانات أو تركه فارغاً إذا لم يوجد
+        const pID = logMessageData.participantID || logMessageData.participantId;
         const oldNicknames = threadData.nicknames || {};
-        const oldNick = oldNicknames[participantID] || "";
+        const oldNick = oldNicknames[pID] || "";
         
-        await api.changeNickname(oldNick, threadID, participantID);
-        return api.sendMessage(`🛡️ [  يمنع تغير الكنيات ]\n◈ ─── ◈\n.\n.`, threadID);
+        await api.changeNickname(oldNick, threadID, pID);
+        return api.sendMessage("🛡️ تم إلغاء تغيير اللقب (الحماية مفعلة).", threadID);
       }
 
-      // 4. [ حماية صورة المجموعة ]
+      // 4. [ حماية الصورة ]
       if (logMessageType === "log:thread-icon" && anti.antiIcon) {
-         api.sendMessage(`🛡️ [ قـفـل الـصـورة ]\n◈ ─── ◈\n⚠️ تم اكتشاف محاولة تغيير الصورة.\nالحماية مفعمة، يرجى مراجعة المسؤولين.`, threadID);
+         return api.sendMessage("🛡️ تنبيه: تغيير صورة المجموعة ممنوع.", threadID);
       }
 
     } catch (err) {
-      console.error("خطأ في نظام الحماية:", err);
+      console.error("خطأ في AntiGuard:", err);
     }
   }
 };
