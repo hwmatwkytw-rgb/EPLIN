@@ -61,15 +61,15 @@ module.exports = {
 
             // --- صياغة الرسالة بالستايل الطولي المختار ---
             const notificationMessage =
-                `●───── ⌬ ─────●\n` +
+                `●─────── ⌬ ───────●\n` +
                 `┇ ⦿ ⟬ إشـعـار إداري ⟭\n` +
                 `┇\n` +
-                `┇ 𓋰 الـمـرسل: المطور\n` +
-                `┇ 𓋰 الـرسـالـة: \n` +
+                `┇  الـمـرسل: المطور\n` +
+                `┇  الـرسـالـة: \n` +
                 `┇ 『 ${text} 』\n` +
                 `┇\n` +
-                `┇ 𓋰 الـتـوقـيـت: ${sendTime}\n` +
-                `●───── ⌬ ─────●`;
+                `┇  الـتـوقـيـت: ${sendTime}\n` +
+                `●─────── ⌬ ───────●`;
 
             let successCount = 0;
             for (const thread of groupThreads) {
@@ -88,10 +88,10 @@ module.exports = {
             attachments.forEach(s => { if (fs.existsSync(s.path)) fs.unlinkSync(s.path); });
 
             return api.sendMessage(
-                `●───── ⌬ ─────●\n` +
+                `●────── ⌬ ──────●\n` +
                 `┇ ✅ تـم الإرسـال بـنـجـاح\n` +
-                `┇ 𓋰 لـعـدد: 〖 ${successCount} 〗 مـجـمـوعـة\n` +
-                `●───── ⌬ ─────●`,
+                `┇  لـعـدد: 〖 ${successCount} 〗 مـجـمـوعـة\n` +
+                `●────── ⌬ ──────●`,
                 threadID,
                 messageID
             );
