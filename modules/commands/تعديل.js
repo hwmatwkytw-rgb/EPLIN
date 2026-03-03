@@ -8,12 +8,12 @@ const path = require('path');
 module.exports = {
   config: {
     name: "تعديل",
-    version: "1.2.0",
+    version: "1.3.0",
     author: "Gry KJ",
     countDown: 8,
     role: 0,
     description: "تعديل الصور بالوصف العربي 🎨",
-    category: "ai",
+    category: "ذكاء",
     guide: { ar: "{pn} [الوصف بالعربي] (رد على صورة)" }
   },
 
@@ -27,7 +27,7 @@ module.exports = {
         `┇ ⦿ ⟬ تـعـديـل بـالـوصـف ⟭\n` +
         `┇\n` +
         `┇ 📝 يرجى الرد على صورة وكتابة الوصف\n` +
-        `┇ مـثـال: تعديل حولها لنمط سايبر بانك\n` +
+        `┇ مـثـال: تعديل اجعل لون الجدار احمر\n` +
         `●─────── ⌬ ───────●`,
         threadID, messageID
       );
@@ -36,7 +36,7 @@ module.exports = {
     if (!arabicPrompt) return api.sendMessage("⚠️ يرجى كتابة وصف للتعديل بالعربي!", threadID, messageID);
 
     try {
-      // ترجمة الوصف من العربي للإنجليزي
+      // ترجمة الوصف
       const translation = await axios.get(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=en&dt=t&q=${encodeURIComponent(arabicPrompt)}`);
       const englishPrompt = translation.data[0][0][0];
 
@@ -69,7 +69,7 @@ module.exports = {
       }, messageID);
 
     } catch (error) {
-      return api.sendMessage(`❌ فشل في معالجة الطلب: ${error.message}`, threadID, messageID);
+      return api.sendMessage(`❌ فشل: ${error.message === "TIMEOUT" ? "السيرفر استغرق وقت طويل، حاول لاحقاً" : error.message}`, threadID, messageID);
     }
   }
 };
@@ -88,7 +88,7 @@ async function ProcessImageWithPrompt(imagePath, prompt) {
   const { width, height } = imageSize(fs.readFileSync(imagePath));
 
   const task = (await axios.post(`https://be.aimirror.fun/draw?uid=${idgen}`, {
-    model_id: 1001,
+    model_id: 29, // استخدام موديل مستقر يدعم الـ prompt
     prompt: prompt,
     cropped_image_key: token.key,
     cropped_height: height,
@@ -96,19 +96,29 @@ async function ProcessImageWithPrompt(imagePath, prompt) {
     package_name: "com.ai.polyverse.mirror",
     version: "6.2.4",
     is_free_trial: true,
-    force_default_pose: true
+    force_default_pose: false, // تعطيل الوضع الافتراضي للسماح بالتعديل الحر
+    strength: 0.5 // درجة التأثير (0.5 تعني توازن بين الصورة الأصلية والوصف)
   }, { headers: { 'User-Agent': 'AIMirror/6.2.4', 'uid': idgen } })).data;
 
+  if (!task.draw_request_id) throw new Error("السيرفر رفض الطلب، حاول بكلمات أخرى.");
+
   let result;
-  while (true) {
+  let attempts = 0;
+  const maxAttempts = 20; // الحد الأقصى للمحاولات (حوالي 60 ثانية)
+
+  while (attempts < maxAttempts) {
     await new Promise(r => setTimeout(r, 3000));
     result = (await axios.get(`https://be.aimirror.fun/draw/process?draw_request_id=${task.draw_request_id}&uid=${idgen}`, {
       headers: { 'User-Agent': 'AIMirror/6.2.4', 'uid': idgen }
     })).data;
-    if (result.draw_status === "SUCCEED") break;
-    if (result.draw_status === "FAILED") throw new Error("لم يستطع الذكاء الاصطناعي معالجة هذا الوصف.");
+
+    if (result.draw_status === "SUCCEED") return result.generated_image_addresses[0];
+    if (result.draw_status === "FAILED") throw new Error("فشلت المعالجة من قبل السيرفر.");
+    
+    attempts++;
   }
-  return result.generated_image_addresses[0];
+  
+  throw new Error("TIMEOUT");
 }
 
 function genUID() {
