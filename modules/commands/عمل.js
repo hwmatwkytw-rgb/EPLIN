@@ -62,18 +62,18 @@ module.exports = {
         userDB[senderID].balance += amount;
         writeDB(userDBPath, userDB);
 
-        const msg = `●───── ⌬ ─────●
+        const msg = `●─────── ⌬ ───────●
 ┇
 ⦿ ⟬ مركز العمل ⟭
-┇ 𓋰 المهنة: ${job}
+┇  المهنة: ${job}
 ┇
 ⦿ ⟬ المكافأة ⟭
-┇ 𓋰 كسبت: ${amount.toLocaleString()} رصيد
+┇  كسبت: ${amount.toLocaleString()} رصيد
 ┇
 ⦿ ⟬ المحفظة ⟭
-┇ 𓋰 رصيدك الحالي: ${userDB[senderID].balance.toLocaleString()}
+┇  رصيدك الحالي: ${userDB[senderID].balance.toLocaleString()}
 ┇
-●───── ⌬ ─────●`;
+●─────── ⌬ ───────●`;
 
         return api.sendMessage(msg, threadID);
     }
