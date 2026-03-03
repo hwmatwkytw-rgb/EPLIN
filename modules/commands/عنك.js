@@ -20,7 +20,7 @@ module.exports = {
             const user = info[targetID];
             if (!user) return api.sendMessage("●───── ⌬ ─────●\n┇ ❌ لم يتم العثور على هذا المستخدم.\n●───── ⌬ ─────●", threadID, messageID);
 
-            const msg = `●───── ⌬ ─────●
+            const msg = `●─────── ⌬ ───────●
 ┇ ⦿ ⟬ مـعـلـومـات الـمـسـتـخـدم ⟭
 ┇
 ┇  الإسـم: ${user.name}
@@ -29,7 +29,7 @@ module.exports = {
 ┇  الـلـغـة: ${user.vanity || "عربي"}
 ┇  الـرابـط: fb.com/${targetID}
 ┇
-●───── ⌬ ─────●
+●─────── ⌬ ───────●
   𓆩☆𓆪`;
 
             api.sendMessage(msg, threadID, messageID);
