@@ -30,10 +30,10 @@ module.exports = {
 
             let progress = 0;
             const msg = await api.sendMessage(
-                "●───── ⌬ ─────●\n" +
+                "●────── ⌬ ──────●\n" +
                 "┇ 🛡️ بـدء فـحـص الأمـان...\n" +
                 "┇ [░░░░░░░░░░] 0%\n" +
-                "●───── ⌬ ─────●",
+                "●────── ⌬ ──────●",
                 threadID
             );
 
@@ -46,10 +46,10 @@ module.exports = {
                 const bar = "▓".repeat(filled) + "░".repeat(10 - filled);
 
                 api.editMessage(
-                    `●───── ⌬ ─────●\n` +
+                    `●────── ⌬ ──────●\n` +
                     `┇ 🛡️ فحص الحساب: ${name}\n` +
                     `┇ [${bar}] ${progress}%\n` +
-                    `●───── ⌬ ─────●`,
+                    `●────── ⌬ ──────●`,
                     msg.messageID
                 );
             }
@@ -58,7 +58,7 @@ module.exports = {
             const level = securityLevel[Math.floor(Math.random() * securityLevel.length)];
 
             const report = 
-                `●───── ⌬ ─────●\n` +
+                `●─────── ⌬ ───────●\n` +
                 `┇ ⦿ ⟬ تـقـريـر الأمـان ⟭\n` +
                 `┇\n` +
                 `┇  الـمـسـتـخـدم: ${name}\n` +
@@ -67,7 +67,7 @@ module.exports = {
                 `┇  نـشـاط مـشـبوه: ${Math.random() > 0.7 ? "تم رصد محاولة" : "لا يوجد"}\n` +
                 `┇\n` +
                 `┇  الـتـوصـيـة: ${level === "ضعيف" ? "فعل 2FA!" : "حسابك آمن."}\n` +
-                `●───── ⌬ ─────●\n` +
+                `●─────── ⌬ ───────●\n` +
                 ` ⠇تـنـبيـه: فحص تـوعـوي فـقـط.`;
 
             api.sendMessage(report, threadID);
