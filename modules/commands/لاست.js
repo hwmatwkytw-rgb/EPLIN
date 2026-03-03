@@ -8,7 +8,7 @@ module.exports = {
     author: "سينكو",
     countDown: 15,
     role: 2, 
-    description: "عرض قائمة المجموعات مع منشن وتفاعل (Reaction) لغير المطور",
+    description: "عرض قائمة المجموعات مع الزخرفة الجديدة",
     category: "owner",
     guide: { ar: "{pn}" }
   },
@@ -30,15 +30,15 @@ module.exports = {
         return api.sendMessage("⚠️ البوت ليس عضواً في أي مجموعة حالياً.", threadID, messageID);
       }
 
-      let msg = `╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n`;
-      msg += `     ◤ قـائمة المجمـوعات (${groups.length}) ◥\n\n`;
+      let msg = `●─────── ⌬ ───────●\n`;
+      msg += `┇ ⦿ ⟬ قـائمة المجمـوعات (${groups.length}) ⟭\n┇\n`;
       
       const groupIds = [];
       const mentions = [];
 
       groups.forEach((g, i) => {
         const gName = g.name || "بدون اسم";
-        const entry = `| ${i + 1} | ${gName}\n| 🆔 | ${g.threadID}\n╰───────┈⊷\n`;
+        const entry = `┇ الرقم: ${i + 1}\n┇ الاسم: ${gName}\n┇ الـ ID: ${g.threadID}\n┇──────────────\n`;
         
         mentions.push({
           tag: gName,
@@ -49,8 +49,9 @@ module.exports = {
         groupIds.push(g.threadID);
       });
 
-      msg += `\n📌 رد بـ:\n• خروج [الرقم]\n• حظر [الرقم]\n`;
-      msg += `╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
+      msg += `┇ الـحـالـة: جـاري الإنـتـظـار... ⏳\n`;
+      msg += `┇ رد بـ (خروج [الرقم]) أو (حظر)\n`;
+      msg += `●─────── ⌬ ───────●`;
 
       return api.sendMessage({ body: msg, mentions }, threadID, (err, info) => {
         if (err) return;
@@ -71,7 +72,6 @@ module.exports = {
     const { body, threadID, messageID, senderID } = event;
     const DEVELOPER_ID = "61588108307572";
     
-    // التفاعل لغير المطور في حالة الرد أيضاً
     if (senderID !== DEVELOPER_ID) {
       return api.setMessageReaction("🚯", messageID, (err) => {}, true);
     }
