@@ -1,24 +1,22 @@
-const { Threads } = require('../../database/database');
-
 module.exports = {
   config: {
     name: "اعدادات",
-    version: "2.5",
+    version: "2.7",
     author: "سينكو & Gemini",
     countDown: 5,
-    description: "إعدادات حماية المجموعة بنمط هندسي",
+    description: "إعدادات حماية المجموعة",
     category: "group",
   },
 
-  onStart: async ({ api, event }) => {
+  onStart: async ({ api, event, Threads }) => {
     try {
       const { threadID, messageID, senderID } = event;
       if (!event.isGroup) return api.sendMessage('❌ هذا الأمر متاح للمجموعات فقط.', threadID);
 
-      let threadData = Threads.get(threadID) || {};
-      if (!threadData.settings) threadData.settings = {};
-      if (!threadData.settings.anti) {
-        threadData.settings.anti = {
+      // في كنجي، Threads بتيجي جاهزة في الـ parameters
+      let settings = (await Threads.getData(threadID)).settings || {};
+      if (!settings.anti) {
+        settings.anti = {
           antiSpam: false,
           antiOut: false,
           antiName: false,
@@ -27,7 +25,7 @@ module.exports = {
         };
       }
 
-      const anti = threadData.settings.anti;
+      const anti = settings.anti;
       const statusIcon = (bool) => bool ? "✅" : "❌";
 
       let msg = `◈ ─── إعدادات الحماية ─── ◈\n\n`;
@@ -41,13 +39,8 @@ module.exports = {
       msg += `│← الـحـالـة: جاهز للضبط 𓋹`;
 
       return api.sendMessage(msg, threadID, (err, info) => {
-        if (err) return console.error(err);
-        
-        // التأكد من وجود المصفوفة قبل الدفع فيها
-        if (!global.client.handleReply) global.client.handleReply = [];
-        
         global.client.handleReply.push({
-          name: "اعدادات", // تأكد أن الاسم يطابق config.name
+          name: this.config.name,
           messageID: info.messageID,
           author: senderID
         });
@@ -55,14 +48,13 @@ module.exports = {
 
     } catch (err) {
       console.error(err);
-      api.sendMessage('❌ حدث خطأ داخلي في عرض الإعدادات.', event.threadID);
+      api.sendMessage('❌ حدث خطأ في النظام.', event.threadID);
     }
   },
 
-  handleReply: async ({ api, event, handleReply }) => {
+  handleReply: async ({ api, event, handleReply, Threads }) => {
     const { threadID, messageID, body, senderID } = event;
 
-    // منع أي شخص غير اللي طلب الأمر من التحكم
     if (senderID !== handleReply.author) return;
 
     const choice = parseInt(body);
@@ -71,25 +63,24 @@ module.exports = {
     if (isNaN(choice) || choice < 1 || choice > keys.length) return;
 
     try {
-      let threadData = Threads.get(threadID);
-      const key = keys[choice - 1];
-      
-      // تبديل الحالة
-      threadData.settings.anti[key] = !threadData.settings.anti[key];
-      
-      // حفظ البيانات
-      Threads.set(threadID, threadData);
+      let data = await Threads.getData(threadID);
+      let settings = data.settings || {};
+      if (!settings.anti) settings.anti = {};
 
-      const status = threadData.settings.anti[key] ? "✅" : "❌";
+      const key = keys[choice - 1];
+      settings.anti[key] = !settings.anti[key];
       
-      // حذف الرسالة القديمة عشان الزحمة
+      // طريقة حفظ كنجي الصحيحة
+      await Threads.setData(threadID, { settings });
+
+      const status = settings.anti[key] ? "✅" : "❌";
       api.unsendMessage(handleReply.messageID); 
       
       return api.sendMessage(`✅ تم تحديث الخيار رقم (${choice}) إلى 『 ${status} 』 بنجاح!`, threadID, messageID);
 
     } catch (e) {
       console.error(e);
-      api.sendMessage("❌ فشل في حفظ الإعدادات، تأكد من ملف الداتابيز.", threadID);
+      api.sendMessage(`❌ فشل الحفظ، جرب مرة أخرى.`, threadID, messageID);
     }
   }
 };
