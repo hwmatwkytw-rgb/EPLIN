@@ -3,66 +3,88 @@ const { Threads } = require('../../database/database');
 module.exports = {
   config: {
     name: "اعدادات",
-    version: "1.0",
-    author: "سينكو",
+    version: "2.2",
+    author: "سينكو & Gemini",
     countDown: 5,
-    description: "إعدادات حماية المجموعة بنمط هندسي",
+    description: "إعدادات حماية المجموعة بنمط هندسي وأيقونات",
     category: "group",
   },
 
-  onStart: async ({ api, event, args }) => {
+  onStart: async ({ api, event }) => {
     try {
       const { threadID, messageID } = event;
       if (!event.isGroup) return api.sendMessage('❌ هذا الأمر متاح للمجموعات فقط.', threadID);
 
-      const threadData = Threads.get(threadID) || {};
+      const threadData = Threads.get(threadID) || { settings: { anti: {} } };
       threadData.settings = threadData.settings || {};
-      // نتحقق من وجود كائن الحماية أو ننشئه
+      
       threadData.settings.anti = threadData.settings.anti || {
         antiSpam: false,
         antiOut: false,
         antiName: false,
-        antiIcon: false
+        antiIcon: false,
+        antiNickname: false
       };
 
       const anti = threadData.settings.anti;
+      const statusIcon = (bool) => bool ? "✅" : "❌";
 
-      // --- حالة التعديل ---
-      if (args[0] === 'تغيير') {
-        const choice = args[1];
-        if (!choice || isNaN(choice)) return api.sendMessage('⚠️ يرجى كتابة رقم الخيار بعد كلمة تغيير (مثال: اعدادات تغيير 1)', threadID);
-
-        const keys = ["antiSpam", "antiOut", "antiName", "antiIcon"];
-        const index = parseInt(choice) - 1;
-
-        if (index >= 0 && index < keys.length) {
-          const key = keys[index];
-          anti[key] = !anti[key]; // تبديل الحالة
-          Threads.set(threadID, threadData);
-
-          return api.sendMessage(`✅ تم تحديث الخيار رقم (${choice}) بنجاح!`, threadID);
-        } else {
-          return api.sendMessage('❌ رقم خيار غير صحيح.', threadID);
-        }
-      }
-
-      // --- عرض القائمة (النمط الهندسي الحاد) ---
-      const status = (bool) => bool ? "✅ مـفـعـل" : "❌ مـعـطل";
-
+      // عرض القائمة بالنمط الهندسي والأقواس 『 』
       let msg = `◈ ─── إعدادات الحماية ─── ◈\n\n`;
-      msg += `① ⠐ مكافحة السبام\n   ⭓ 『 ${status(anti.antiSpam)} 』\n\n`;
-      msg += `② ⠐ منع الخروج\n   ⭓ 『 ${status(anti.antiOut)} 』\n\n`;
-      msg += `③ ⠐ قفل اسم المجموعة\n   ⭓ 『 ${status(anti.antiName)} 』\n\n`;
-      msg += `④ ⠐ قفل صورة المجموعة\n   ⭓ 『 ${status(anti.antiIcon)} 』\n\n`;
+      msg += `① ⠐ مكافحة السبام\n   ⭓ 『 ${statusIcon(anti.antiSpam)} 』\n\n`;
+      msg += `② ⠐ منع الخروج\n   ⭓ 『 ${statusIcon(anti.antiOut)} 』\n\n`;
+      msg += `③ ⠐ قفل اسم المجموعة\n   ⭓ 『 ${statusIcon(anti.antiName)} 』\n\n`;
+      msg += `④ ⠐ قفل صورة المجموعة\n   ⭓ 『 ${statusIcon(anti.antiIcon)} 』\n\n`;
+      msg += `⑤ ⠐ منع تغيير الكنيات\n   ⭓ 『 ${statusIcon(anti.antiNickname)} 』\n\n`;
       msg += `━━━━━━━━━━━━━━━━━\n`;
-      msg += `│← للتغيير: اعدادات تغيير <الرقم>\n`;
+      msg += `│← رد على الرسالة بالرقم للتغيير\n`;
       msg += `│← الـحـالـة: جاهز للضبط 𓋹`;
 
-      api.sendMessage(msg, threadID, messageID);
+      return api.sendMessage(msg, threadID, (err, info) => {
+        global.client.handleReply.push({
+          name: this.config.name,
+          messageID: info.messageID,
+          author: event.senderID
+        });
+      }, messageID);
 
     } catch (err) {
       console.error(err);
       api.sendMessage('❌ حدث خطأ داخلي.', event.threadID);
     }
+  },
+
+  handleReply: async ({ api, event, handleReply }) => {
+    const { threadID, messageID, body, senderID } = event;
+
+    if (senderID !== handleReply.author) return;
+
+    const choice = parseInt(body);
+    const keys = ["antiSpam", "antiOut", "antiName", "antiIcon", "antiNickname"];
+    
+    if (isNaN(choice) || choice < 1 || choice > keys.length) {
+      return api.sendMessage("⚠️ اختر رقم من 1 إلى 5.", threadID, messageID);
+    }
+
+    try {
+      const threadData = Threads.get(threadID);
+      const key = keys[choice - 1];
+      
+      threadData.settings.anti[key] = !threadData.settings.anti[key];
+      Threads.set(threadID, threadData);
+
+      const status = threadData.settings.anti[key] ? "✅" : "❌";
+      
+      // مسح القائمة القديمة
+      api.unsendMessage(handleReply.messageID); 
+      
+      return api.sendMessage(`✅ تم تحديث الخيار رقم (${choice}) إلى 『 ${status} 』 بنجاح!`, threadID, messageID);
+
+    } catch (e) {
+      console.error(e);
+      api.sendMessage("❌ فشل التحديث.", threadID);
+    }
+  }
+};
   }
 };
