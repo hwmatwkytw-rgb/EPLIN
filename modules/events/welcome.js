@@ -6,7 +6,7 @@ const welcomedUsers = new Set();
 module.exports = {
   config: {
     name: 'welcome',
-    version: '4.0',
+    version: '4.1',
     author: 'Hridoy + Abu Ubaida Edit',
     eventType: ['log:subscribe']
   },
@@ -15,12 +15,16 @@ module.exports = {
     try {
       if (event.logMessageType !== 'log:subscribe') return;
 
-      const { threadID, logMessageData } = event;
+      const { threadID, logMessageData, author } = event;
       const botID = api.getCurrentUserID();
+
+      // --- [ التعديل الجديد ] ---
+      // إذا كان الشخص الذي قام بالإضافة هو البوت نفسه، لا يرسل ترحيب
+      if (author == botID) return;
 
       if (!logMessageData?.addedParticipants) return;
 
-      // فلترة البوت من الأعضاء الجدد
+      // فلترة البوت من الأعضاء الجدد (لو البوت انضاف للمجموعة)
       const newUsers = logMessageData.addedParticipants
         .map(p => p.userFbId)
         .filter(id => id !== botID);
@@ -43,11 +47,7 @@ async function sendGroupWelcome(api, threadID, userIDs) {
     const threadInfo = await api.getThreadInfo(threadID);
 
     const mentions = [];
-    let bodyText = `
-╭━━〔نـورتـم مــجمـوعـــتنه〕━━╮
-
-
-`;
+    let bodyText = `╭━━〔نـورتـم مــجمـوعـــتنه〕━━╮\n\n`;
 
     let count = 1;
 
@@ -80,7 +80,6 @@ async function sendGroupWelcome(api, threadID, userIDs) {
     const memberCount = threadInfo.participantIDs.length;
 
     bodyText += `
-
 ━━━━━━━━━━━━━━━━━━
 👥 عدد الأعضاء الآن : ${memberCount}
 🎉 نتمنى لك أوقات ممتعة معنا
@@ -88,8 +87,7 @@ async function sendGroupWelcome(api, threadID, userIDs) {
 💬 أي استفسار لا تتردد
 
    ≛ ⇄ 𝐓𝐍𝐗『 𝑾𝒆𝒍𝒄𝒐𝒎𝒆 💫 』
-╰━━━━━━━━━━━━━━━━━━╯
-`;
+╰━━━━━━━━━━━━━━━━━━╯`;
 
     await api.sendMessage(
       {
@@ -104,4 +102,4 @@ async function sendGroupWelcome(api, threadID, userIDs) {
   } catch (error) {
     log('error', `sendGroupWelcome error: ${error.message}`);
   }
-  }
+}
