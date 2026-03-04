@@ -1,4 +1,4 @@
-Const { Threads } = require('../../database/database');
+const { Threads } = require('../../database/database');
 
 module.exports = {
   config: {
