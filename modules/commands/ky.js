@@ -8,7 +8,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 module.exports = {
     config: {
-        name: "كيلسي", // اسم الأمر: /fix
+        name: "ky", // اسم الأمر: /fix
         version: "1.0.0",
         role: 2, // للآدمن فقط (سينكو) لحماية البوت
         author: "SINKO",
