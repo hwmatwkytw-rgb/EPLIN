@@ -11,7 +11,7 @@ module.exports = {
     countDown: 10,
     role: 0,
     description: "البحث عن صور مشابهة باستخدام Yandex",
-    category: "صور",
+    category: "ai",
     guide: { ar: "{pn} (رد على صورة)" }
   },
 
@@ -216,4 +216,4 @@ function generateYandexCookies() {
   const timestamp = Date.now();
   const uid = Math.floor(Math.random() * 10000000000);
   return `yandexuid=${uid}${timestamp}; gdpr=0; _ym_uid=${timestamp}${Math.floor(Math.random() * 1000000)};`;
-  }
+                               }
