@@ -18,7 +18,7 @@ module.exports = {
     },
 
     onStart: async function ({ api, event, args }) {
-        const adminID = "100088214156174"; // الـ ID حقك
+        const adminID = "61588108307572"; // الـ ID حقك
         if (event.senderID !== adminID) return api.sendMessage("❌ | الصلاحية للمطور سينكو فقط!", event.threadID);
 
         const fileName = args[0]; // اسم الملف المراد تعديله (مثلاً test.js)
