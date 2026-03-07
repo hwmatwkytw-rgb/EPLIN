@@ -6,11 +6,11 @@ const path = require('path');
 module.exports = {
   config: {
     name: "لينز",
-    version: "1.0.0",
+    version: "2.0.0",
     author: "سينكو",
     countDown: 10,
     role: 0,
-    description: "البحث عن صور مشابهة باستخدام Yandex",
+    description: "البحث عن صور مشابهة",
     category: "ai",
     guide: { ar: "{pn} (رد على صورة)" }
   },
@@ -19,7 +19,6 @@ module.exports = {
     const { threadID, messageID, messageReply } = event;
     const cacheDir = path.join(__dirname, 'cache');
     const downloadedFiles = [];
-    const TARGET_IMAGES = 15;
 
     try {
       if (!messageReply?.attachments?.[0]) {
@@ -35,56 +34,76 @@ module.exports = {
       if (!imageUrl) return api.sendMessage("❌ فشل جلب الصورة", threadID, messageID);
 
       await fs.ensureDir(cacheDir);
-
       api.sendMessage(`●─────── ⌬ ───────●
 ┇ ⦿ ⟬ جـاري الـمـعـالـجـة ⟭
 ┇
-┇ الـحـالـة: جـاري الـبـحـث عـن صـور مـشـابـهـة... ⏳
-●─────── ⌬ ───────●`, threadID, messageID);
+┇ الـوصـف: جـاري الـبـحـث عـن صـور مـشـابـهـة...
+┇ الـحـالـة: جـاري الـتـخـيـل... ⏳
+●─────── ⌬ ───────●`, threadID);
 
-      // Download the original image
+      // Download image
       const imageResponse = await axios.get(imageUrl, {
         responseType: 'arraybuffer',
-        headers: { 'User-Agent': 'Dart/3.9 (dart:io)' }
+        timeout: 15000,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
       });
 
-      // Upload to Yandex
-      const uploadUrl = await uploadToYandex(imageResponse.data);
-      if (!uploadUrl) {
-        return api.sendMessage("❌ فشل رفع الصورة إلى Yandex", threadID, messageID);
+      // Try multiple search methods
+      let searchResults = [];
+      
+      // Method 1: Try direct Google Reverse Image Search results
+      searchResults = await searchGoogleImages(imageUrl);
+      
+      if (!searchResults || searchResults.length === 0) {
+        // Method 2: Fallback - Try Bing Image Search
+        searchResults = await searchBingImages(imageUrl);
       }
 
-      // Search for similar images
-      const searchResults = await searchSimilarImages(uploadUrl);
       if (!searchResults || searchResults.length === 0) {
-        return api.sendMessage("❌ لم يتم العثور على صور مشابهة", threadID, messageID);
+        return api.sendMessage(`●─────── ⌬ ───────●
+┇ ⦿ ⟬ نـتـائـج الـبـحـث ⟭
+┇
+┇ الـحـالـة: ❌ لم يـتـم الـعـثـور على صـور
+┇ الـالـتـماس: جـرب صـورة أخـرى
+●─────── ⌬ ───────●`, threadID, messageID);
       }
 
       // Download images
       let downloadedCount = 0;
-      for (let i = 0; i < searchResults.length && downloadedCount < TARGET_IMAGES; i++) {
+      const maxImages = 12;
+
+      for (let i = 0; i < searchResults.length && downloadedCount < maxImages; i++) {
         try {
-          const imgUrl = searchResults[i].img_url || searchResults[i].thumb || searchResults[i].url;
+          const imgUrl = searchResults[i];
           if (!imgUrl || !imgUrl.startsWith('http')) continue;
 
           const imgRes = await axios.get(imgUrl, {
             responseType: 'arraybuffer',
-            timeout: 10000,
-            headers: { 'User-Agent': 'Mozilla/5.0' }
+            timeout: 8000,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+              'Referer': 'https://www.google.com/'
+            }
           });
 
-          const filePath = path.join(cacheDir, `lens_${Date.now()}_${downloadedCount}.jpg`);
-          await fs.writeFile(filePath, imgRes.data);
-          downloadedFiles.push(filePath);
-          downloadedCount++;
-
+          if (imgRes.data && imgRes.data.length > 5000) {
+            const filePath = path.join(cacheDir, `lens_${Date.now()}_${downloadedCount}.jpg`);
+            await fs.writeFile(filePath, imgRes.data);
+            downloadedFiles.push(filePath);
+            downloadedCount++;
+          }
         } catch (e) {
           continue;
         }
       }
 
       if (downloadedFiles.length === 0) {
-        return api.sendMessage("❌ فشل تحميل الصور", threadID, messageID);
+        return api.sendMessage(`●─────── ⌬ ───────●
+┇ ⦿ ⟬ نـتـائـج الـبـحـث ⟭
+┇
+┇ الـحـالـة: ❌ فـشـل تـحـمـيـل الـصـور
+┇ الـالـتـماس: جـرب مـرة أخـرى
+●─────── ⌬ ───────●`, threadID, messageID);
       }
 
       // Send images
@@ -95,15 +114,17 @@ module.exports = {
 ┇ ⦿ ⟬ نـتـائـج الـبـحـث ⟭
 ┇
 ┇ الـعـدد: ${downloadedFiles.length} صـورة
-┇ الـمـصـدر: Yandex Images
+┇ الـمـصـدر: الـويـب
 ┇ الـحـالـة: تـم الـعـثـور ✅
 ●─────── ⌬ ───────●`,
         attachment: streams
       }, threadID, () => {
         // Cleanup
-        downloadedFiles.forEach(f => {
-          setTimeout(() => fs.existsSync(f) && fs.unlinkSync(f), 5000);
-        });
+        setTimeout(() => {
+          downloadedFiles.forEach(f => {
+            try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch (e) {}
+          });
+        }, 5000);
       }, messageID);
 
     } catch (error) {
@@ -115,105 +136,62 @@ module.exports = {
   }
 };
 
-async function uploadToYandex(imageBuffer) {
+// Google Reverse Image Search
+async function searchGoogleImages(imageUrl) {
   try {
-    const form = new FormData();
-    form.append('upfile', imageBuffer, { filename: 'image.jpg', contentType: 'image/jpeg' });
-
-    const cookies = generateYandexCookies();
-    const response = await axios.post('https://yandex.com/images/search?rpt=imageview&format=json', form, {
+    const encodedUrl = encodeURIComponent(imageUrl);
+    const response = await axios.get(`https://www.google.com/searchbyimage?image_url=${encodedUrl}`, {
       headers: {
-        ...form.getHeaders(),
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Cookie': cookies
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       },
-      maxRedirects: 5
-    });
-
-    if (response.data?.blocks) {
-      for (const block of response.data.blocks) {
-        if (block.params?.url) return block.params.url;
-      }
-    }
-
-    const responseText = JSON.stringify(response.data);
-    const urlMatch = responseText.match(/avatars\.mds\.yandex\.net\/get-images-cbir\/[^"'\s]+/);
-    if (urlMatch) return 'https://' + urlMatch[0];
-
-    const cbirMatch = responseText.match(/"cbir_id":"([^"]+)"/);
-    if (cbirMatch) return `https://avatars.mds.yandex.net/get-images-cbir/${cbirMatch[1]}/orig`;
-
-    return null;
-  } catch (error) {
-    console.error("Upload error:", error.message);
-    return null;
-  }
-}
-
-async function searchSimilarImages(imageUrl) {
-  try {
-    const cookies = generateYandexCookies();
-    const searchUrl = `https://yandex.com/images/touch/search?p=0&url=${encodeURIComponent(imageUrl)}&rpt=imagelike&format=json`;
-
-    const response = await axios.get(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Cookie': cookies,
-        'Accept-Encoding': 'gzip'
-      }
+      timeout: 10000
     });
 
     const results = [];
-    const seenUrls = new Set();
-
-    if (response.data?.blocks) {
-      for (const block of response.data.blocks) {
-        if (block.html) {
-          const dataMatches = block.html.matchAll(/data-bem='({[^']+})'/g);
-          for (const match of dataMatches) {
-            try {
-              const data = JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
-              if (data['serp-item']) {
-                const item = data['serp-item'];
-                const imgUrl = item.img_url || item.thumb?.url;
-                if (imgUrl && !seenUrls.has(imgUrl)) {
-                  seenUrls.add(imgUrl);
-                  results.push({
-                    title: item.snippet?.title || '',
-                    url: item.snippet?.url || '',
-                    img_url: imgUrl
-                  });
-                }
-              }
-            } catch (e) {}
-          }
+    const matches = response.data.matchAll(/imgurl=([^"&]+)/g);
+    
+    for (const match of matches) {
+      try {
+        const url = decodeURIComponent(match[1]);
+        if (url.startsWith('http') && !results.includes(url)) {
+          results.push(url);
+          if (results.length >= 30) break;
         }
-
-        if (block.items?.length) {
-          for (const item of block.items) {
-            const imgUrl = item.img_url || item.thumb?.url;
-            if (imgUrl && !seenUrls.has(imgUrl)) {
-              seenUrls.add(imgUrl);
-              results.push({
-                title: item.title || '',
-                url: item.img_href || '',
-                img_url: imgUrl
-              });
-            }
-          }
-        }
-      }
+      } catch (e) {}
     }
-
+    
     return results;
   } catch (error) {
-    console.error("Search error:", error.message);
     return [];
   }
 }
 
-function generateYandexCookies() {
-  const timestamp = Date.now();
-  const uid = Math.floor(Math.random() * 10000000000);
-  return `yandexuid=${uid}${timestamp}; gdpr=0; _ym_uid=${timestamp}${Math.floor(Math.random() * 1000000)};`;
-                               }
+// Bing Reverse Image Search
+async function searchBingImages(imageUrl) {
+  try {
+    const encodedUrl = encodeURIComponent(imageUrl);
+    const response = await axios.get(`https://www.bing.com/images/search?cbir=sbi&imgurl=${encodedUrl}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      timeout: 10000
+    });
+
+    const results = [];
+    const matches = response.data.matchAll(/"murl":"([^"]+)"/g);
+    
+    for (const match of matches) {
+      try {
+        const url = match[1].replace(/\\\//g, '/');
+        if (url.startsWith('http') && !results.includes(url)) {
+          results.push(url);
+          if (results.length >= 30) break;
+        }
+      } catch (e) {}
+    }
+    
+    return results;
+  } catch (error) {
+    return [];
+  }
+          }
