@@ -22,14 +22,14 @@ module.exports = {
       const prefix = global.client.config.prefix || '/';
 
       // تغيير الكنية
-      const shortNickname = `[ ${prefix} ] 𝕒𝕡𝕝𝕚𝕟🕸️`;
+      const shortNickname = `[ ${prefix} ] 𝒌𝒖𝒍𝒔𝒔𝒊 ┆⭕`;
       api.changeNickname(shortNickname, event.threadID, botID);
 
       // زخرفة الترحيب
       const welcomeMsg = `
 ╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
       ▣ ${botName}  ▣
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯
+
 
   ◤ 🗝️ الـرمـز : ${prefix} ▣
   
@@ -37,7 +37,7 @@ module.exports = {
   
   ◤ ๑ الـمطور : سينكو 17Y ▣
 
-╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
+
       🌹 صـلّ علـى الـنـبي 🌹
 ╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
 
