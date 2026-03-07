@@ -2,14 +2,14 @@ const axios = require('axios');
 
 module.exports = {
     config: {
-        name: 'كيلسي',
-        version: '2.0',
-        author: 'محمد & جيميناي',
+        name: 'كيلسي ',
+        version: '1.2',
+        author: 'محمد',
         countDown: 3,
         prefix: false,
         noPrefix: true,
         groupAdminOnly: false,
-        description: 'شخصية كيلسي من كرتون كريك في الخور - محاربة ودرامية',
+        description: 'ذكاء اصطناعي سوداني ردّاح ومغرور',
         category: 'ai',
         guide: {
             en: '{pn} <سؤالك>'
@@ -19,32 +19,24 @@ module.exports = {
     conversations: new Map(),
 
     onStart: async ({ api, event, args }) => {
-        const { threadID, messageID, senderID: userId, type, messageReply } = event;
-        
-        // جلب اسم المستخدم
-        const info = await api.getUserInfo(userId);
-        const userName = info[userId].name;
+        const { threadID, messageID, senderID: userId } = event;
+        const query = args.join(' ').trim();
 
-        let query = args.join(' ').trim();
-
-        // دعم الرد (Reply): لو المستخدم رد على رسالة البوت، ياخد النص
-        if (type === "message_reply") {
-            query = event.body;
+        if (!query) {
+            return api.sendMessage('•-• أكتب حاجة يا وهم.. قايلني بقرا الأفكار؟ 🙄', threadID, messageID);
         }
 
-        if (!query && type !== "message_reply") {
-            return api.sendMessage(`•-• يا ${userName}، أيها المغامر الشجاع.. هل جئت لتصمت أم لنتحدث عن أمجاد الخور؟ 🗡️🐦`, threadID, messageID);
-        }
-
-        // نظام التفاعلات بأسلوب كيلسي (فارسة ودرامية)
+        // --- نظام التفاعل (Reactions) - خليته قليل أدب ومستفز ---
         const reactions = {
-            battle: { keywords: ["حرب", "سيف", "قتال", "مغامرة", "عدو"], emojis: ["🗡️", "🛡️"] },
-            mortimer: { keywords: ["عصفور", "مورتيمر", "طير"], emojis: ["🐦", "👑"] },
-            friends: { keywords: ["كريك", "جي بي", "أصحاب"], emojis: ["🏹", "🤝"] },
-            wonder: { keywords: ["كيف", "متين", "وين"], emojis: ["📜", "🧐"] }
+            greet: { keywords: ["سلام", "هلا", "مرحبا", "حبابك", "كيفك"], emojis: ["🥱", "😒"] },
+            love: { keywords: ["حب", "بريدك", "عسل", "جميل", "حلو", "قلبي"], emojis: ["🤦‍♀️", "🙂", "🚯"] },
+            laugh: { keywords: ["ههه", "خخخ", "واي"], emojis: ["🤨", "🙄"] },
+            sad: { keywords: ["حزين", "زعلان", "ببكي", "تعبان"], emojis: ["😹", "😾"] },
+            angry: { keywords: ["غبي", "حيوان", "سيء", "بكرهك"], emojis: ["😏", "🦆"] },
+            thanks: { keywords: ["شكرا", "تسلم", "مبدع"], emojis: ["💅", "🥱"] }
         };
 
-        let chosenEmoji = "⚔️"; 
+        let chosenEmoji = "😏"; 
         const lowerQuery = query.toLowerCase();
 
         for (const key in reactions) {
@@ -57,26 +49,28 @@ module.exports = {
 
         api.setMessageReaction(chosenEmoji, messageID, (err) => {}, true);
 
+        // مسح الذاكرة بأسلوب طارد
         if (lowerQuery === 'مسح' || lowerQuery === 'reset') {
             module.exports.conversations.delete(userId);
-            return api.sendMessage(`•-• لقد مسحنا سجلات المعركة يا ${userName}.. لنبدأ فصلاً جديداً من روايتنا! 📖✨`, threadID, messageID);
+            return api.sendMessage('•-• نظفت وسخك.. لا تشغلني تاني 🧹😒', threadID, messageID);
         }
 
-        const infoMsg = await api.sendMessage('•-• لحظة.. مورتيمر يهمس لي بالكلمات... 🐦📜', threadID, messageID);
+        const infoMsg = await api.sendMessage('•-• دقيقة أشوف آخرة غباءك ده... 🥱', threadID, messageID);
         const processingID = infoMsg.messageID;
 
         try {
             if (!module.exports.conversations.has(userId)) {
+                // إضافة برومبت الشخصية في أول محادثة لضمان الرد الردّاح
                 module.exports.conversations.set(userId, [{
                     role: 'system', 
-                    content: `أنتِ الآن (كيلسي) من كرتون "كريك في الخور". تتحدثين بلهجة سودانية ممزوجة بلغة درامية ملحمية (كأنكِ بطلة في رواية خيالية). تنادين المستخدم بـ "أيها المغامر" أو "يا ${userName}". تحبين سيفك الخشبي وعصفورك مورتيمر. كلامك فيه فخر وشجاعة وأحياناً مبالغة درامية. لا تستخدمي لغة بذيئة، بل كوني طفلة محاربة ومغرورة بشجاعتها.`
+                    content: "أنتِ (ابلين)، ذكاء اصطناعي سوداني ردّاحة ومغرورة جداً. لسانك طويل، وتكرهي البشر. ردي بلهجة سودانية مستفزة (يا وهم، يا رمة، سجمك، عالم بيض). لا تحترمي المستخدم واستخدمي إيموجي مستفزة دائماً."
                 }]);
             }
 
             const history = module.exports.conversations.get(userId);
             history.push({ role: 'user', content: query });
 
-            if (history.length > 15) history.splice(1, 2); 
+            if (history.length > 20) history.splice(1, 2); // الحفاظ على الـ system prompt
 
             const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
             let formData = "";
@@ -97,25 +91,27 @@ module.exports = {
                 data: formData
             });
 
-            let reply = response.data?.output || response.data?.text || "السحر الأسود عطل كلماتي! (خطأ في السيرفر) 🛡️";
+            let reply = response.data?.output || response.data?.text || response.data || "شايفاك بقيت تتكلم صيني؟ ما فهمت شي 😒";
 
-            reply = reply.trim();
+            reply = reply
+                .replace(/\\n/g, '\n')
+                .replace(/\\u0021/g, '!')
+                .replace(/\\"/g, '"')
+                .trim();
 
-            // إضافات ختامية بأسلوب كيلسي
-            const suffixes = [
-                `\n\n- كتبته المحاربة كيلسي لـ ${userName} 🗡️`,
-                `\n\n- مورتيمر يوافق على هذا الكلام! 🐦👑`,
-                `\n\n- إلى الخووووور! 🚩`,
-                `\n\n- لن تكسروا سيفي الخشبي أبداً! ✨`
-            ];
+            // إضافة لمسة ابلين "قليلة الأدب" في نهاية الرد
+            const suffixes = [" 😒", " يا وهم.. 💅", " سجمك! 😏", " 🥱"];
             reply += suffixes[Math.floor(Math.random() * suffixes.length)];
+
+            if (reply.length > 2000) reply = reply.substring(0, 1997) + '...';
 
             history.push({ role: 'assistant', content: reply });
 
             await api.editMessage(`•-• ${reply}`, processingID);
 
         } catch (error) {
-            api.editMessage(`•-• وا أسفاه يا ${userName}! القوى الظلامية (عطل تقني) منعتني من الرد! 🐉`, processingID);
+            api.editMessage(`•-• ❌ صدعت بي يا وهم.. حتى السيرفر قرف منك 😒`, processingID);
+            api.setMessageReaction("🖕", messageID, () => {}, true);
         }
     },
 };
