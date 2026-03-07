@@ -2,49 +2,79 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs-extra");
 const path = require("path");
 
-// تهيئة العقل الذكي
 const genAI = new GoogleGenerativeAI("AIzaSyBAl2t8mMUIXovEkOAYQcV23MlmoEmA320");
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 module.exports = {
     config: {
-        name: "ky", // اسم الأمر: /fix
-        version: "1.0.0",
-        role: 2, // للآدمن فقط (سينكو) لحماية البوت
+        name: "ky",
+        version: "2.1.0",
+        role: 2,
         author: "SINKO",
-        description: "ذكاء اصطناعي لتعديل وإصلاح الكود من الداخل",
+        description: "المهندس التقني: معدل ملفات الأحداث والأوامر داخل المودلس",
         category: "owner",
-        guide: "{pn} [اسم الملف] [المشكلة أو الطلب]"
+        guide: "{pn} [اسم_الملف] [الطلب]"
     },
 
+    conversations: new Map(),
+
     onStart: async function ({ api, event, args }) {
-        const adminID = "61588108307572"; // الـ ID حقك
-        if (event.senderID !== adminID) return api.sendMessage("❌ | الصلاحية للمطور سينكو فقط!", event.threadID);
+        const { threadID, messageID, senderID: userId } = event;
+        const adminID = "61588108307572"; 
 
-        const fileName = args[0]; // اسم الملف المراد تعديله (مثلاً test.js)
-        const userRequest = args.slice(1).join(" "); // الطلب (مثلاً: أصلح خطأ الأقواس)
+        if (userId !== adminID) return api.sendMessage("⚠️ | الصلاحية للمطور سينكو فقط.", threadID, messageID);
 
-        if (!fileName || !userRequest) return api.sendMessage("⚠️ | الاستخدام: /fix [اسم_الملف] [المشكلة]", event.threadID);
+        const query = args.join(" ").trim();
+        if (!query) return api.sendMessage("•-• مرحباً باشمهندس سينكو. حدد الملف (في الأوامر أو الأحداث) والطلب.", threadID, messageID);
 
-        const filePath = path.join(__dirname, fileName);
-
-        if (!fs.existsSync(filePath)) return api.sendMessage("🚫 | الملف ده ما لقيتو في مجلد الأوامر!", event.threadID);
+        api.setMessageReaction("⚙️", messageID, () => {}, true);
 
         try {
-            const oldCode = fs.readFileSync(filePath, "utf-8");
-            api.sendMessage("⚙️ | جاري تحليل الكود وإصلاحه...", event.threadID);
+            const fileName = args[0];
+            
+            // --- تحديد المسارات بناءً على هيكلة بوتك ---
+            const commandsPath = path.join(process.cwd(), "modules", "commands", fileName);
+            const eventsPath = path.join(process.cwd(), "modules", "الاحداث", fileName); // تأكد من اسم المجلد "الاحداث" بالظبط
 
-            const prompt = `أنت مطور Node.js خبير. هذا هو كود ملف اسمه ${fileName}:\n\n${oldCode}\n\nالمطلوب: ${userRequest}\n\nقم برد الكود كاملاً ومصححاً فقط دون كلام جانبي.`;
+            let filePath = "";
+            if (fs.existsSync(commandsPath)) {
+                filePath = commandsPath;
+            } else if (fs.existsSync(eventsPath)) {
+                filePath = eventsPath;
+            }
 
-            const result = await model.generateContent(prompt);
-            const newCode = result.response.text().replace(/```javascript|```/g, ""); // تنظيف الرد
+            const isFileOperation = filePath !== "" && fileName.endsWith('.js');
 
-            // كتابة الكود الجديد في الملف
-            fs.writeFileSync(filePath, newCode, "utf-8");
+            if (!this.conversations.has(userId)) this.conversations.set(userId, []);
+            const history = this.conversations.get(userId);
 
-            api.sendMessage(`✅ | تم إصلاح وتحديث الملف [${fileName}] بنجاح!\nجرب تشغل البوت تاني.`, event.threadID);
+            let systemInstruction = "أنت مهندس برمجيات خبير في هيكلة بوتات ماسنجر. ";
+            if (isFileOperation) systemInstruction += `تعدل الآن ملفاً في مسار: ${filePath}. ركز على جودة الكود.`;
+
+            const userPrompt = isFileOperation 
+                ? `كود الملف الحالي:\n\n${fs.readFileSync(filePath, "utf-8")}\n\nالمطلوب: ${args.slice(1).join(" ")}`
+                : query;
+
+            history.push({ role: "user", parts: [{ text: userPrompt }] });
+
+            const infoMsg = await api.sendMessage(isFileOperation ? `🔍 جاري تعديل [${fileName}]...` : "🔄 جاري التفكير...", threadID, messageID);
+
+            const chat = model.startChat({ history: history.slice(0, -1) });
+            const result = await chat.sendMessage(userPrompt);
+            const responseText = result.response.text();
+
+            if (isFileOperation) {
+                const cleanedCode = responseText.replace(/```javascript|```js|```/g, "").trim();
+                fs.writeFileSync(filePath, cleanedCode, "utf-8");
+                await api.editMessage(`✅ تم تحديث الملف في مجلد ${filePath.includes("commands") ? "الكوماندس" : "الأحداث"} بنجاح.`, infoMsg.messageID);
+            } else {
+                await api.editMessage(`•-• ${responseText}`, infoMsg.messageID);
+                history.push({ role: "model", parts: [{ text: responseText }] });
+            }
+
         } catch (error) {
-            api.sendMessage("❌ | حصل خطأ أثناء محاولة الوصول للعقل المدبر.", event.threadID);
+            console.error(error);
+            api.sendMessage("❌ | فشلت العملية. تأكد من أسماء المجلدات (modules/commands/الاحداث).", threadID, messageID);
         }
     }
 };
