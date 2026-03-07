@@ -6,11 +6,11 @@
   "scripts": {
     "start": "node ."
   },
-  "author": "Hridoy (https://github.com/1dev-hridoy)",
+  "author": "SINKO",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/1dev-hridoy/Kenji-Cloud"
+    "url": "https://github.com/sadtyhdhynrqm-spec/EPLIN"
   },
   "keywords": [
     "facebook",
@@ -22,7 +22,7 @@
     "aplin"
   ],
   "dependencies": {
-    "axios": "^1.13.5",
+    "axios": "^1.6.0",
     "blessed": "^0.1.81",
     "canvas": "^2.11.2",
     "chalk": "^4.1.2",
@@ -40,6 +40,8 @@
     "ali-oss": "^6.16.0",
     "uuid": "^9.0.0",
     "form-data": "^4.0.0",
-    "image-size": "2.0.2"
+    "image-size": "1.0.2",
+    "path": "^0.12.7",
+    "@google/generative-ai": "^0.1.0"
   }
 }
