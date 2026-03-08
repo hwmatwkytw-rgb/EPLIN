@@ -42,7 +42,7 @@ module.exports = {
 ╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
 
       const imgPath = __dirname + "/cache/bot_join.jpg";
-      const imgUrl = "https://i.ibb.co/hJ47QQMM/1771089849331.jpg";
+      const imgUrl = "https://i.ibb.co/FZCHwt9/received-1740662803574945.webp";
 
       // تحميل الصورة وإرسالها
       const response = await axios.get(imgUrl, { responseType: "arraybuffer" });
