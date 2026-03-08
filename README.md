@@ -1,4 +1,4 @@
-<img src="https://i.ibb.co/JjKXd0cS/1772656304635.jpg" alt="banner">
+<img src="https://i.ibb.co/FZCHwt9/received-1740662803574945.webp" alt="banner">
 <h1 align="center"><img src="https://i.ibb.co/JjKXd0cS/1772656304635.jpg" width="30px">ابلين - بوت شات ماسنجر</h1>
 
 <p align="center">
