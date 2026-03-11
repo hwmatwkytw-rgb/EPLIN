@@ -21,30 +21,24 @@ module.exports = {
       const botName = global.client.config.botName || ' 𝕒𝕡𝕝𝕚𝕟';
       const prefix = global.client.config.prefix || '/';
 
-      // تغيير الكنية
-      const shortNickname = `[ ${prefix} ] 𝒌𝒖𝒍𝒔𝒔𝒊 ┆⭕`;
+      // تغيير الكنية (تعديل الزخرفة فقط للأقواس المجهرية والعمود المقطع والوردة خارجاً)
+      const shortNickname = `✅ ┇ ❨ ${prefix} ❩ 𝑨𝒑𝒍𝒊𝒏 𝒕𝒂𝒚𝒎 𝒐𝒇 𝒑𝒐𝒕 `;
       api.changeNickname(shortNickname, event.threadID, botID);
 
-      // زخرفة الترحيب
-      const welcomeMsg = `
-╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
-      ▣ ${botName}  ▣
-
-
-  ◤ 🗝️ الـرمـز : ${prefix} ▣
-  
-  ◤ 📜 الـدليل : ${prefix}help ▣
-  
-  ◤ ๑ الـمطور : سينكو 17Y ▣
-
-
-      🌹 صـلّ علـى الـنـبي 🌹
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
+      // زخرفة الترحيب (تطبيق النمط الملكي الجديد: الزهور خارج الأعمدة)
+      const welcomeMsg = `✾ ┇ ⸻⸻⸻⸻⸻
+✾ ┇    ✧ إبـلـيـن  ✧
+✾ ┇ ⸻⸻⸻⸻⸻
+✾ ┇  ⊹ الـرّمـز : [ ${prefix} ]
+✾ ┇  ⊹ الـدّليل : [ ${prefix}help ]
+✾ ┇  ⊹ الـمـطـور : سـيـنـكـو 17Y
+✾ ┇ ⸻⸻⸻⸻⸻
+✾ ┇      ˗ˏˋ S I N K O   ´ˎ˗`;
 
       const imgPath = __dirname + "/cache/bot_join.jpg";
       const imgUrl = "https://i.ibb.co/FZCHwt9/received-1740662803574945.webp";
 
-      // تحميل الصورة وإرسالها
+      // تحميل الصورة وإرسالها (نفس الدالة الأصلية بدون تغيير)
       const response = await axios.get(imgUrl, { responseType: "arraybuffer" });
       await fs.outputFile(imgPath, Buffer.from(response.data, "utf-8"));
 
