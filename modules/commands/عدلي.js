@@ -6,10 +6,10 @@ module.exports = {
   config: {
     name: 'عدلي',
     aliases: ['sd', 'dream'],
-    version: '5.2.0',
-    author: 'SINKO', // المطور: سينكو
-    twitter: 'https://twitter.com/Sinko_Dev', // الرابط الوهمي الذي طلبته
-    description: 'توليد صور بجودة عالية عبر Hugging Face XL',
+    version: '5.5.0',
+    author: 'SINKO',
+    twitter: 'https://twitter.com/Sinko_Dev',
+    description: 'توليد صور احترافية عبر Hugging Face مع محاولة إعادة الاتصال',
     countDown: 5,
     prefix: true,
     category: 'owner',
@@ -19,7 +19,6 @@ module.exports = {
   onStart: async ({ api, event, args }) => {
     const { threadID, messageID, senderID } = event;
     const developerID = "61588108307572";
-    // تم وضع مفتاحك الخاص هنا
     const HF_TOKEN = "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"; 
 
     if (senderID !== developerID) {
@@ -27,63 +26,51 @@ module.exports = {
     }
 
     const prompt = args.join(" ");
-    if (!prompt) {
-      return api.sendMessage('●─────── ❌ يرجى كتابة وصف للصورة ───────●', threadID, messageID);
-    }
+    if (!prompt) return api.sendMessage('●─────── ❌ اكتب وصفاً للصورة ───────●', threadID, messageID);
 
     api.setMessageReaction("⚙️", messageID, (err) => {}, true);
-    const waitingMsg = await api.sendMessage('◄ جاري معالجة الطلب عبر سيرفرات Hugging Face... ►', threadID, messageID);
+    const waitingMsg = await api.sendMessage('◄ جاري إيقاظ السيرفر ومعالجة الصورة (قد يستغرق دقيقة)... ►', threadID, messageID);
+
+    // دالة لجلب الصورة مع محاولة التكرار في حال كان السيرفر نائماً
+    async function fetchImage(retries = 3) {
+      try {
+        const response = await axios({
+          method: 'post',
+          url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5", // موديل أسرع وأكثر استقراراً
+          headers: { "Authorization": `Bearer ${HF_TOKEN}` },
+          data: { inputs: prompt },
+          responseType: 'arraybuffer',
+          timeout: 60000
+        });
+        return response.data;
+      } catch (error) {
+        if (retries > 0 && error.response && error.response.data.toString().includes('loading')) {
+          await new Promise(res => setTimeout(res, 20000)); // انتظر 20 ثانية وأعد المحاولة
+          return fetchImage(retries - 1);
+        }
+        throw error;
+      }
+    }
 
     try {
-      const response = await axios({
-        method: 'post',
-        url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
-        headers: { 
-          "Authorization": `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        data: { 
-          inputs: prompt,
-          options: { wait_for_model: true } // هذا الخيار يجعل السيرفر ينتظر حتى يجهز النموذج بدلاً من إعطاء خطأ
-        },
-        responseType: 'arraybuffer'
-      });
-
-      const cachePath = path.join(__dirname, "cache", `hf_sinko_${Date.now()}.png`);
-      if (!fs.existsSync(path.join(__dirname, "cache"))) {
-        fs.mkdirSync(path.join(__dirname, "cache"));
-      }
+      const imageData = await fetchImage();
+      const cachePath = path.join(__dirname, "cache", `hf_${Date.now()}.png`);
       
-      await fs.writeFile(cachePath, response.data);
-
-      const messageBody = 
-`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
-      ✨ نـتـيـجـة الـتـولـيـد ✨
-
-  •——◤ 📝 الـوصـف : ${prompt} ◥——•
-──────────────────
-  •——◤ ✅ تـم الـتـنـفـيذ بـنـجـاح ◥——•
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
+      if (!fs.existsSync(path.join(__dirname, "cache"))) fs.mkdirSync(path.join(__dirname, "cache"));
+      await fs.writeFile(cachePath, imageData);
 
       await api.sendMessage({
-        body: messageBody,
+        body: `╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n      ✨ نـتـيـجـة الـتـولـيـد ✨\n──────────────────\n  •——◤ ✅ تـم الـتـنـفـيذ بـنـجـاح ◥——•\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`,
         attachment: fs.createReadStream(cachePath)
       }, threadID, () => {
-        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+        fs.unlinkSync(cachePath);
         api.unsendMessage(waitingMsg.messageID);
       }, messageID);
 
       api.setMessageReaction("✅", messageID, () => {}, true);
 
     } catch (error) {
-      console.error('HF Error:', error.message);
-      let errorMsg = '●─────── ❌ السيرفر مشغول حالياً، حاول مجدداً ───────●';
-      
-      if (error.response && error.response.status === 401) {
-        errorMsg = '●─────── ❌ مفتاح الـ API غير صالح ───────●';
-      }
-
-      api.editMessage(errorMsg, waitingMsg.messageID);
+      api.editMessage('●─────── ❌ السيرفر لا يستجيب حالياً، جرب بعد لحظات ───────●', waitingMsg.messageID);
       api.setMessageReaction("❌", messageID, () => {}, true);
     }
   }
