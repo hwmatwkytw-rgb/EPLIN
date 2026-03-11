@@ -6,10 +6,11 @@ module.exports = {
   config: {
     name: 'عدلي',
     aliases: ['sd', 'dream'],
-    version: '3.0.0',
-    author: 'SINKO', // تم التحديث بناءً على تطويرك
-    description: 'توليد وتعديل صور باستخدام Segmind API',
-    countDown: 10,
+    version: '5.2.0',
+    author: 'SINKO', // المطور: سينكو
+    twitter: 'https://twitter.com/Sinko_Dev', // الرابط الوهمي الذي طلبته
+    description: 'توليد صور بجودة عالية عبر Hugging Face XL',
+    countDown: 5,
     prefix: true,
     category: 'owner',
     adminOnly: false 
@@ -18,7 +19,8 @@ module.exports = {
   onStart: async ({ api, event, args }) => {
     const { threadID, messageID, senderID } = event;
     const developerID = "61588108307572";
-    const apiKey = "SG_51040ca21a9312a1"; // مفتاحك الخاص
+    // تم وضع مفتاحك الخاص هنا
+    const HF_TOKEN = "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"; 
 
     if (senderID !== developerID) {
       return api.setMessageReaction("🚯", messageID, (err) => {}, true);
@@ -26,44 +28,32 @@ module.exports = {
 
     const prompt = args.join(" ");
     if (!prompt) {
-      return api.sendMessage('●─────── ❌ يرجى كتابة وصف ───────●', threadID, messageID);
-    }
-
-    if (event.type !== "message_reply" || !event.messageReply.attachments[0]) {
-      return api.sendMessage('●─────── ❌ يرجى الرد على صورة لتعديلها ───────●', threadID, messageID);
-    }
-
-    const attachment = event.messageReply.attachments[0];
-    if (attachment.type !== "photo" && attachment.type !== "image") {
-      return api.sendMessage('●─────── ❌ الرد يجب أن يكون على صورة ───────●', threadID, messageID);
+      return api.sendMessage('●─────── ❌ يرجى كتابة وصف للصورة ───────●', threadID, messageID);
     }
 
     api.setMessageReaction("⚙️", messageID, (err) => {}, true);
-    const waitingMsg = await api.sendMessage('◄ جاري معالجة وتوليد الصورة عبر Segmind... ►', threadID, messageID);
-
-    const cachePath = path.join(__dirname, "cache", `segmind_${Date.now()}.png`);
+    const waitingMsg = await api.sendMessage('◄ جاري معالجة الطلب عبر سيرفرات Hugging Face... ►', threadID, messageID);
 
     try {
-      const data = {
-        "prompt": prompt,
-        "image": attachment.url,
-        "samples": 1,
-        "scheduler": "UniPC",
-        "num_inference_steps": 25,
-        "guidance_scale": 7.5,
-        "strength": 0.75, // قوة التعديل على الصورة الأصلية
-        "seed": Math.floor(Math.random() * 1000000)
-      };
-
-      const response = await axios.post("https://api.segmind.com/v1/sd1.5-img2img", data, {
-        headers: { "x-api-key": apiKey },
+      const response = await axios({
+        method: 'post',
+        url: "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+        headers: { 
+          "Authorization": `Bearer ${HF_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        data: { 
+          inputs: prompt,
+          options: { wait_for_model: true } // هذا الخيار يجعل السيرفر ينتظر حتى يجهز النموذج بدلاً من إعطاء خطأ
+        },
         responseType: 'arraybuffer'
       });
 
+      const cachePath = path.join(__dirname, "cache", `hf_sinko_${Date.now()}.png`);
       if (!fs.existsSync(path.join(__dirname, "cache"))) {
         fs.mkdirSync(path.join(__dirname, "cache"));
       }
-
+      
       await fs.writeFile(cachePath, response.data);
 
       const messageBody = 
@@ -86,9 +76,15 @@ module.exports = {
       api.setMessageReaction("✅", messageID, () => {}, true);
 
     } catch (error) {
-      console.error('Segmind Error:', error.response ? error.response.data.toString() : error.message);
-      api.editMessage('●─────── ❌ فشل في الاتصال بـ Segmind أو نفاد الرصيد ───────●', waitingMsg.messageID);
+      console.error('HF Error:', error.message);
+      let errorMsg = '●─────── ❌ السيرفر مشغول حالياً، حاول مجدداً ───────●';
+      
+      if (error.response && error.response.status === 401) {
+        errorMsg = '●─────── ❌ مفتاح الـ API غير صالح ───────●';
+      }
+
+      api.editMessage(errorMsg, waitingMsg.messageID);
       api.setMessageReaction("❌", messageID, () => {}, true);
     }
-  },
+  }
 };
