@@ -1,12 +1,52 @@
+const { log } = require('../../logger/logger');
+
+// تخزين الأعضاء الذين تم الترحيب بهم لكل قروب
+const welcomedUsers = new Set();
+
+module.exports = {
+  config: {
+    name: 'welcome',
+    version: '4.1',
+    author: 'Hridoy + Abu Ubaida Edit',
+    eventType: ['log:subscribe']
+  },
+
+  onStart: async ({ event, api }) => {
+    try {
+      if (event.logMessageType !== 'log:subscribe') return;
+
+      const { threadID, logMessageData, author } = event;
+      const botID = api.getCurrentUserID();
+
+      // --- [ التعديل الجديد ] ---
+      // إذا كان الشخص الذي قام بالإضافة هو البوت نفسه، لا يرسل ترحيب
+      if (author == botID) return;
+
+      if (!logMessageData?.addedParticipants) return;
+
+      // فلترة البوت من الأعضاء الجدد (لو البوت انضاف للمجموعة)
+      const newUsers = logMessageData.addedParticipants
+        .map(p => p.userFbId)
+        .filter(id => id !== botID);
+
+      if (!newUsers.length) return;
+
+      await sendGroupWelcome(api, threadID, newUsers);
+
+    } catch (error) {
+      log('error', `Welcome event error: ${error.message}`);
+    }
+  }
+};
+
 // ==================================
-// إرسال رسالة الترحيب - تعديل الزقرة فقط (النسخة الشغالة)
+// إرسال رسالة الترحيب مع منشن رسمي
 // ==================================
 async function sendGroupWelcome(api, threadID, userIDs) {
   try {
     const threadInfo = await api.getThreadInfo(threadID);
+
     const mentions = [];
-    
-    // رجعت بناء النص الأصلي عشان يشتغل معاك بدون مشاكل
     let bodyText = `╭━━〔نـورتـم مــجمـوعـــتنه〕━━╮\n✾ ┇ ⸻⸻⸻⸻⸻\n\n`;
 
     let count = 1;
@@ -22,7 +62,6 @@ async function sendGroupWelcome(api, threadID, userIDs) {
         const name = userInfo?.[id]?.name || "عضو جديد";
         const tag = `@${name}`;
 
-        // تغيير الرموز الجانبية فقط مع الحفاظ على المنشن
         bodyText += `✾ ┇  ✦ ${count} ➜ ${tag}\n`;
 
         mentions.push({
@@ -40,8 +79,15 @@ async function sendGroupWelcome(api, threadID, userIDs) {
 
     const memberCount = threadInfo.participantIDs.length;
 
-    // رجعت كلامك الأصلي بالحرف داخل الزقرة الجديدة
-    bodyText += `\n✾ ┇ ━━━━━━━━━━━━━━━\n✾ ┇ 👥 عدد الأعضاء الآن : ${memberCount}\n✾ ┇ 🎉 نتمنى لك أوقات ممتعة معنا\n✾ ┇ 🤝 شارك – تفاعل – استمتع\n✾ ┇ 💬 أي استفسار لا تتردد\n\n✾ ┇    ≛ ⇄ 𝐓𝐍𝐗『 𝑾𝒆𝒍𝒄𝒐𝒎𝒆 💫 』\n╰━━━〔   ✾  S I  ✾   〕━━━╯`;
+    bodyText += `
+✾ ┇ ⸻⸻⸻⸻⸻
+✾ ┇ 👥 عدد الأعضاء الآن : ${memberCount}
+✾ ┇ 🎉 نتمنى لك أوقات ممتعة معنا
+✾ ┇ 🤝 شارك – تفاعل – استمتع
+✾ ┇ 💬 أي استفسار لا تتردد
+
+✾ ┇    ≛ ⇄ 𝐓𝐍𝐗『 𝑾𝒆𝒍𝒄𝒐𝒎𝒆 💫 』
+╰━━━〔  ✾ 🕸 ✾ 〕━━━╯`;
 
     await api.sendMessage(
       {
