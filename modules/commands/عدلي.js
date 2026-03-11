@@ -6,10 +6,10 @@ module.exports = {
   config: {
     name: 'عدلي',
     aliases: ['sd', 'dream'],
-    version: '5.5.0',
+    version: '5.6.0',
     author: 'SINKO',
     twitter: 'https://twitter.com/Sinko_Dev',
-    description: 'توليد صور احترافية عبر Hugging Face مع محاولة إعادة الاتصال',
+    description: 'توليد صور مستقر وسريع عبر Hugging Face',
     countDown: 5,
     prefix: true,
     category: 'owner',
@@ -29,35 +29,27 @@ module.exports = {
     if (!prompt) return api.sendMessage('●─────── ❌ اكتب وصفاً للصورة ───────●', threadID, messageID);
 
     api.setMessageReaction("⚙️", messageID, (err) => {}, true);
-    const waitingMsg = await api.sendMessage('◄ جاري إيقاظ السيرفر ومعالجة الصورة (قد يستغرق دقيقة)... ►', threadID, messageID);
-
-    // دالة لجلب الصورة مع محاولة التكرار في حال كان السيرفر نائماً
-    async function fetchImage(retries = 3) {
-      try {
-        const response = await axios({
-          method: 'post',
-          url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5", // موديل أسرع وأكثر استقراراً
-          headers: { "Authorization": `Bearer ${HF_TOKEN}` },
-          data: { inputs: prompt },
-          responseType: 'arraybuffer',
-          timeout: 60000
-        });
-        return response.data;
-      } catch (error) {
-        if (retries > 0 && error.response && error.response.data.toString().includes('loading')) {
-          await new Promise(res => setTimeout(res, 20000)); // انتظر 20 ثانية وأعد المحاولة
-          return fetchImage(retries - 1);
-        }
-        throw error;
-      }
-    }
+    const waitingMsg = await api.sendMessage('◄ جاري الاتصال بالسيرفر السريع... ►', threadID, messageID);
 
     try {
-      const imageData = await fetchImage();
-      const cachePath = path.join(__dirname, "cache", `hf_${Date.now()}.png`);
-      
+      const response = await axios({
+        method: 'post',
+        url: "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+        headers: { 
+          "Authorization": `Bearer ${HF_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        data: { 
+          inputs: prompt,
+          options: { wait_for_model: true, use_cache: false }
+        },
+        responseType: 'arraybuffer',
+        timeout: 90000 // زيادة وقت الانتظار قليلاً لضمان الاستجابة
+      });
+
+      const cachePath = path.join(__dirname, "cache", `hf_fast_${Date.now()}.png`);
       if (!fs.existsSync(path.join(__dirname, "cache"))) fs.mkdirSync(path.join(__dirname, "cache"));
-      await fs.writeFile(cachePath, imageData);
+      await fs.writeFile(cachePath, response.data);
 
       await api.sendMessage({
         body: `╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮\n      ✨ نـتـيـجـة الـتـولـيـد ✨\n──────────────────\n  •——◤ ✅ تـم الـتـنـفـيذ بـنـجـاح ◥——•\n╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`,
@@ -70,7 +62,13 @@ module.exports = {
       api.setMessageReaction("✅", messageID, () => {}, true);
 
     } catch (error) {
-      api.editMessage('●─────── ❌ السيرفر لا يستجيب حالياً، جرب بعد لحظات ───────●', waitingMsg.messageID);
+      console.error(error.message);
+      // إذا كان الخطأ أن الموديل ما زال يحمل، نطلب من المستخدم الانتظار قليلاً
+      if (error.response && error.response.status === 503) {
+          api.editMessage('●─────── ⏳ السيرفر يستعد، انتظر 30 ثانية وجرب مرة أخرى ───────●', waitingMsg.messageID);
+      } else {
+          api.editMessage('●─────── ❌ عذراً، حاول مرة أخرى الآن ───────●', waitingMsg.messageID);
+      }
       api.setMessageReaction("❌", messageID, () => {}, true);
     }
   }
