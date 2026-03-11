@@ -6,10 +6,10 @@ module.exports = {
   config: {
     name: 'عدلي',
     aliases: ['sd', 'dream'],
-    version: '2.2.1',
-    author: 'RI F AT',
-    description: 'توليد صور باستخدام الذكاء الاصطناعي (للمطور فقط)',
-    countDown: 5,
+    version: '3.0.0',
+    author: 'SINKO', // تم التحديث بناءً على تطويرك
+    description: 'توليد وتعديل صور باستخدام Segmind API',
+    countDown: 10,
     prefix: true,
     category: 'owner',
     adminOnly: false 
@@ -17,67 +17,54 @@ module.exports = {
 
   onStart: async ({ api, event, args }) => {
     const { threadID, messageID, senderID } = event;
-    const developerID = "61588108307572"; // أيدي حسابك
+    const developerID = "61588108307572";
+    const apiKey = "SG_51040ca21a9312a1"; // مفتاحك الخاص
 
-    // التحقق مما إذا كان المستخدم هو المطور
     if (senderID !== developerID) {
-      // التفاعل بالرمز 🚯 فقط دون إرسال رسالة
       return api.setMessageReaction("🚯", messageID, (err) => {}, true);
     }
 
     const prompt = args.join(" ");
-
-    // التفاعل الأولي بالرموز للمطور فقط
-    api.setMessageReaction("⚙️", messageID, (err) => {}, true);
-
-    // رسالة الانتظار للمطور
-    const waitingMsg = await api.sendMessage(
-      '◄ جاري معالجة وتوليد الصورة... ►',
-      threadID,
-      messageID
-    );
-    const processingID = waitingMsg.messageID;
-
-    // التحقق من وجود وصف
     if (!prompt) {
-      return api.editMessage('●─────── ❌ يرجى كتابة وصف ───────●', processingID);
+      return api.sendMessage('●─────── ❌ يرجى كتابة وصف ───────●', threadID, messageID);
     }
 
-    let imageUrl;
-    if (event.type === "message_reply") {
-      const attachment = event.messageReply.attachments[0];
-      if (attachment && (attachment.type === "photo" || attachment.type === "image")) {
-        imageUrl = attachment.url;
-      }
+    if (event.type !== "message_reply" || !event.messageReply.attachments[0]) {
+      return api.sendMessage('●─────── ❌ يرجى الرد على صورة لتعديلها ───────●', threadID, messageID);
     }
 
-    if (!imageUrl) {
-      return api.editMessage('●─────── ❌ يرجى الرد على صورة ───────●', processingID);
+    const attachment = event.messageReply.attachments[0];
+    if (attachment.type !== "photo" && attachment.type !== "image") {
+      return api.sendMessage('●─────── ❌ الرد يجب أن يكون على صورة ───────●', threadID, messageID);
     }
 
-    const cachePath = path.join(__dirname, "cache", `sd_${Date.now()}.png`);
+    api.setMessageReaction("⚙️", messageID, (err) => {}, true);
+    const waitingMsg = await api.sendMessage('◄ جاري معالجة وتوليد الصورة عبر Segmind... ►', threadID, messageID);
+
+    const cachePath = path.join(__dirname, "cache", `segmind_${Date.now()}.png`);
 
     try {
-      const apiUrl = `https://uncensored-sd.onrender.com/api/sd?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
+      const data = {
+        "prompt": prompt,
+        "image": attachment.url,
+        "samples": 1,
+        "scheduler": "UniPC",
+        "num_inference_steps": 25,
+        "guidance_scale": 7.5,
+        "strength": 0.75, // قوة التعديل على الصورة الأصلية
+        "seed": Math.floor(Math.random() * 1000000)
+      };
 
-      const response = await axios({
-        method: 'get',
-        url: apiUrl,
-        responseType: 'stream',
-        timeout: 120000
+      const response = await axios.post("https://api.segmind.com/v1/sd1.5-img2img", data, {
+        headers: { "x-api-key": apiKey },
+        responseType: 'arraybuffer'
       });
 
       if (!fs.existsSync(path.join(__dirname, "cache"))) {
         fs.mkdirSync(path.join(__dirname, "cache"));
       }
 
-      const writer = fs.createWriteStream(cachePath);
-      response.data.pipe(writer);
-
-      await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-      });
+      await fs.writeFile(cachePath, response.data);
 
       const messageBody = 
 `╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
@@ -86,7 +73,6 @@ module.exports = {
   •——◤ 📝 الـوصـف : ${prompt} ◥——•
 ──────────────────
   •——◤ ✅ تـم الـتـنـفـيذ بـنـجـاح ◥——•
-      
 ╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
 
       await api.sendMessage({
@@ -94,15 +80,14 @@ module.exports = {
         attachment: fs.createReadStream(cachePath)
       }, threadID, () => {
         if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-        api.unsendMessage(processingID);
+        api.unsendMessage(waitingMsg.messageID);
       }, messageID);
 
       api.setMessageReaction("✅", messageID, () => {}, true);
 
     } catch (error) {
-      console.error('SD Error:', error);
-      if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-      api.editMessage('●─────── ❌ فشل في توليد الصورة ───────●', processingID);
+      console.error('Segmind Error:', error.response ? error.response.data.toString() : error.message);
+      api.editMessage('●─────── ❌ فشل في الاتصال بـ Segmind أو نفاد الرصيد ───────●', waitingMsg.messageID);
       api.setMessageReaction("❌", messageID, () => {}, true);
     }
   },
