@@ -24,9 +24,9 @@ module.exports = {
       const threadData = Threads.get(threadID);
       if (!threadData) {
         return api.sendMessage(
-          "●───── ⌬ ─────●\n" +
-          "┇ ❌  بـيـانـات الـمـجـمـوعة\n" +
-          "●───── ⌬ ─────●", 
+          "●───── ✾ ⌬ ✾ ─────●\n" +
+          "✾ ┇ ❌ بـيـانـات الـمـجـمـوعة\n" +
+          "●───── ✾ ⌬ ✾ ─────●", 
           threadID, messageID
         );
       }
@@ -35,35 +35,35 @@ module.exports = {
       threadData.settings.prefix = newPrefix;
       Threads.set(threadID, threadData);
 
-      // --- الميزة الجديدة: تغيير كنية البوت ---
-      const botName = "𝕖𝕡𝕚𝕝𝕚𝕟🕸 "; // يمكنك تغيير اسم البو
-      const newNickname = newPrefix === '' ? `[ بدون بادئة ] ${botName}` : ` 𝑳 ${newPrefix} ❁ ${botName}`;
+      // --- الميزة الجديدة: تغيير كنية البوت بالورود ---
+      const botName = "𝑨𝒑𝒍𝒊𝒏 𝒕𝒂𝒚𝒎 𝒐𝒇 𝒑𝒐𝒕"; 
+      const newNickname = newPrefix === '' ? `✅ ┇ ❨ / ❩ ${botName}` : `✾ ┇  ${newPrefix}  ${botName}`;
       
       await api.changeNickname(newNickname, threadID, botID);
 
-      let msg = `●─────── ⌬ ────────●\n`;
-      msg += `┇ ⦿ ⟬ تـحـديـث الـبـادئـة ✅ ⟭\n┇\n`;
+      let msg = `●─────── ✾ ⌬ ✾ ───────●\n`;
+      msg += `✾ ┇ ⦿ ⟬ تـحـديـث الـبـادئـة ✅ ⟭\n✾ ┇\n`;
 
       if (newPrefix === '') {
-        msg += `┇  الـحـالـة: تـم التـصـفـيـر\n`;
-        msg += `┇  الـوصـف: الـعـمل بـدون بـادئـة\n`;
+        msg += `✾ ┇  الـحـالـة: تـم التـصـفـيـر\n`;
+        msg += `✾ ┇  الـوصـف: الـعـمل بـدون بـادئـة\n`;
       } else {
-        msg += `┇  الـحـالـة: تـم الـضـبـط\n`;
-        msg += `┇  الـبـادئـة: 『 ${newPrefix} 』\n`;
+        msg += `✾ ┇  الـحـالـة: تـم الـضـبـط\n`;
+        msg += `✾ ┇  الـبـادئـة: 『 ${newPrefix} 』\n`;
       }
       
-      msg += `┇  الـكـنـيـة: تم تحديث اسم البوت\n`;
-      msg += `┇  الـنـتـيـجـة: نـجـاح الـعـمـلـيـة\n┇\n`;
-      msg += `●──────── ⌬ ──────────●`;
+      msg += `✾ ┇  الـكـنـيـة: تم تحديث اسم البوت\n`;
+      msg += `✾ ┇  الـنـتـيـجـة: نـجـاح الـعـمـلـيـة\n✾ ┇\n`;
+      msg += `●──────── ✾ ⌬ ✾ ─────────●`;
 
       return api.sendMessage(msg, threadID, messageID);
 
     } catch (error) {
       console.error("خطأ في أمر تعيين البادئة:", error);
       api.sendMessage(
-        "●───── ⌬ ─────●\n" +
-        "┇ ❌ حـدث خـطأ فـي الـنـظـام أو نـقـص صـلاحـيـات\n" +
-        "●───── ⌬ ─────●", 
+        "●───── ✾ ⌬ ✾ ─────●\n" +
+        "✾ ┇ ❌ حـدث خـطأ فـي الـنـظـام أو نـقـص صـلاحـيـات\n" +
+        "●───── ✾ ⌬ ✾ ─────●", 
         event.threadID
       );
     }
