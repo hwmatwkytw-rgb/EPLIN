@@ -1,14 +1,13 @@
 // ==================================
-// إرسال رسالة الترحيب - تعديل الزقرة فقط مع الحفاظ على الكلام الأصلي
+// إرسال رسالة الترحيب - تعديل الزقرة فقط (النسخة الشغالة)
 // ==================================
 async function sendGroupWelcome(api, threadID, userIDs) {
   try {
     const threadInfo = await api.getThreadInfo(threadID);
     const mentions = [];
     
-    // القفل العلوي الأصلي مع الكلام حقك "نورتـم مــجمـوعـــتنه"
-    let bodyText = `╭━━〔نـورتـم مــجمـوعـــتنه〕━━╮\n` +
-                   `✾ ┇ ⸻⸻⸻⸻⸻\n`;
+    // رجعت بناء النص الأصلي عشان يشتغل معاك بدون مشاكل
+    let bodyText = `╭━━〔نـورتـم مــجمـوعـــتنه〕━━╮\n✾ ┇ ⸻⸻⸻⸻⸻\n\n`;
 
     let count = 1;
 
@@ -23,10 +22,14 @@ async function sendGroupWelcome(api, threadID, userIDs) {
         const name = userInfo?.[id]?.name || "عضو جديد";
         const tag = `@${name}`;
 
-        // الزقرة الجانبية الملكية والوسط (بدون تغيير ✦ و ➜)
+        // تغيير الرموز الجانبية فقط مع الحفاظ على المنشن
         bodyText += `✾ ┇  ✦ ${count} ➜ ${tag}\n`;
 
-        mentions.push({ tag, id });
+        mentions.push({
+          tag,
+          id
+        });
+
         count++;
       } catch (err) {
         console.error("Error fetching user info:", err);
@@ -37,17 +40,16 @@ async function sendGroupWelcome(api, threadID, userIDs) {
 
     const memberCount = threadInfo.participantIDs.length;
 
-    // الكلام الأصلي حقك بالحرف مع الزقرة الجديدة
-    bodyText += `✾ ┇ ⸻⸻⸻⸻⸻\n` +
-                `✾ ┇ 👥 عدد الأعضاء الآن : ${memberCount}\n` +
-                `✾ ┇ 🎉 نتمنى لك أوقات ممتعة معنا\n` +
-                `✾ ┇ 🤝 شارك – تفاعل – استمتع\n` +
-                `✾ ┇ 💬 أي استفسار لا تتردد\n` +
-                `✾ ┇ ⸻⸻⸻⸻⸻\n` +
-                `✾ ┇    ≛ ⇄ 𝐓𝐍𝐗『 𝑾𝒆𝒍𝒄𝒐𝒎𝒆 💫 』\n` +
-                `╰━━━〔✾    ✾   ✾〕━━━╯`;
+    // رجعت كلامك الأصلي بالحرف داخل الزقرة الجديدة
+    bodyText += `\n✾ ┇ ━━━━━━━━━━━━━━━\n✾ ┇ 👥 عدد الأعضاء الآن : ${memberCount}\n✾ ┇ 🎉 نتمنى لك أوقات ممتعة معنا\n✾ ┇ 🤝 شارك – تفاعل – استمتع\n✾ ┇ 💬 أي استفسار لا تتردد\n\n✾ ┇    ≛ ⇄ 𝐓𝐍𝐗『 𝑾𝒆𝒍𝒄𝒐𝒎𝒆 💫 』\n╰━━━〔   ✾  S I  ✾   〕━━━╯`;
 
-    await api.sendMessage({ body: bodyText, mentions }, threadID);
+    await api.sendMessage(
+      {
+        body: bodyText,
+        mentions
+      },
+      threadID
+    );
 
     log('info', `Users welcomed with mention in ${threadID}`);
 
