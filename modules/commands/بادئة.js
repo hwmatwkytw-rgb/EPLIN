@@ -37,7 +37,7 @@ module.exports = {
 
       // --- الميزة الجديدة: تغيير كنية البوت بالورود ---
       const botName = "𝑨𝒑𝒍𝒊𝒏 𝒕𝒂𝒚𝒎 𝒐𝒇 𝒑𝒐𝒕"; 
-      const newNickname = newPrefix === '' ? `✅ ┇ ❨ / ❩ ${botName}` : `✾ ┇  ${newPrefix}  ${botName}`;
+      const newNickname = newPrefix === '' ? `✅ ┇ ❨ / ❩ ${botName}` : `✅ ┇  ❨${newPrefix}❩  ${botName}`;
       
       await api.changeNickname(newNickname, threadID, botID);
 
