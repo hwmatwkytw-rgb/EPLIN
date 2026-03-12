@@ -1,116 +1,125 @@
 module.exports = {
     config: {
         name: "قولي",
-        version: "2.5",
+        version: "2.7",
         author: "سينكو & Gemini",
         countDown: 5,
         role: 2,
         prefix: true,
-        description: "إرسال إشعار للمجموعات عبر القائمة",
+        description: "إرسال إشعار للمجموعات عبر القائمة بنفس نظام الطلبات",
         category: "المطور",
         guide: { ar: "{pn}" }
     },
 
-    onStart: async function ({ api, event }) {
-        const { threadID, messageID } = event;
+    onStart: async function ({ api, event, config }) {
+        const { threadID, messageID, senderID } = event;
+
+        // التحقق من المطور بنفس طريقتك في الطلبات
+        if (!config.adminUIDs.includes(senderID)) {
+            return api.sendMessage("●───── ✾ ⌬ ✾ ─────●\n✾ ┇ ❌ هـذا الأمـر لـلـمـطـوࢪ فـقـط.\n●───── ✾ ⌬ ✾ ─────●", threadID);
+        }
 
         try {
             const inbox = await api.getThreadList(20, null, ["INBOX"]);
             const groupList = inbox.filter(g => g.isGroup && g.threadID !== threadID);
 
-            if (groupList.length === 0) {
-                return api.sendMessage("●───── ✾ ⌬ ✾ ─────●\n✾ ┇ ❌ لم يتم العثور على مجموعات\n●───── ✾ ⌬ ✾ ─────●", threadID, messageID);
+            if (!groupList.length) {
+                return api.sendMessage("●───── ✾ ⌬ ✾ ─────●\n✾ ┇ ❌ لا تـوجد مـجموعات حـالياً.\n●───── ✾ ⌬ ✾ ─────●", threadID, messageID);
             }
 
-            let msg = `●───── ✾ ⌬ ✾ ─────●\n`;
-            msg += `✾ ┇ 📱 قـائمة الـمجموعات:\n`;
-            
-            groupList.forEach((group, index) => {
-                msg += `✾ ┇ ${index + 1} ➜ ${group.name || 'مجموعة بدون اسم'}\n`;
+            let msg = `●───── ✾ ⌬ ✾ ─────●\n✾ ┇ ⦿ ⟬ قـائمة الـمجموعات ⟭\n✾ ┇\n`;
+
+            groupList.forEach((g, i) => {
+                msg += `✾ ┇ ⟬ ${i + 1} ⟭ ❪ ${g.name || "مجموعة غير معروفة"} ❫\n`;
+                if (i < groupList.length - 1) msg += `✾ ┇ ⸻⸻⸻⸻⸻\n`;
             });
 
-            msg += `✾ ┇\n✾ ┇ 💡 رد عـلى هـذه الرسـالة برقم\n✾ ┇ الـمجموعة لاختيـارها.\n●───── ✾ ⌬ ✾ ─────●`;
+            msg += `✾ ┇\n●───── ✾ ⌬ ✾ ─────●\n`;
+            msg += ` ⠇رد بـ الـرقم لاختيار المـجموعة`;
 
-            return api.sendMessage(msg, threadID, (err, info) => {
-                if (err) return console.log(err);
-                global.GoatBot.onReply.set(info.messageID, {
-                    commandName: this.config.name,
+            api.sendMessage(msg, threadID, (err, info) => {
+                if (err) return console.error(err);
+                // التخزين بنفس نظام "الطلبات" اللي شغال عندك
+                global.client.handleReply.push({
+                    name: this.config.name,
                     messageID: info.messageID,
-                    author: event.senderID,
-                    groupList,
+                    author: senderID,
+                    groupList: groupList,
                     type: "chooseGroup"
                 });
             }, messageID);
 
         } catch (e) {
-            return api.sendMessage("✾ ┇ حدث خطأ أثناء جلب المجموعات", threadID, messageID);
+            console.error(e);
+            api.sendMessage("❌ حدث خطأ في جلب القائمة.", threadID);
         }
     },
 
-    onReply: async function ({ api, event, Reply }) {
-        const { threadID, messageID, body, senderID } = event;
-        if (senderID !== Reply.author) return;
+    onReply: async function ({ api, event, handleReply }) {
+        const { body, threadID, messageID, senderID } = event;
+        if (senderID !== handleReply.author) return;
 
-        // المرحلة الأولى: اختيار المجموعة (بعد ما ترد بالرقم)
-        if (Reply.type === "chooseGroup") {
-            const index = parseInt(body);
-            const group = Reply.groupList[index - 1];
+        try {
+            // المرحلة الأولى: اختيار المجموعة
+            if (handleReply.type === "chooseGroup") {
+                const num = parseInt(body);
+                const targetGroup = handleReply.groupList[num - 1];
 
-            if (isNaN(index) || !group) {
-                return api.sendMessage("✾ ┇ تنبيه: الرجاء كتابة رقم المجموعة بشكل صحيح.", threadID, messageID);
-            }
+                if (!targetGroup) {
+                    return api.sendMessage("✾ ┇ ❌ الرقم غير موجود في القائمة.", threadID, messageID);
+                }
 
-            // حذف قائمة المجموعات القديمة عشان الشات ينظف
-            api.unsendMessage(Reply.messageID);
+                api.unsendMessage(handleReply.messageID);
 
-            return api.sendMessage(
-                `●───── ✾ ⌬ ✾ ─────●\n` +
-                `✾ ┇ ✅ تـم اخـتـيار: ${group.name}\n` +
-                `✾ ┇ ✉️ رد الآن بـنـص الإشـعـار\n` +
-                `✾ ┇ الـذي تـود إرسـالـه.\n` +
-                `●───── ✾ ⌬ ✾ ─────●`,
-                threadID, (err, info) => {
-                    global.GoatBot.onReply.set(info.messageID, {
-                        commandName: this.config.name,
+                const askMsg = `●───── ✾ ⌬ ✾ ─────●\n` +
+                               `✾ ┇ ✅ تـم اخـتـيار: ${targetGroup.name}\n` +
+                               `✾ ┇\n` +
+                               `✾ ┇ ✉️ رد الآن بـنـص الإشـعـار\n` +
+                               `✾ ┇ الـذي تـود إرسـالـه.\n` +
+                               `●───── ✾ ⌬ ✾ ─────●`;
+
+                return api.sendMessage(askMsg, threadID, (err, info) => {
+                    global.client.handleReply.push({
+                        name: this.config.name,
                         messageID: info.messageID,
                         author: senderID,
-                        targetID: group.threadID,
-                        targetName: group.name,
-                        type: "sendText" // تحويل الحالة للمرحلة الثانية
+                        targetID: targetGroup.threadID,
+                        targetName: targetGroup.name,
+                        type: "sendText"
                     });
                 }, messageID);
-        }
+            }
 
-        // المرحلة الثانية: إرسال النص (بعد ما تكتب الكلام الداير ترسلوا)
-        if (Reply.type === "sendText") {
-            const text = body;
-            const targetID = Reply.targetID;
-
-            const msgToGroup = 
-                `●───── ✾ ⌬ ✾ ─────●\n` +
-                `✾ ┇\n` +
-                `✾ ┇ ⦿ ⟬ 𓆩 الـمـطـور . اشـعـار 𓆪 ⟭\n` +
-                `✾ ┇\n` +
-                `✾ ┇  الـمـحـتـوى:\n` +
-                `✾ ┇ ➜ ${text}\n` +
-                `✾ ┇\n` +
-                `●───── ✾ ⌬ ✾ ─────●`;
-
-            api.sendMessage(msgToGroup, targetID, (err) => {
-                if (err) {
-                    return api.sendMessage(`✾ ┇ ❌ فشل الإرسال لـ ${Reply.targetName}`, threadID, messageID);
-                }
+            // المرحلة الثانية: إرسال النص
+            if (handleReply.type === "sendText") {
+                const text = body;
                 
-                api.unsendMessage(Reply.messageID); // حذف رسالة "اكتب النص"
+                const msgToGroup = 
+                    `●───── ✾ ⌬ ✾ ─────●\n` +
+                    `✾ ┇\n` +
+                    `✾ ┇ ⦿ ⟬ 𓆩   اشـعـار 𓆪 ⟭\n` +
+                    `✾ ┇\n` +
+                    `✾ ┇ 📜 الـمـحـتـوى:\n` +
+                    `✾ ┇ ➜ ${text}\n` +
+                    `✾ ┇\n` +
+                    `●───── ✾ ⌬ ✾ ─────●`;
+
+                await api.sendMessage(msgToGroup, handleReply.targetID);
+                
+                api.unsendMessage(handleReply.messageID);
                 return api.sendMessage(
                     `●───── ✾ ⌬ ✾ ─────●\n` +
-                    `✾ ┇ ✅ تـم الإرسـال بـنـجـاح\n` +
-                    `✾ ┇  الـمـسـتـلـم: ${Reply.targetName}\n` +
+                    `✾ ┇  تـم الإرسـال بـنـجـاح\n` +
+                    `✾ ┇  الـمـسـتـلـم: ${handleReply.targetName}\n` +
                     `✾ ┇  الـحـالـة: تـم التـبـليـغ 📥\n` +
                     `●───── ✾ ⌬ ✾ ─────●`, 
                     threadID, messageID
                 );
-            });
+            }
+
+        } catch (e) {
+            console.error(e);
+            api.sendMessage("❌ حدث خطأ أثناء التنفيذ.", threadID);
         }
     }
 };
