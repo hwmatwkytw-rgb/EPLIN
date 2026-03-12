@@ -1,7 +1,7 @@
 module.exports = {
     config: {
         name: "قولي",
-        version: "2.0",
+        version: "2.5",
         author: "سينكو & Gemini",
         countDown: 5,
         role: 2,
@@ -32,6 +32,7 @@ module.exports = {
             msg += `✾ ┇\n✾ ┇ 💡 رد عـلى هـذه الرسـالة برقم\n✾ ┇ الـمجموعة لاختيـارها.\n●───── ✾ ⌬ ✾ ─────●`;
 
             return api.sendMessage(msg, threadID, (err, info) => {
+                if (err) return console.log(err);
                 global.GoatBot.onReply.set(info.messageID, {
                     commandName: this.config.name,
                     messageID: info.messageID,
@@ -46,26 +47,27 @@ module.exports = {
         }
     },
 
-    onReply: async function ({ api, event, Reply, args }) {
+    onReply: async function ({ api, event, Reply }) {
         const { threadID, messageID, body, senderID } = event;
         if (senderID !== Reply.author) return;
 
-        // المرحلة الأولى: اختيار المجموعة
+        // المرحلة الأولى: اختيار المجموعة (بعد ما ترد بالرقم)
         if (Reply.type === "chooseGroup") {
             const index = parseInt(body);
             const group = Reply.groupList[index - 1];
 
-            if (!group) {
-                return api.sendMessage("✾ ┇ الرقم غير صحيح، أعد المحاولة.", threadID, messageID);
+            if (isNaN(index) || !group) {
+                return api.sendMessage("✾ ┇ تنبيه: الرجاء كتابة رقم المجموعة بشكل صحيح.", threadID, messageID);
             }
 
+            // حذف قائمة المجموعات القديمة عشان الشات ينظف
             api.unsendMessage(Reply.messageID);
 
             return api.sendMessage(
                 `●───── ✾ ⌬ ✾ ─────●\n` +
-                `✾ ┇  تـم اخـتـيار: ${group.name}\n` +
-                `✾ ┇  رد عـلى هـذه الرسـالة\n` +
-                `✾ ┇ بـنـص الإشـعـار الآن.\n` +
+                `✾ ┇ ✅ تـم اخـتـيار: ${group.name}\n` +
+                `✾ ┇ ✉️ رد الآن بـنـص الإشـعـار\n` +
+                `✾ ┇ الـذي تـود إرسـالـه.\n` +
                 `●───── ✾ ⌬ ✾ ─────●`,
                 threadID, (err, info) => {
                     global.GoatBot.onReply.set(info.messageID, {
@@ -74,12 +76,12 @@ module.exports = {
                         author: senderID,
                         targetID: group.threadID,
                         targetName: group.name,
-                        type: "sendText"
+                        type: "sendText" // تحويل الحالة للمرحلة الثانية
                     });
                 }, messageID);
         }
 
-        // المرحلة الثانية: إرسال النص
+        // المرحلة الثانية: إرسال النص (بعد ما تكتب الكلام الداير ترسلوا)
         if (Reply.type === "sendText") {
             const text = body;
             const targetID = Reply.targetID;
@@ -99,10 +101,10 @@ module.exports = {
                     return api.sendMessage(`✾ ┇ ❌ فشل الإرسال لـ ${Reply.targetName}`, threadID, messageID);
                 }
                 
-                api.unsendMessage(Reply.messageID);
+                api.unsendMessage(Reply.messageID); // حذف رسالة "اكتب النص"
                 return api.sendMessage(
                     `●───── ✾ ⌬ ✾ ─────●\n` +
-                    `✾ ┇  تـم الإرسـال بـنـجـاح\n` +
+                    `✾ ┇ ✅ تـم الإرسـال بـنـجـاح\n` +
                     `✾ ┇  الـمـسـتـلـم: ${Reply.targetName}\n` +
                     `✾ ┇  الـحـالـة: تـم التـبـليـغ 📥\n` +
                     `●───── ✾ ⌬ ✾ ─────●`, 
