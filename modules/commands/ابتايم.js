@@ -18,7 +18,7 @@ module.exports = {
   onStart: async ({ api, event }) => {
     const { threadID, messageID } = event;
 
-    api.setMessageReaction("🕸", messageID, (err) => {}, true);
+    api.setMessageReaction("🖤", messageID, (err) => {}, true);
 
     const waitingMsg = await api.sendMessage(
       '◄ جاري استخراج البيانات... ►',
@@ -39,26 +39,25 @@ module.exports = {
       const ping = Math.floor(performance.now() % 1000) + ' ms';
       const time = moment().format('hh:mm:ss A');
 
-      // التصميم المدمج: زخرفة خارجية + خطوط فاصلة بالداخل
+      // التصميم الموحد مع أمر البادئة (الخطوط الدائرية + الورود)
       const message = 
-`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
-  
-
-◤ ⏰ الـتـوقـيت : ${time} ▣
-──────────────────
-◤ 🕸 الـسـرعـة : ${ping} ▣
-──────────────────
-◤ 🕸 الـرامات : ${ramUsage} ▣
-──────────────────
-◤ 🕸 الـتـشغيل : ${uptime} ▣
-      
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
+`●─────── ✾ ⌬ ✾ ───────●
+✾ ┇
+✾ ┇ ◤ ⏰ الـتـوقـيت : ${time} ▣
+✾ ┇ ⸻⸻⸻⸻⸻
+✾ ┇ ◤ 🕸 الـسـرعـة : ${ping} ▣
+✾ ┇ ⸻⸻⸻⸻⸻
+✾ ┇ ◤ 🕸 الـرامات : ${ramUsage} ▣
+✾ ┇ ⸻⸻⸻⸻⸻
+✾ ┇ ◤ 🕸 الـتـشغيل : ${uptime} ▣
+✾ ┇
+●────── ✾ ⌬ ✾ ────────●`;
 
       api.editMessage(message, processingID);
 
     } catch (error) {
       console.error('Uptime error:', error);
-      api.editMessage('●─────── ❌ فشل الجلب ───────●', processingID);
+      api.editMessage('●───── ✾ ❌ فشل الجلب ✾ ────●', processingID);
     }
   },
 };
