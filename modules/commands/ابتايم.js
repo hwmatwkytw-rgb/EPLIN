@@ -1,34 +1,53 @@
 const os = require('os');
 const { performance } = require('perf_hooks');
 const moment = require('moment');
+const fs = require('fs');
+const path = require('path');
+
+const configPath = path.join(__dirname, '..', '..', 'config', 'config.json');
+
+function readDB(filePath) {
+    try {
+        const data = fs.readFileSync(filePath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        return {};
+    }
+}
 
 module.exports = {
   config: {
     name: 'ابتايم',
     aliases: ['uptime', 'up', 'stats'],
-    version: '2.6',
+    version: '2.8',
     author: 'سينكو',
-    description: 'عرض حالة النظام وإحصائيات البوت مع معالجة الأخطاء',
+    description: 'عرض حالة النظام (للمطور فقط)',
     countDown: 5,
     prefix: true,
     category: 'utility',
-    adminOnly: false
+    adminOnly: true // تم تفعيل خيار الإدارة فقط هنا أيضاً كطبقة حماية أولى
   },
 
   onStart: async ({ api, event }) => {
-    const { threadID, messageID } = event;
+    const { threadID, messageID, senderID } = event;
+    const config = readDB(configPath);
+    const adminList = config.adminUIDs || [];
+
+    // التحقق الصارم من أن المستخدم هو المطور
+    if (!adminList.includes(senderID)) {
+      return api.sendMessage("", threadID, messageID);
+    }
 
     api.setMessageReaction("🧭", messageID, (err) => {}, true);
 
     const waitingMsg = await api.sendMessage(
-      '✾ ┇ جاري فحص حالة النظام... ⏳',
+      '✾ ┇ جاري استخراج بيانات النظام الخاصة... ⏳',
       threadID,
       messageID
     );
     const processingID = waitingMsg.messageID;
 
     try {
-      // 1. حساب وقت التشغيل
       const uptimeSeconds = process.uptime();
       const days = Math.floor(uptimeSeconds / 86400);
       const hours = Math.floor((uptimeSeconds % 86400) / 3600);
@@ -36,26 +55,24 @@ module.exports = {
       const seconds = Math.floor(uptimeSeconds % 60);
       const uptimeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-      // 2. معلومات الذاكرة والنظام
       const ramUsage = (process.memoryUsage().rss / 1024 / 1024).toFixed(2);
       const totalRam = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
       const ping = Math.floor(performance.now() % 1000);
       const time = moment().format('hh:mm:ss A');
       
-      // 3. إحصائيات البوت (مع معالجة خطأ الجلب)
+      // جلب إحصائيات البوت
       let threadCount = 'غير متوفر';
       let userCount = 'غير متوفر';
 
       try {
         const threadList = await api.getThreadList(100, null, ["INBOX"]);
         threadCount = threadList.length;
-      } catch (e) { console.log("تعذر جلب المجموعات"); }
+      } catch (e) {}
 
       if (global.data && global.data.allUserID) {
         userCount = global.data.allUserID.length;
       }
 
-      // بناء الرسالة
       const message = 
 `⏣────── ✾ ⌬ ✾ ──────⏣
 ✾ ┇
