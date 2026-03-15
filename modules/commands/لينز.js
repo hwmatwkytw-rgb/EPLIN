@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 
 // ضع مفتاح API الخاص بـ ImgBB هنا
-const IMGBB_API_KEY = "3963d5cc3ee64b07508b20f76a9e8bbd"; 
+const IMGBB_API_KEY = "r8_bwKWfTg5khHgLQrCebOYfRCI1chqpDs1raCNF"; 
 
 module.exports = {
   config: {
