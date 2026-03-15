@@ -35,7 +35,7 @@ module.exports = {
         countDown: 5,
         prefix: true,
         groupAdminOnly: false,
-        description: 'عرض قائمة الأوامر بزخرفة المسار الطولي.',
+        description: 'عرض قائمة الأوامر بالزخرفة الجديدة.',
         category: 'المجموعة',
         guide: {
             ar: '{pn}\n{pn} <اسم_الأمر>'
@@ -83,23 +83,23 @@ module.exports = {
                 return api.sendMessage(`❌ لم يتم العثور على الأمر "${input}"`, event.threadID);
             }
 
-            let detailMessage = `●───── ⌬ ─────●\n`;
-            detailMessage += `┇ ⦿ ⟬ الإســم ⟭ : ${cmd.name}\n`;
-            detailMessage += `┇ 𓋰 الـوصـف : ${cmd.description}\n`;
-            detailMessage += `┇ 𓋰 الـمؤلـف : ${cmd.author}\n`;
-            detailMessage += `┇ 𓋰 الـإصـدار : ${cmd.version}\n`;
+            let detailMessage = `⏣────── ✾ ⌬ ✾ ──────⏣\n`;
+            detailMessage += `✾ ┇ ⏣ ⟬ الإســم ⟭ : ${cmd.name}\n`;
+            detailMessage += `✾ ┇ ◍ الـوصـف : ${cmd.description}\n`;
+            detailMessage += `✾ ┇ ◍ الـمؤلـف : ${cmd.author}\n`;
+            detailMessage += `✾ ┇ ◍ الـإصـدار : ${cmd.version}\n`;
 
             if (cmd.guide?.ar) {
-                detailMessage += `┇\n┇ 𓋰 طريقة الاستخدام :\n┇ ⬩ ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)}\n`;
+                detailMessage += `✾ ┇\n✾ ┇ ◍ طريقة الاستخدام :\n✾ ┇ ⬩ ${cmd.guide.ar.replace(/{pn}/g, config.prefix + cmd.name)}\n`;
             }
 
-            detailMessage += `●───── ⌬ ─────●`;
+            detailMessage += `⏣────── ✾ ⌬ ✾ ──────⏣`;
 
             return api.sendMessage(detailMessage, event.threadID);
         }
 
         // =========================
-        // تصنيف الأوامر (نفس منطقك الأصلي تماماً)
+        // تصنيف الأوامر
         // =========================
         const categories = {};
         const categoryMap = {
@@ -123,9 +123,9 @@ module.exports = {
         const orderedCats = ['المجموعة', 'الصور', 'الوسائط', 'الذكاء الاصطناعي', 'الترفيه', 'اللعب', 'عشوائي', 'المطور', 'الأدوات'];
 
         // =========================
-        // بناء القائمة بالزخرفة الطولية
+        // بناء القائمة بالزخرفة المطلوبة
         // =========================
-        let finalMessage = `●───── ⌬ ─────●\n┇\n`;
+        let finalMessage = `⏣────── ✾ ⌬ ✾ ──────⏣\n✾ ┇\n`;
 
         for (let i = 0; i < orderedCats.length; i++) {
             const category = orderedCats[i];
@@ -135,21 +135,19 @@ module.exports = {
             const adminList = config.adminUIDs || [];
             if (category === "المطور" && !adminList.includes(event.senderID)) continue;
 
-            finalMessage += `┇ ⦿ ⟬ قـسـم ${category.toUpperCase()} ⟭\n`;
+            finalMessage += `✾ ┇ ⏣ ⟬ قـسـم ${category.toUpperCase()} ⟭\n`;
             
+            // ترتيب الأوامر في صفوف (3 أوامر لكل صف)
             for (let j = 0; j < cmds.length; j += 3) {
-                const row = cmds.slice(j, j + 3).map(c => `◍ ${c}`).join("  ");
-                finalMessage += `┇ ${row}\n`;
+                const row = cmds.slice(j, j + 3).map(c => `◍ ${c}`).join(" ");
+                finalMessage += `✾ ┇ ${row}\n`;
             }
-            finalMessage += `┇\n`;
 
-            // إضافة الفاصل فقط إذا كان هناك قسم تالٍ
-            if (i < orderedCats.length - 1) {
-                finalMessage += `┝━━━━━━━━━━━━━━━\n┇\n`;
-            }
+            // إضافة الفاصل السفلي لكل قسم
+            finalMessage += `✾ ┇ ⸻⸻⸻⸻⸻\n✾ ┇\n`;
         }
 
-        finalMessage += `●───── ⌬ ─────●\n`;
+        finalMessage += `⏣────── ✾ ⌬ ✾ ──────⏣\n`;
         finalMessage += ` ⠇عـدد الأوامـر: ${uniqueCommands.length}\n`;
         finalMessage += ` ⠇الـمـطـوࢪ: سينكو 𓆩☆𓆪`;
 
