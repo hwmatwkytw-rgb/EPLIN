@@ -6,9 +6,9 @@ module.exports = {
   config: {
     name: 'ابتايم',
     aliases: ['uptime', 'up', 'stats'],
-    version: '2.0',
+    version: '2.6',
     author: 'سينكو',
-    description: 'عرض حالة النظام وإحصائيات البوت بالكامل',
+    description: 'عرض حالة النظام وإحصائيات البوت مع معالجة الأخطاء',
     countDown: 5,
     prefix: true,
     category: 'utility',
@@ -28,7 +28,7 @@ module.exports = {
     const processingID = waitingMsg.messageID;
 
     try {
-      // حساب وقت التشغيل
+      // 1. حساب وقت التشغيل
       const uptimeSeconds = process.uptime();
       const days = Math.floor(uptimeSeconds / 86400);
       const hours = Math.floor((uptimeSeconds % 86400) / 3600);
@@ -36,17 +36,26 @@ module.exports = {
       const seconds = Math.floor(uptimeSeconds % 60);
       const uptimeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-      // معلومات الذاكرة والنظام
+      // 2. معلومات الذاكرة والنظام
       const ramUsage = (process.memoryUsage().rss / 1024 / 1024).toFixed(2);
       const totalRam = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
       const ping = Math.floor(performance.now() % 1000);
       const time = moment().format('hh:mm:ss A');
       
-      // إحصائيات البوت
-      const threadCount = (await api.getThreadList(100, null, ["INBOX"])).length;
-      const userCount = global.data.allUserID ? global.data.allUserID.length : 'غير متوفر';
+      // 3. إحصائيات البوت (مع معالجة خطأ الجلب)
+      let threadCount = 'غير متوفر';
+      let userCount = 'غير متوفر';
 
-      // بناء الرسالة بالزخرفة المطلوبة
+      try {
+        const threadList = await api.getThreadList(100, null, ["INBOX"]);
+        threadCount = threadList.length;
+      } catch (e) { console.log("تعذر جلب المجموعات"); }
+
+      if (global.data && global.data.allUserID) {
+        userCount = global.data.allUserID.length;
+      }
+
+      // بناء الرسالة
       const message = 
 `⏣────── ✾ ⌬ ✾ ──────⏣
 ✾ ┇
@@ -63,19 +72,20 @@ module.exports = {
 ✾ ┇ ◍ إجمالي الـرام: ${totalRam}GB
 ✾ ┇ ⸻⸻⸻⸻⸻
 ✾ ┇
-✾ ┇⏣ ⟬ مـعـلـومـات الـسـيـرفـر ⟭
+✾ ┇ ⏣ ⟬ مـعـلـومـات الـسـيـرفـر ⟭
 ✾ ┇ ◍ الـنظام: ${os.type()} ${os.arch()}
 ✾ ┇ ◍ الـمعالج: ${os.cpus()[0].model.split(' ')[0]}
 ✾ ┇ ⸻⸻⸻⸻⸻
 ✾ ┇
 ⏣────── ✾ ⌬ ✾ ──────⏣
+ ⠇الـمـطـوࢪ: سينكو 𓆩☆𓆪
  ⠇حـالة الـبوت: مـتصل بنجاح ✅`;
 
       api.editMessage(message, processingID);
 
     } catch (error) {
       console.error('Uptime error:', error);
-      api.editMessage('⏣── ✾ ❌ فشل في جلب البيانات ✾ ──⏣', processingID);
+      api.editMessage('⏣── ✾ ❌ حدث خطأ داخلي أثناء الجلب ✾ ──⏣', processingID);
     }
   },
 };
