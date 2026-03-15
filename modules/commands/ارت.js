@@ -9,7 +9,7 @@ module.exports = {
   config: {
     name: "ارت",
     version: "1.0.0",
-    author: "Gry KJ",
+    author: "سينكو",
     countDown: 5,
     role: 0,
     description: "تحويل صورك إلى ستايلات أنمي مذهلة 🎨",
@@ -24,16 +24,17 @@ module.exports = {
     // ═══════════════ عرض القائمة ═══════════════
     if (!cmd) {
       return api.sendMessage(
-        `●─────── ⌬ ───────●\n` +
-        `┇ ⦿ ⟬ أوامـر الـتـحـويـل ⟭\n` +
-        `┇\n` +
-        `┇ 🖼️ ارت [رقم]: رد على صورة\n` +
-        `┇ 📋 ارت موديلات: عرض الستايلات\n` +
-        `┇ 🔍 ارت بحث: البحث عن ستايل\n` +
-        `┇ 📊 ارت احصائيات: حالة النظام\n` +
-        `┇\n` +
-        `┇ مـثـال: ارت 29 (رد على صورة)\n` +
-        `●─────── ⌬ ───────●`,
+        `⏣────── ✾ ⌬ ✾ ──────⏣\n` +
+        `✾ ┇\n` +
+        `✾ ┇ ⏣ ⟬ أوامـر الـتـحـويـل ⟭\n` +
+        `✾ ┇ ◍ ارت [رقم]: رد على صورة\n` +
+        `✾ ┇ ◍ ارت موديلات: عرض الستايلات\n` +
+        `✾ ┇ ◍ ارت بحث: البحث عن ستايل\n` +
+        `✾ ┇ ◍ ارت احصائيات: حالة النظام\n` +
+        `✾ ┇ ⸻⸻⸻⸻⸻\n` +
+        `✾ ┇ ◍ مـثـال: ارت 29 (رد على صورة)\n` +
+        `✾ ┇\n` +
+        `⏣────── ✾ ⌬ ✾ ──────⏣`,
         threadID, messageID
       );
     }
@@ -42,15 +43,16 @@ module.exports = {
     if (cmd === "احصائيات" || cmd === "stats") {
       const models = await Models();
       return api.sendMessage(
-        `●─────── ⌬ ───────●\n` +
-        `┇ ⦿ ⟬ إحـصـائـيـات الـنـظـام ⟭\n` +
-        `┇\n` +
-        `┇ الـسـتـايـلات: ${models.length}\n` +
-        `┇ الـشـعـبـيـة: Anime Style\n` +
-        `┇ الـحـالـة: مـتـصـل ✅\n` +
-        `┇\n` +
-        `┇ اكـتب "ارت موديلات" للعرض\n` +
-        `●─────── ⌬ ───────●`,
+        `⏣────── ✾ ⌬ ✾ ──────⏣\n` +
+        `✾ ┇\n` +
+        `✾ ┇ ⏣ ⟬ إحـصـائـيـات الـنـظـام ⟭\n` +
+        `✾ ┇ ◍ الـسـتـايـلات: ${models.length}\n` +
+        `✾ ┇ ◍ الـشـعـبـيـة: Anime Style\n` +
+        `✾ ┇ ◍ الـحـالـة: مـتـصـل ✅\n` +
+        `✾ ┇ ⸻⸻⸻⸻⸻\n` +
+        `✾ ┇ ◍ اكـتب "ارت موديلات" للعرض\n` +
+        `✾ ┇\n` +
+        `⏣────── ✾ ⌬ ✾ ──────⏣`,
         threadID, messageID
       );
     }
@@ -59,7 +61,7 @@ module.exports = {
     if (cmd === "موديلات" || cmd === "models" || cmd === "list") {
       const page = parseInt(args[1]) || 1;
       const models = await Models();
-      return await showModels(models, page, api, threadID, senderID, `⦿ ⟬ قـائـمـة الـسـتـايـلات ⟭`);
+      return await showModels(models, page, api, threadID, senderID, `⏣ ⟬ قـائـمـة الـسـتـايـلات ⟭`);
     }
 
     // ═══════════════ البحث ═══════════════
@@ -70,7 +72,7 @@ module.exports = {
       const models = await Models(searchQuery);
       if (models.length === 0) return api.sendMessage(`😢 لم يتم العثور على "${searchQuery}"`, threadID, messageID);
 
-      return await showModels(models, 1, api, threadID, senderID, `⦿ ⟬ نـتـائـج الـبـحـث ⟭`);
+      return await showModels(models, 1, api, threadID, senderID, `⏣ ⟬ نـتـائـج الـبـحـث ⟭`);
     }
 
     // ═══════════════ تحويل الصورة ═══════════════
@@ -83,13 +85,14 @@ module.exports = {
 
       const selectedStyle = models[styleNum];
       api.sendMessage(
-        `●─────── ⌬ ───────●\n` +
-        `┇ ⦿ ⟬ جـاري الـتـحـويـل ⟭\n` +
-        `┇\n` +
-        `┇ الـسـتايل: ${selectedStyle.name}\n` +
-        `┇ الـحـالـة: يـتم الـمـعالـجـة...\n` +
-        `┇ الـوقـت: 5-10 ثـوانـي ⏱️\n` +
-        `●─────── ⌬ ───────●`, 
+        `⏣────── ✾ ⌬ ✾ ──────⏣\n` +
+        `✾ ┇\n` +
+        `✾ ┇ ⏣ ⟬ جـاري الـتـحـويـل ⟭\n` +
+        `✾ ┇ ◍ الـسـتايل: ${selectedStyle.name}\n` +
+        `✾ ┇ ◍ الـحـالـة: يـتم الـمـعالـجـة...\n` +
+        `✾ ┇ ◍ الـوقـت: 5-10 ثـوانـي ⏱️\n` +
+        `✾ ┇\n` +
+        `⏣────── ✾ ⌬ ✾ ──────⏣`, 
         threadID, messageID
       );
 
@@ -105,7 +108,7 @@ module.exports = {
         const resultStream = await axios.get(result, { responseType: 'stream' });
         
         await api.sendMessage({
-          body: `●─────── ⌬ ───────●\n┇ ✅ تـم الـتـحـويـل بـنـجـاح!\n┇ الـسـتـايـل: ${selectedStyle.name}\n●─────── ⌬ ───────●`,
+          body: `⏣────── ✾ ⌬ ✾ ──────⏣\n✾ ┇ ✅ تـم الـتـحـويـل بـنـجـاح!\n✾ ┇ الـسـتـايـل: ${selectedStyle.name}\n⏣────── ✾ ⌬ ✾ ──────⏣`,
           attachment: resultStream.data
         }, threadID, (err) => {
            if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
@@ -135,14 +138,14 @@ async function showModels(models, page, api, threadID, author, title) {
   const start = (page - 1) * pageSize;
   const modelsPage = models.slice(start, start + pageSize);
 
-  let msg = `●─────── ⌬ ───────●\n`;
-  msg += `┇ ${title}\n`;
-  msg += `┇ الـصـفـحـة: ${page} مـن ${totalPages}\n┇\n`;
+  let msg = `⏣────── ✾ ⌬ ✾ ──────⏣\n`;
+  msg += `✾ ┇ ${title}\n`;
+  msg += `✾ ┇ الـصـفـحـة: ${page} مـن ${totalPages}\n✾ ┇\n`;
   
-  modelsPage.forEach(m => msg += `┇ ${m.originalIndex} - ${m.name}\n`);
+  modelsPage.forEach(m => msg += `✾ ┇ ◍ ${m.originalIndex} - ${m.name}\n`);
   
-  msg += `┇\n┇ 💬 رد بـرقم الـصـفـحـة لـلـتـنـقل\n`;
-  msg += `●─────── ⌬ ───────●`;
+  msg += `✾ ┇\n✾ ┇ ◍ رد بـرقم الـصـفـحـة لـلـتـنـقل\n`;
+  msg += `⏣────── ✾ ⌬ ✾ ──────⏣`;
 
   api.sendMessage(msg, threadID, (err, info) => {
     if (!global.client.handleReply) global.client.handleReply = [];
