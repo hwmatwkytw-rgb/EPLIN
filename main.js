@@ -15,7 +15,7 @@ app.get('/config', (req, res) => {
 });
 
 app.get('/command-count', (req, res) => {
-  res.json({ count: global.client.commands.size });
+  res.json({ count: global.client && global.client.commands ? global.client.commands.size : 0 });
 });
 
 const chalk = require('chalk');
@@ -95,6 +95,7 @@ const initializeBot = async () => {
       if (event.type === 'event') {
         await handleEvent(event, api);
       } else if (event.type === 'message' || event.type === 'message_reply') {
+        await handleEvent(event, api);
         const time = new Date().toLocaleTimeString();
         const messageType = event.isGroup ? 'Group' : 'Private';
         let content = '';
@@ -111,11 +112,6 @@ const initializeBot = async () => {
       }
     });
 
-
-    const port = process.env.PORT || 20170;
-    app.listen(port, () => {
-      log('info', `Web server running on port ${port}`);
-    });
 
     log('info', 'Bot initialized successfully');
     global.botStartTime = Date.now(); 
@@ -140,6 +136,11 @@ const initializeBot = async () => {
   }
 };
 
+
+const port = process.env.PORT || 5000;
+app.listen(port, '0.0.0.0', () => {
+  log('info', `Web server running on port ${port}`);
+});
 
 fs.removeSync('./PriyanshFca.json');
 initializeBot();
