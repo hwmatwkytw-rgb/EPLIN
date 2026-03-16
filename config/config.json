@@ -10,7 +10,11 @@
     "",
     "12"
   ],
-  "language": "bn",
+  "ai_keys": [
+    "AIzaSyAw6bZXTaBz0eZecgtaD4R40r46VVQiA",
+    "AIzaSyDi1HZlqTjTPmnSWEhrbRJY3dUDMTPoOls"
+  ],
+  "language": "ar",
   "database": {
     "type": "json",
     "autoSave": true,
