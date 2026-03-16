@@ -1,6 +1,6 @@
 module.exports = {
     config: {
-        name: "الطلبات",
+        name: "موافقة",
         version: "6.5",
         author: "سينكو",
         countDown: 5,
