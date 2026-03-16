@@ -11,7 +11,7 @@ let currentKeyIndex = 0;
 
 module.exports = {
     config: {
-        name: "ابلين",
+        name: "بوت",
         version: "4.5",
         author: "سينكو",
         countDown: 2,
