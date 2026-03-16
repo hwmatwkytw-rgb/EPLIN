@@ -38,16 +38,16 @@ module.exports = {
                 return api.editMessage('⏣ ❌ ما لقيت شي.. غايتو ذوقك ده غريب 😒', processingID);
             }
 
-            let msg = `⏣────── ✾ ⌬ ✾ ──────⏣\n✾ ┇\n✾ ┇ ⏣ ⟬ نـتـائـج الـبـحـث ⟭\n`;
+            let msg = `⏣────── ✾ ⌬ ✾ ──────⏣\n \n  ⏣ ⟬ نـتـائـج الـبـحـث ⟭\n`;
             
             const cachePath = path.join(__dirname, 'cache');
             if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath);
 
             for (let i = 0; i < results.length; i++) {
-                msg += `✾ ┇ ◍ ${i + 1}. ${results[i].title}\n✾ ┇ ⏱️ الـزمن: ${results[i].time}\n✾ ┇ ⸻⸻⸻⸻⸻\n`;
+                msg += `  ${i + 1}. ${results[i].title}\n✾ ┇ ⏱️ الـزمن: ${results[i].time}\n✾ ┇ ⸻⸻⸻⸻⸻\n`;
             }
 
-            msg += `✾ ┇\n✾ ┇ ◍ رد بـرقم الأغنية لـلـتـحـميل 📥\n⏣────── ✾ ⌬ ✾ ──────⏣`;
+            msg += `\n   رد بـرقم الأغنية لـلـتـحـميل 📥\n⏣────── ✾ ⌬ ✾ ──────⏣`;
             api.editMessage(msg, processingID);
 
             if (global.client && global.client.handleReply) {
@@ -73,7 +73,7 @@ module.exports = {
         try {
             const choice = parseInt(body);
             if (isNaN(choice) || choice > handleReply.result.length || choice <= 0) {
-                return api.sendMessage("✾ ┇ ركز.. اختر رقم من 1 لـ 6 فقط 🙄", threadID, messageID);
+                return api.sendMessage("  ركز.. اختر رقم من 1 لـ 6 فقط 🙄", threadID, messageID);
             }
 
             api.unsendMessage(handleReply.messageID);
