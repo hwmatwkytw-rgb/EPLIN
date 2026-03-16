@@ -2,32 +2,41 @@ const axios = require('axios');
 
 module.exports = {
   config: {
-    name: "تعديل",
+    name: "تعديل", // تأكد من عدم وجود مسافات هنا
     version: "1.0",
     author: "سينكو",
-    countDown: 20,
+    countDown: 5,
     prefix: true,
     category: "AI",
-    description: "إعادة رسم صورتك بـ Stable Diffusion (رد على صورة)"
+    description: "إعادة رسم الصور"
   },
 
-  onStart: async ({ api, event, args }) => {
-    const { threadID, messageReply } = event;
-    const prompt = args.join(" ");
+  onStart: async function({ api, event, args }) {
+    const { threadID, messageReply, messageID } = event;
 
-    if (!messageReply || !messageReply.attachments[0]) 
-      return api.sendMessage("──❃ ┇ رد على صورة لكي أعيد رسمها", threadID);
+    if (!messageReply || !messageReply.attachments || messageReply.attachments.length == 0) {
+      return api.sendMessage("──❃ ┇ رد على صورة لكي أعيد رسمها يا بطل", threadID, messageID);
+    }
 
-    api.sendMessage("❃ ┇ جاري إعادة تشكيل الصورة... 🪄", threadID);
+    const prompt = args.join(" ") || "masterpiece, high quality";
+    const imgUrl = messageReply.attachments[0].url;
+
+    api.sendMessage("──❃ ┇ جاري المعالجة... انتظر قليلاً", threadID, messageID);
 
     try {
-      const imgUrl = encodeURIComponent(messageReply.attachments[0].url);
-      const resUrl = `https://api.paxsenix.biz.id/ai/img2img?url=${imgUrl}&prompt=${encodeURIComponent(prompt || "masterpiece, high quality")}`;
-      
-      api.sendMessage({
-        body: " ❈ \n     ✨ تـم إعـادة الـرسـم بـنـجـاح\n❊",
-        attachment: await axios.get(resUrl, { responseType: 'stream' }).then(r => r.data)
-      }, threadID);
-    } catch (e) { api.sendMessage("❃ ┇ فشل معالجة الصورة"، threadID); }
+      // جربت لك هذا الرابط لأنه أسرع في الاستجابة للبوتات
+      const res = await axios.get(`https://api.paxsenix.biz.id/ai/img2img?url=${encodeURIComponent(imgUrl)}&prompt=${encodeURIComponent(prompt)}`, {
+        responseType: 'stream'
+      });
+
+      return api.sendMessage({
+        body: "─── ❈ ⸻⸻ ❈ ⸻⸻ ❈ ───\n     ✨ تـم الـرسـم بـنـجـاح\n─── ❈ ⸻⸻ ❈ ⸻⸻ ❈ ───",
+        attachment: res.data
+      }, threadID, messageID);
+
+    } catch (error) {
+      console.error(error);
+      return api.sendMessage("──❃ ┇ حدث خطأ في النظام أو الـ API متوقف حالياً", threadID, messageID);
+    }
   }
 };
