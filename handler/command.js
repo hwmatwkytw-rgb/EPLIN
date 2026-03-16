@@ -25,49 +25,46 @@ const loadCommands = () => {
 };
 
 // تنفيذ الأمر
-const handleCommand = async ({ message, args, event, api, Users, Threads, commands, prefix }) => {
+const handleCommand = async ({ message, args, event, api, Users, Threads, commands }) => {
   try {
-    const bodyText = typeof message === 'string' ? message : (message?.body || event?.body || '');
-    const botPrefix = prefix || config.prefix;
+    const threadData = Threads.get(event.threadID) || {};
+    const prefixEnabled = threadData.settings?.prefixEnabled ?? config.prefixEnabled ?? true; 
 
-    if (!bodyText || !bodyText.startsWith(botPrefix)) return;
-    const body = bodyText.slice(botPrefix.length).trim();
-    if (!body) return;
-    const words = body.split(/\s+/);
-    const commandName = words[0].toLowerCase();
-    args = words;
+    let commandName;
 
-    const command = commands.get(commandName) || Array.from(commands.values()).find(cmd => cmd.config.aliases?.includes(commandName));
-    if (!command) return; // الأمر غير موجود، لا يرسل شيء
-
-    const userData = Users.get(event.senderID);
-    if (userData && userData.isBanned) return; // المستخدم محظور
-
-    // وضع الأدمن فقط
-    if (global.client.config.adminOnlyMode && !hasPermission(event.senderID, { adminOnly: true })) {
-      return api.sendMessage('انقلع/ي.', event.threadID);
+    if (prefixEnabled) {
+      if (!args || !args[0]) return;
+      commandName = args[0].toLowerCase();
+    } else {
+      if (!message.body) return;
+      const words = message.body.trim().split(/\s+/);
+      if (!words[0]) return;
+      commandName = words[0].toLowerCase();
+      args = words;
     }
 
-    // صلاحية الأمر
+    const command = commands.get(commandName) || Array.from(commands.values()).find(cmd => cmd.config.aliases?.includes(commandName));
+    if (!command) return;
+
+    const userData = Users.get(event.senderID);
+    if (userData && userData.isBanned) return;
+
+    // --- التعديل هنا ---
+    // إذا كان وضع الأدمن فقط مفعل والمستخدم ليس أدمن، يتفاعل بـ ❌ بدلاً من إرسال رسالة
+    if (global.client.config.adminOnlyMode && !hasPermission(event.senderID, { adminOnly: true })) {
+      return api.setMessageReaction("❌", event.messageID, (err) => {}, true);
+    }
+    // ------------------
+
     if (!hasPermission(event.senderID, command.config, await api.getThreadInfo(event.threadID))) {
       return api.sendMessage('', event.threadID);
     }
 
-    // كولداون (مدة الانتظار)
     if (global.client.config.features.cooldown && !checkCooldown(event.senderID, command.config.name, command.config.countDown)) {
       return api.sendMessage(`الرجاء الانتظار ${command.config.countDown} ثانية قبل استخدام هذا الأمر مرة أخرى.`, event.threadID);
     }
 
-    // تنفيذ الأمر
-    try {
-      api.setMessageReaction("⏳", event.messageID, (err) => {}, true);
-    } catch (e) {}
-    
     await command.onStart({ message, args: args.slice(1), event, api, Users, Threads, config: global.client.config });
-    
-    try {
-      api.setMessageReaction("✅", event.messageID, (err) => {}, true);
-    } catch (e) {}
     log('info', `تم تنفيذ الأمر: ${command.config.name} بواسطة المستخدم ${event.senderID}`);
   } catch (error) {
     log('error', `خطأ في تنفيذ الأمر: ${error.message}`);
