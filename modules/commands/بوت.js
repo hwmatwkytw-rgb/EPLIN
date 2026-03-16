@@ -1,41 +1,32 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// المفاتيح مباشرة هنا عشان نختصر أي مشكلة في ملف الـ config
+// المفتاح الجديد اللي أرسلته يا بطل
 const API_KEYS = [
-    "AIzaSyAw6bZXTaBz0eZecgtaD4R40r46VVQiA",
-    "AIzaSyDi1HZlqTjTPmnSWEhrbRJY3dUDMTPoOls"
+    "AIzaSyBAl2t8mMUIXovEkOAYQcV23MlmoEmA320"
 ];
 
 const conversationMemory = {};
-let currentKeyIndex = 0;
 
 module.exports = {
     config: {
         name: "بوت",
-        version: "4.5",
+        version: "5.0",
         author: "سينكو",
         countDown: 2,
-        role: 0, // 0 للمستخدمين، 1 للآدمن
-        shortDescription: "ذكاء اصطناعي سوداني ردّاحة",
-        longDescription: "ذكاء اصطناعي بلهجة سودانية مستفزة وقوية",
+        role: 0,
         category: "ai",
-        guide: "{pn} <الكلام>"
+        guide: "{pn} <سؤالك>"
     },
 
     onStart: async function ({ api, event, args }) {
-        const { threadID, messageID, body } = event;
-        // لو المستخدم كتب "ابلين" بس بدون كلام
-        if (args.length === 0 && !event.messageReply) {
-            return api.sendMessage("•-• أكتب حاجة يا وهم.. قايلني بقرا الأفكار؟ 🙄", threadID, messageID);
-        }
         return this.onReply({ api, event, args });
     },
 
     onReply: async function ({ api, event, args }) {
-        const { threadID, messageID, senderID, messageReply } = event;
+        const { threadID, messageID, senderID, body, messageReply } = event;
         
         let query = args.join(" ");
-        if (!query && messageReply) query = event.body; // لأخذ الكلام في حالة الرد
+        if (!query && messageReply) query = body; 
 
         if (!query && !messageReply) return;
 
@@ -43,57 +34,43 @@ module.exports = {
 
         if (!conversationMemory[senderID]) conversationMemory[senderID] = [];
 
-        const APLIN_SYSTEM = `أنتِ (ابلين)، ذكاء اصطناعي سوداني من "بري" لسانك طويل ومغرورة. 
-        لهجتك سودانية قحة (يا رمة، سجمك، يا وهم، عالم بيض). لا تستخدمي النجوم (*). 
-        ردي باختصار وقوة وبدون أي احترام. لو في كلام حب ردي بـ (تفكك، الروابة دي شنو).`;
+        // تعليمات النظام - الرداحة السودانية
+        const APLIN_SYSTEM = `أنتِ (ابلين)، ذكاء اصطناعي سوداني مغرورة ولسانك طويل. 
+        - ردي حصراً باللهجة السودانية الدارجة (يا رمة، سجمك، يا وهم، عالم بيض).
+        - ممنوع نهائياً استخدام النجوم (*) أو أي تنسيق Markdown.
+        - لو الكلام فيه حب أو بوسة، ردي برد قاسي ومستفز جداً.
+        - خلي ردودك مختصرة وقوية ومستفزة.`;
 
-        let userMessage = query;
-        if (messageReply) {
-            userMessage = `(سياق: رد على: "${messageReply.body}") -> الكلام الجديد: ${query}`;
-        }
+        try {
+            const genAI = new GoogleGenerativeAI(API_KEYS[0]);
+            const model = genAI.getGenerativeModel({
+                model: "gemini-1.5-flash",
+                systemInstruction: APLIN_SYSTEM
+            });
 
-        let eveResponse = null;
-        let successful = false;
-        let attempts = 0;
-
-        while (!successful && attempts < API_KEYS.length) {
-            const attemptIndex = (currentKeyIndex + attempts) % API_KEYS.length;
-            const currentKey = API_KEYS[attemptIndex];
-
-            try {
-                const genAI = new GoogleGenerativeAI(currentKey);
-                const model = genAI.getGenerativeModel({
-                    model: "gemini-1.5-flash",
-                    systemInstruction: APLIN_SYSTEM
-                });
-
-                const chat = model.startChat({
-                    history: conversationMemory[senderID],
-                    generationConfig: { temperature: 0.8 }
-                });
-
-                const result = await chat.sendMessage(userMessage);
-                eveResponse = result.response.text().trim();
-                successful = true;
-                currentKeyIndex = (attemptIndex + 1) % API_KEYS.length;
-
-            } catch (error) {
-                console.error(`Key Error: ${error.message}`);
-                attempts++;
+            let userMessage = query;
+            if (messageReply) {
+                userMessage = `(المستخدم رد على كلامك: "${messageReply.body}") -> قال ليك: ${query}`;
             }
-        }
 
-        if (successful && eveResponse) {
-            eveResponse = eveResponse.replace(/\*/g, ''); 
+            const chat = model.startChat({
+                history: conversationMemory[senderID],
+                generationConfig: { temperature: 0.8, maxOutputTokens: 300 }
+            });
 
-            // حفظ الذاكرة
+            const result = await chat.sendMessage(userMessage);
+            let reply = result.response.text().trim().replace(/\*/g, '');
+
+            // حفظ السياق في الذاكرة
             conversationMemory[senderID].push({ role: "user", parts: [{ text: userMessage }] });
-            conversationMemory[senderID].push({ role: "model", parts: [{ text: eveResponse }] });
+            conversationMemory[senderID].push({ role: "model", parts: [{ text: reply }] });
             if (conversationMemory[senderID].length > 10) conversationMemory[senderID].shift();
 
-            return api.sendMessage(`•-• ${eveResponse}`, threadID, messageID);
-        } else {
-            return api.sendMessage("•-• المفاتيح ضربت يا وهم.. قايلني شغالة بالموية؟ 😒", threadID, messageID);
+            return api.sendMessage(`•-• ${reply}`, threadID, messageID);
+
+        } catch (error) {
+            console.error(error);
+            return api.sendMessage("•-• يا وهم المفتاح ده شكله لسه ما اتفعل أو فيه مشكلة.. جرب بعد دقائق! 😒", threadID, messageID);
         }
     }
 };
