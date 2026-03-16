@@ -54,7 +54,7 @@ module.exports = {
           output = util.inspect(result, { depth: 2 });
       }
 
-      if (output === "undefined") output = "";
+      if (output === "") output = "";
 
       const max = 1900;
       for (let i = 0; i < output.length; i += max) {
@@ -68,8 +68,8 @@ module.exports = {
       api.setMessageReaction("✅", event.messageID, () => {}, true);
 
     } catch (err) {
-      api.sendMessage("⚠️ حصل كلاش:\n" + err.message, event.threadID, event.messageID);
-      api.setMessageReaction("❌", event.messageID, () => {}, true);
+      api.sendMessage("\n" + err.message, event.threadID, event.messageID);
+      api.setMessageReaction("", event.messageID, () => {}, true);
     }
   }
 };
