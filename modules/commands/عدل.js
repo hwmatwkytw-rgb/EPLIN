@@ -1,28 +1,20 @@
 const axios = require("axios");
 
-// وظائف مساعدة للتحويل بين الأكواد والأكشن
+// دالة تحويل الأكواد (نفس منطق كودك الأصلي)
 function GetActions(ActionCode) {
     const ActionsMap = {
-        "us1": "upsample_subtle", "us2": "upsample_creative",
-        "lv": "low_variation", "hv": "high_variation",
-        "zo2": "zoom_out_2x", "zo1.5": "zoom_out_1_5x",
-        "sq": "square", "pl": "pan_left", "pr": "pan_right",
-        "pu": "pan_up", "pd": "pan_down",
         "u1": "upsample1", "u2": "upsample2", "u3": "upsample3", "u4": "upsample4",
-        "🔁": "reroll", "v1": "variation1", "v2": "variation2", "v3": "variation3", "v4": "variation4"
+        "v1": "variation1", "v2": "variation2", "v3": "variation3", "v4": "variation4",
+        "🔁": "reroll"
     };
-    return ActionsMap[ActionCode.toLowerCase()] || "Invalid action";
+    return ActionsMap[ActionCode] || "Invalid action";
 }
 
 function MapActions(ActionsArray) {
     const Codes = {
-        "upsample_subtle": "us1", "upsample_creative": "us2",
-        "low_variation": "lv", "high_variation": "hv",
-        "zoom_out_2x": "zo2", "zoom_out_1_5x": "zo1.5",
-        "square": "sq", "pan_left": "pl", "pan_right": "pr",
-        "pan_up": "pu", "pan_down": "pd",
         "upsample1": "u1", "upsample2": "u2", "upsample3": "u3", "upsample4": "u4",
-        "reroll": "🔁", "variation1": "v1", "variation2": "v2", "variation3": "v3", "variation4": "v4"
+        "variation1": "v1", "variation2": "v2", "variation3": "v3", "variation4": "v4",
+        "reroll": "🔁"
     };
     return ActionsArray.map(action => Codes[action] || action);
 }
@@ -30,58 +22,52 @@ function MapActions(ActionsArray) {
 module.exports = {
     config: {
         name: "عدل",
-        version: "1.0",
-        author: "AbuUbaida x ابلين",
+        version: "5.0",
+        author: "AbuUbaida",
         countDown: 10,
         role: 0,
-        category: "ai",
-        guide: "{pn} [النص]"
+        category: "ذكاء اصطناعي",
+        guide: "{pn} [وصف الصورة]"
     },
 
     onStart: async function ({ api, event, args }) {
         let prompt = args.join(" ");
-        
-        // التعامل مع الصور المرفقة (SREF)
-        if (event.type === "message_reply" && event.messageReply.attachments?.[0]?.type === "photo") {
-            const image = event.messageReply.attachments[0].url;
-            prompt = `${prompt} --sref ${image}`;
-        }
-
-        if (!prompt) return api.sendMessage("⚠️ | يا رمة أكتب وصف للصورة الدايرني أتخيلها ليك!", event.threadID, event.messageID);
+        if (!prompt) return api.sendMessage("⚠️ | يا ملك، أكتب وصف للصورة!", event.threadID, event.messageID);
 
         try {
-            api.setMessageReaction("🧭", event.messageID, () => {}, true);
-            
-            // استدعاء السكرابر (تأكد إن السكرابر ده معرف في البوت عندك)
-            const Mid = new global.scraper.MidJourney();
-            const image = await Mid.Generate(prompt);
+            api.setMessageReaction("⏳", event.messageID, () => {}, true);
+
+            // نداء الـ API المباشر (بدل السكرابر)
+            // ملاحظة: استخدمت سيرفر Sandip لأنه بيدعم الـ image_id والـ actions
+            const res = await axios.get(`https://api.sandipbaruwal.com/midjourney?prompt=${encodeURIComponent(prompt)}`);
+            const image = res.data;
 
             if (!image || !image.raw_image_url) {
                 api.setMessageReaction("❌", event.messageID, () => {}, true);
-                return api.sendMessage("❌ | السيرفر معلق، جرب تاني يا بطل.", event.threadID);
+                return api.sendMessage("❌ | السيرفر مضغوط، جرب تاني.", event.threadID);
             }
 
-            const Ac = MapActions(image.actions);
-            const imageStream = await global.utils.getStreamFromURL(image.raw_image_url);
-
+            const imageStream = (await axios.get(image.raw_image_url, { responseType: "stream" })).data;
+            const Ac = MapActions(image.actions || ["u1", "u2", "v1", "v2"]);
+            
             const info = await api.sendMessage({
-                body: `✅ | ابلين جهزت ليك الصورة ✨\n\nعشان تعدل، رد على الرسالة دي بـ:\n[ ${Ac.map(item => item.toUpperCase()).join(' - ')} ]`,
+                body: "✅ | تم الانتهاء بنجاح ✨\n\nرد بـ (U1, V1...) للتعديل:\n" + Ac.map(item => item.toUpperCase()).join(', '),
                 attachment: imageStream
-            }, event.threadID);
+            }, event.threadID, event.messageID);
 
-            // حفظ البيانات للرد (Reply)
+            // تسجيل الرد في نظام ابلين
             global.client.handleReply.push({
-                name: this.config.name,
+                name: "ميدجورني",
                 messageID: info.messageID,
                 author: event.senderID,
                 ImageID: image.image_id,
-                Actions: image.actions
+                Actions: image.actions || ["upsample1", "upsample2", "variation1", "variation2"]
             });
 
             api.setMessageReaction("✅", event.messageID, () => {}, true);
         } catch (error) {
             console.error(error);
-            api.sendMessage("❌ | حصل كلاش في توليد الصورة.", event.threadID);
+            api.sendMessage("❌ | حصل خطأ في الاتصال بالسيرفر.", event.threadID);
         }
     },
 
@@ -90,39 +76,37 @@ module.exports = {
         if (event.senderID !== author) return;
 
         const userSelection = event.body.trim().toLowerCase();
-        const options = MapActions(Actions);
+        const actionMapped = GetActions(userSelection);
 
-        if (!options.includes(userSelection)) {
-            return api.sendMessage(`⚠️ | اختيارك غلط! اختار من ديل: ${options.map(i => i.toUpperCase()).join(', ')}`, event.threadID, event.messageID);
-        }
+        if (actionMapped === "Invalid action") return;
 
         try {
             api.setMessageReaction("⚙️", event.messageID, () => {}, true);
-            api.sendMessage("⏳ | جاري تعديل الصورة.. خليك قريب يا بطل.", event.threadID, event.messageID);
+            api.sendMessage("⚠️ | جاري تعديل الصورة، انتظر ثواني...", event.threadID, event.messageID);
 
-            const Mid = new global.scraper.MidJourney();
-            const Image = await Mid.Action({ action: GetActions(userSelection), image_id: ImageID });
+            // نداء الـ API للتعديل (Action)
+            const res = await axios.get(`https://api.sandipbaruwal.com/midjourney/action?action=${actionMapped}&image_id=${ImageID}`);
+            const Image = res.data;
 
-            const options2 = MapActions(Image.actions);
-            const imageStream = await global.utils.getStreamFromURL(Image.raw_image_url);
-
+            const imageStream = (await axios.get(Image.raw_image_url, { responseType: "stream" })).data;
+            
             const info = await api.sendMessage({
-                body: `✅ | تم التعديل: ${userSelection.toUpperCase()}\n\nتعديلات تانية؟\n[ ${options2.map(i => i.toUpperCase()).join(' - ')} ]`,
+                body: `✅ | تم التعديل: ${userSelection.toUpperCase()}`,
                 attachment: imageStream
-            }, event.threadID);
+            }, event.threadID, event.messageID);
 
+            // تحديث بيانات الرد للمرة الجاية
             global.client.handleReply.push({
-                name: this.config.name,
+                name: "عدل",
                 messageID: info.messageID,
                 author: event.senderID,
                 ImageID: Image.image_id,
                 Actions: Image.actions
             });
+            api.setMessageReaction("✅", event.messageID, () => {}, true);
 
-            api.setMessageReaction("✔️", event.messageID, () => {}, true);
         } catch (error) {
-            api.setMessageReaction("❌", event.messageID, () => {}, true);
-            api.sendMessage("❌ | فشلت في تعديل الصورة.", event.threadID);
+            api.sendMessage("❌ | فشلت عملية التعديل.", event.threadID);
         }
     }
 };
