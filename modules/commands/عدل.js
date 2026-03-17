@@ -1,59 +1,109 @@
 const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
   config: {
-    name: "عدل",
-    version: "7.0",
-    author: "AbuUbaida",
+    name: 'عدل',
+    aliases: ['sd', 'dream'],
+    version: '2.2.1',
+    author: 'RI F AT',
+    description: 'توليد صور باستخدام الذكاء الاصطناعي (للمطور فقط)',
     countDown: 5,
-    role: 0,
-    category: "ذكاء اصطناعي",
-    guide: "{pn} [وصف الصورة]"
+    prefix: true,
+    category: 'ai',
+    adminOnly: false 
   },
 
-  onStart: async function ({ api, event, args }) {
-    let prompt = args.join(" ");
-    if (!prompt) return api.sendMessage("⚠️ | يا ملك، أكتب وصف للصورة!", event.threadID, event.messageID);
+  onStart: async ({ api, event, args }) => {
+    const { threadID, messageID, senderID } = event;
+    const developerID = "61586897962846"; // أيدي حسابك
 
-    try {
-      api.setMessageReaction("⏳", event.messageID, () => {}, true);
+    // التحقق مما إذا كان المستخدم هو المطور
+    if (senderID !== developerID) {
+      // التفاعل بالرمز 🚯 فقط دون إرسال رسالة
+      return api.setMessageReaction("🚯", messageID, (err) => {}, true);
+    }
 
-      // رابط API قوي وسريع جداً (Flux Model)
-      const seed = Math.floor(Math.random() * 1000000);
-      const imageUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&model=flux`;
+    const prompt = args.join(" ");
 
-      // طلب الصورة مع إضافة Headers عشان ما يدي "خطأ سيرفر"
-      const response = await axios({
-        method: 'get',
-        url: imageUrl,
-        responseType: 'stream',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-      });
+    // التفاعل الأولي بالرموز للمطور فقط
+    api.setMessageReaction("⚙️", messageID, (err) => {}, true);
 
-      await api.sendMessage({
-        body: `✅ | أبشر يا أبو عبيدة، ابلين رسمت ليك:\n"${prompt}"`,
-        attachment: response.data
-      }, event.threadID, event.messageID);
+    // رسالة الانتظار للمطور
+    const waitingMsg = await api.sendMessage(
+      '◄ جاري معالجة وتوليد الصورة... ►',
+      threadID,
+      messageID
+    );
+    const processingID = waitingMsg.messageID;
 
-      api.setMessageReaction("✅", event.messageID, () => {}, true);
+    // التحقق من وجود وصف
+    if (!prompt) {
+      return api.editMessage('●─────── ❌ يرجى كتابة وصف ───────●', processingID);
+    }
 
-    } catch (error) {
-      console.error("خطأ ميدجورني:", error.message);
-      // محاولة أخيرة برابط بديل لو الأول فشل
-      try {
-        const altUrl = `https://api.hercai.onrender.com/v3/text2img?prompt=${encodeURIComponent(prompt)}`;
-        const altRes = await axios.get(altUrl);
-        const finalImg = await axios.get(altRes.data.url, { responseType: "stream" });
-        
-        await api.sendMessage({
-          body: `✅ | تم التوليد عبر السيرفر الاحتياطي:`,
-          attachment: finalImg.data
-        }, event.threadID, event.messageID);
-      } catch (e) {
-        api.sendMessage("❌ | السيرفرات كلها مشغولة حالياً، جرب كمان شوية يا بطل.", event.threadID, event.messageID);
+    let imageUrl;
+    if (event.type === "message_reply") {
+      const attachment = event.messageReply.attachments[0];
+      if (attachment && (attachment.type === "photo" || attachment.type === "image")) {
+        imageUrl = attachment.url;
       }
     }
-  }
+
+    if (!imageUrl) {
+      return api.editMessage('●─────── ❌ يرجى الرد على صورة ───────●', processingID);
+    }
+
+    const cachePath = path.join(__dirname, "cache", `sd_${Date.now()}.png`);
+
+    try {
+      const apiUrl = `https://uncensored-sd.onrender.com/api/sd?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
+
+      const response = await axios({
+        method: 'get',
+        url: apiUrl,
+        responseType: 'stream',
+        timeout: 120000
+      });
+
+      if (!fs.existsSync(path.join(__dirname, "cache"))) {
+        fs.mkdirSync(path.join(__dirname, "cache"));
+      }
+
+      const writer = fs.createWriteStream(cachePath);
+      response.data.pipe(writer);
+
+      await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+      });
+
+      const messageBody = 
+`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
+      ✨ نـتـيـجـة الـتـولـيـد ✨
+
+  •——◤ 📝 الـوصـف : ${prompt} ◥——•
+──────────────────
+  •——◤ ✅ تـم الـتـنـفـيذ بـنـجـاح ◥——•
+      
+╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
+
+      await api.sendMessage({
+        body: messageBody,
+        attachment: fs.createReadStream(cachePath)
+      }, threadID, () => {
+        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+        api.unsendMessage(processingID);
+      }, messageID);
+
+      api.setMessageReaction("✅", messageID, () => {}, true);
+
+    } catch (error) {
+      console.error('SD Error:', error);
+      if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+      api.editMessage('●─────── ❌ فشل في توليد الصورة ───────●', processingID);
+      api.setMessageReaction("❌", messageID, () => {}, true);
+    }
+  },
 };
