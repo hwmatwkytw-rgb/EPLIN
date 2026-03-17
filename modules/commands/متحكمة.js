@@ -1,63 +1,63 @@
 module.exports = {
   config: {
-    name: "متحكمة",
-    version: "1.0.0",
+    name: "إبلين",
+    version: "1.5.0",
     author: "AbuUbaida",
     countDown: 0,
     role: 0,
-    category: "ownr",
-    guide: "بيخليك تنادي البوت باسمه وتنفذ الأوامر"
+    category: "system",
+    guide: "نادي البوت باسمه: ابلين [اسم الأمر]"
   },
 
-  // الدالة دي بتشتغل مع كل رسالة بتوصل للبوت
-  onChat: async function ({ api, event, args, threadsData, usersData, dashBoard }) {
-    const { body, threadID, messageID, senderID } = event;
+  onChat: async function ({ api, event, threadsData, usersData, dashBoard }) {
+    const { body, threadID, messageID } = event;
     if (!body) return;
 
-    // كلمة السر اللي البوت حيتحرك لما يسمعها
     const botName = "إبلين";
-    const input = body.toLowerCase();
+    const input = body.toLowerCase().trim();
 
-    // التحقق لو الرسالة بتبدأ بكلمة "ابلين"
+    // بنتحقق لو الكلام بيبدأ بـ "ابلين"
     if (input.startsWith(botName)) {
       
-      // بنشيل كلمة "ابلين" وأي كلمات ربط زي "شغلي" أو "امسحي"
+      // تنظيف النص من الكلمات الزايدة
       let commandText = input
         .replace(botName, "")
         .replace("شغلي", "")
         .replace("فحي", "")
-        .replace("امر", "")
         .trim();
 
-      // بنقسم النص عشان نطلع اسم الأمر والـ args
-      const cleanArgs = commandText.split(" ");
-      const commandName = cleanArgs.shift(); // أول كلمة بعد "ابلين" حتكون اسم الأمر
+      if (!commandText) return; // لو ناديت "ابلين" بس ما يسوي شي
 
-      // بنفتش في لستة الأوامر اللي عندك في البوت
+      const args = commandText.split(" ");
+      const commandName = args.shift();
+
+      // البحث عن الأمر في الكلاينت
       const command = global.client.commands.get(commandName) || 
                       Array.from(global.client.commands.values()).find(cmd => cmd.config.aliases && cmd.config.aliases.includes(commandName));
 
-      if (command) {
-        // تفاعل سريع عشان المستخدم يعرف إن البوت سمع
-        api.setMessageReaction("🦋", messageID, () => {}, true);
-
+      if (command && command.onStart) {
         try {
-          // تنفيذ الأمر طوالي كأنك كتبته بالبادئة
+          // التفاعل عشان تعرف إنها سمعت
+          api.setMessageReaction("🧞", messageID, () => {}, true);
+
+          // تنفيذ الأمر مباشرة
           await command.onStart({
             api,
-            event: { ...event, body: `${global.client.config.PREFIX}${commandName} ${cleanArgs.join(" ")}` }, // بنوهم البوت إن البادئة موجودة
-            args: cleanArgs,
+            event: { ...event, body: `${global.client.config.PREFIX}${commandName} ${args.join(" ")}` },
+            args: args,
             threadsData,
             usersData,
             dashBoard
           });
         } catch (error) {
           console.error(error);
-          api.sendMessage(`❌ | حصل مشكلة وأنا بحاول أشغل أمر ${commandName}`, threadID, messageID);
+          // ما نرسل رسالة خطأ في الشات عشان ما نزعج المستخدم لو في غلط بسيط
         }
-      } else if (commandName === "منو" || commandName === "انتي") {
-         api.sendMessage("مازا تريد ", threadID, messageID);
       }
     }
+  },
+
+  onStart: async function ({ api, event }) {
+    api.sendMessage("نظام التحكم بالاسم شغال يا أبو عبيدة! جرب تقول: 'ابلين ابتايم'.", event.threadID);
   }
 };
