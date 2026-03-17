@@ -4,11 +4,11 @@ const path = require("path");
 
 module.exports = {
   config: {
-    name: 'عدل', // تأكد أن الاسم يطابق ما تكتبه في الشات
+    name: 'عدل',
     aliases: ['edit', 'eplin'],
-    version: '1.0.5',
+    version: '1.1.0',
     author: 'AbuUbaida',
-    description: 'تعديل الصور عبر API إبلين الآمن',
+    description: 'تعديل الصور عبر API إبلين الخاص',
     countDown: 5,
     prefix: true,
     category: 'ai',
@@ -28,48 +28,46 @@ module.exports = {
     }
 
     if (!prompt || !imageUrl) {
-      return api.sendMessage('⚠️ | يا ملك، يرجى الرد على صورة وكتابة الوصف!', threadID, messageID);
+      return api.sendMessage('⚠️ | يا ملك، يرجى الرد على صورة وكتابة الوصف الجديد لها!', threadID, messageID);
     }
 
-    api.setMessageReaction("⏳", messageID);
-    const waitingMsg = await api.sendMessage('🎨 | جاري معالجة الصورة.. قد يستغرق الأمر دقيقة في المرة الأولى..', threadID, messageID);
+    api.setMessageReaction("⌛", messageID);
+    const waitingMsg = await api.sendMessage('🎨 | جاري الاتصال بسيرفر إبلين ومعالجة الصورة...', threadID, messageID);
 
     try {
-      // رابط سيرفرك الشخصي
+      // رابط سيرفرك الذي تأكدنا من عمله
       const myApiUrl = `https://sudan-pot-65n2.onrender.com/api/edit?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
       
-      // زيادة وقت الانتظار لـ 200 ثانية لأن ريندر المجاني بطيء
-      const res = await axios.get(myApiUrl, { timeout: 200000 });
+      // إجبار البوت على الانتظار لمدة تصل لـ 3 دقائق ليعطي فرصة لسيرفر ريندر
+      const res = await axios.get(myApiUrl, { timeout: 180000 });
 
-      if (res.data.status === "success") {
+      if (res.data && res.data.status === "success") {
         const finalImageUrl = res.data.resultUrl;
         const cachePath = path.join(__dirname, "cache", `eplin_${Date.now()}.png`);
 
-        const imageRes = await axios({ url: finalImageUrl, responseType: 'stream', timeout: 200000 });
+        const imageRes = await axios({ url: finalImageUrl, responseType: 'stream', timeout: 180000 });
         const writer = fs.createWriteStream(cachePath);
         imageRes.data.pipe(writer);
 
         writer.on('finish', async () => {
           await api.sendMessage({
-            body: `✨ تم التعديل بنجاح يا ملك!\n📝 الوصف: ${prompt}`,
+            body: `✅ تم التعديل بواسطة سيرفرك الخاص!\n📝 الوصف: ${prompt}`,
             attachment: fs.createReadStream(cachePath)
           }, threadID, () => {
             if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-            // نحذف رسالة الانتظار فقط عند النجاح
             api.unsendMessage(waitingMsg.messageID);
           }, messageID);
-          api.setMessageReaction("✅", messageID);
+          api.setMessageReaction("✨", messageID);
         });
       } else {
-        api.sendMessage(`🚫 | عذراً: ${res.data.message}`, threadID, messageID);
+        api.sendMessage(`🚫 | السيرفر رفض الطلب: ${res.data.message || 'خطأ غير معروف'}`, threadID, messageID);
         api.unsendMessage(waitingMsg.messageID);
       }
 
     } catch (error) {
       console.error(error);
-      // إذا حدث خطأ، نخبر المستخدم بدلاً من الحذف الصامت
-      api.sendMessage('❌ | السيرفر استغرق وقتاً طويلاً أو حدث خطأ. حاول مرة أخرى الآن.', threadID, messageID);
-      api.unsendMessage(waitingMsg.messageID);
+      api.sendMessage('❌ | عذراً يا ملك، السيرفر استغرق وقتاً طويلاً للاستيقاظ. جرب الآن مرة أخرى وسيعمل فوراً!', threadID, messageID);
+      // لا نحذف رسالة الانتظار هنا إلا بعد إرسال رسالة الخطأ لنعرف ماذا حدث
     }
   },
 };
