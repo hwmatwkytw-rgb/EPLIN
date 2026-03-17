@@ -4,9 +4,9 @@ const path = require("path");
 
 module.exports = {
   config: {
-    name: 'عدل',
+    name: 'عدل', // تأكد أن الاسم يطابق ما تكتبه في الشات
     aliases: ['edit', 'eplin'],
-    version: '1.0.0',
+    version: '1.0.5',
     author: 'AbuUbaida',
     description: 'تعديل الصور عبر API إبلين الآمن',
     countDown: 5,
@@ -16,18 +16,10 @@ module.exports = {
   },
 
   onStart: async ({ api, event, args }) => {
-    const { threadID, messageID, senderID } = event;
-    const developerID = "61588108307572"; 
-
-    // السماح للمطور فقط (اختياري، يمكنك حذفه لجعل الجميع يستخدمه)
-    if (senderID !== developerID) {
-      return api.setMessageReaction("🚫", messageID);
-    }
-
+    const { threadID, messageID } = event;
     const prompt = args.join(" ");
     let imageUrl;
 
-    // الحصول على رابط الصورة في حال الرد على صورة
     if (event.type === "message_reply") {
       const attachment = event.messageReply.attachments[0];
       if (attachment && (attachment.type === "photo" || attachment.type === "image")) {
@@ -36,45 +28,48 @@ module.exports = {
     }
 
     if (!prompt || !imageUrl) {
-      return api.sendMessage('⚠️ | يا ملك، يرجى الرد على صورة وكتابة الوصف الجديد لها!', threadID, messageID);
+      return api.sendMessage('⚠️ | يا ملك، يرجى الرد على صورة وكتابة الوصف!', threadID, messageID);
     }
 
-    api.setMessageReaction("🎨", messageID);
-    const waitingMsg = await api.sendMessage('⏳ | جاري تعديل الصورة عبر سيرفر Eplin الخاص...', threadID, messageID);
+    api.setMessageReaction("⏳", messageID);
+    const waitingMsg = await api.sendMessage('🎨 | جاري معالجة الصورة.. قد يستغرق الأمر دقيقة في المرة الأولى..', threadID, messageID);
 
     try {
-      // استدعاء الـ API الخاص بك (رابط موقعك الجديد)
+      // رابط سيرفرك الشخصي
       const myApiUrl = `https://sudan-pot-65n2.onrender.com/api/edit?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
       
-      const res = await axios.get(myApiUrl);
+      // زيادة وقت الانتظار لـ 200 ثانية لأن ريندر المجاني بطيء
+      const res = await axios.get(myApiUrl, { timeout: 200000 });
 
       if (res.data.status === "success") {
         const finalImageUrl = res.data.resultUrl;
         const cachePath = path.join(__dirname, "cache", `eplin_${Date.now()}.png`);
 
-        // تحميل الصورة الناتجة لإرسالها
-        const imageRes = await axios({ url: finalImageUrl, responseType: 'stream' });
+        const imageRes = await axios({ url: finalImageUrl, responseType: 'stream', timeout: 200000 });
         const writer = fs.createWriteStream(cachePath);
         imageRes.data.pipe(writer);
 
         writer.on('finish', async () => {
           await api.sendMessage({
-            body: `✅ تمت المعالجة بنجاح عبر سيرفرك!\n📝 الوصف: ${prompt}`,
+            body: `✨ تم التعديل بنجاح يا ملك!\n📝 الوصف: ${prompt}`,
             attachment: fs.createReadStream(cachePath)
           }, threadID, () => {
-            fs.unlinkSync(cachePath);
+            if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+            // نحذف رسالة الانتظار فقط عند النجاح
             api.unsendMessage(waitingMsg.messageID);
           }, messageID);
-          api.setMessageReaction("✨", messageID);
+          api.setMessageReaction("✅", messageID);
         });
       } else {
-        // في حال تم حجب الكلمة من قبل موقعك
         api.sendMessage(`🚫 | عذراً: ${res.data.message}`, threadID, messageID);
+        api.unsendMessage(waitingMsg.messageID);
       }
 
     } catch (error) {
       console.error(error);
-      api.sendMessage('❌ | فشل الاتصال بسيرفر Eplin، تأكد من استقرار ريندر.', threadID, messageID);
+      // إذا حدث خطأ، نخبر المستخدم بدلاً من الحذف الصامت
+      api.sendMessage('❌ | السيرفر استغرق وقتاً طويلاً أو حدث خطأ. حاول مرة أخرى الآن.', threadID, messageID);
+      api.unsendMessage(waitingMsg.messageID);
     }
   },
 };
