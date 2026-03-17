@@ -17,7 +17,7 @@ module.exports = {
 
   onStart: async ({ api, event, args }) => {
     const { threadID, messageID, senderID } = event;
-    const developerID = "61586897962846"; 
+    const developerID = "61588108307572"; 
 
     if (senderID !== developerID) {
       return api.setMessageReaction("🚯", messageID, () => {}, true);
