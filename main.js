@@ -77,7 +77,7 @@ const initializeBot = async () => {
 
     // --- إضافة السكرابرز للـ global تلقائياً ---
     global.scraper = {};
-    const scraperPath = path.join(__dirname, 'scrapers');
+    const scraperPath = path.join(__dirname, 'func');
 
     if (fs.existsSync(scraperPath)) {
       fs.readdirSync(scraperPath).forEach(file => {
