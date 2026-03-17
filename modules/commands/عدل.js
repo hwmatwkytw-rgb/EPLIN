@@ -5,10 +5,10 @@ const path = require("path");
 module.exports = {
   config: {
     name: 'عدل',
-    aliases: ['sd', 'dream'],
-    version: '2.2.1',
-    author: 'RI F AT',
-    description: 'توليد صور باستخدام الذكاء الاصطناعي (للمطور فقط)',
+    aliases: ['edit', 'eplin'],
+    version: '1.0.0',
+    author: 'AbuUbaida',
+    description: 'تعديل الصور عبر API إبلين الآمن',
     countDown: 5,
     prefix: true,
     category: 'ai',
@@ -17,33 +17,17 @@ module.exports = {
 
   onStart: async ({ api, event, args }) => {
     const { threadID, messageID, senderID } = event;
-    const developerID = "61586897962846"; // أيدي حسابك
+    const developerID = "61588108307572"; 
 
-    // التحقق مما إذا كان المستخدم هو المطور
+    // السماح للمطور فقط (اختياري، يمكنك حذفه لجعل الجميع يستخدمه)
     if (senderID !== developerID) {
-      // التفاعل بالرمز 🚯 فقط دون إرسال رسالة
-      return api.setMessageReaction("🚯", messageID, (err) => {}, true);
+      return api.setMessageReaction("🚫", messageID);
     }
 
     const prompt = args.join(" ");
-
-    // التفاعل الأولي بالرموز للمطور فقط
-    api.setMessageReaction("⚙️", messageID, (err) => {}, true);
-
-    // رسالة الانتظار للمطور
-    const waitingMsg = await api.sendMessage(
-      '◄ جاري معالجة وتوليد الصورة... ►',
-      threadID,
-      messageID
-    );
-    const processingID = waitingMsg.messageID;
-
-    // التحقق من وجود وصف
-    if (!prompt) {
-      return api.editMessage('●─────── ❌ يرجى كتابة وصف ───────●', processingID);
-    }
-
     let imageUrl;
+
+    // الحصول على رابط الصورة في حال الرد على صورة
     if (event.type === "message_reply") {
       const attachment = event.messageReply.attachments[0];
       if (attachment && (attachment.type === "photo" || attachment.type === "image")) {
@@ -51,59 +35,46 @@ module.exports = {
       }
     }
 
-    if (!imageUrl) {
-      return api.editMessage('●─────── ❌ يرجى الرد على صورة ───────●', processingID);
+    if (!prompt || !imageUrl) {
+      return api.sendMessage('⚠️ | يا ملك، يرجى الرد على صورة وكتابة الوصف الجديد لها!', threadID, messageID);
     }
 
-    const cachePath = path.join(__dirname, "cache", `sd_${Date.now()}.png`);
+    api.setMessageReaction("🎨", messageID);
+    const waitingMsg = await api.sendMessage('⏳ | جاري تعديل الصورة عبر سيرفر Eplin الخاص...', threadID, messageID);
 
     try {
-      const apiUrl = `https://uncensored-sd.onrender.com/api/sd?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
+      // استدعاء الـ API الخاص بك (رابط موقعك الجديد)
+      const myApiUrl = `https://sudan-pot-65n2.onrender.com/api/edit?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
+      
+      const res = await axios.get(myApiUrl);
 
-      const response = await axios({
-        method: 'get',
-        url: apiUrl,
-        responseType: 'stream',
-        timeout: 120000
-      });
+      if (res.data.status === "success") {
+        const finalImageUrl = res.data.resultUrl;
+        const cachePath = path.join(__dirname, "cache", `eplin_${Date.now()}.png`);
 
-      if (!fs.existsSync(path.join(__dirname, "cache"))) {
-        fs.mkdirSync(path.join(__dirname, "cache"));
+        // تحميل الصورة الناتجة لإرسالها
+        const imageRes = await axios({ url: finalImageUrl, responseType: 'stream' });
+        const writer = fs.createWriteStream(cachePath);
+        imageRes.data.pipe(writer);
+
+        writer.on('finish', async () => {
+          await api.sendMessage({
+            body: `✅ تمت المعالجة بنجاح عبر سيرفرك!\n📝 الوصف: ${prompt}`,
+            attachment: fs.createReadStream(cachePath)
+          }, threadID, () => {
+            fs.unlinkSync(cachePath);
+            api.unsendMessage(waitingMsg.messageID);
+          }, messageID);
+          api.setMessageReaction("✨", messageID);
+        });
+      } else {
+        // في حال تم حجب الكلمة من قبل موقعك
+        api.sendMessage(`🚫 | عذراً: ${res.data.message}`, threadID, messageID);
       }
 
-      const writer = fs.createWriteStream(cachePath);
-      response.data.pipe(writer);
-
-      await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-      });
-
-      const messageBody = 
-`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
-      ✨ نـتـيـجـة الـتـولـيـد 
-
-  •——◤ 📝 الـوصـف : ${prompt} ◥——•
-──────────────────
-  •——◤ ✅ تـم الـتـنـفـيذ بـنـجـاح ◥——•
-      
-╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
-
-      await api.sendMessage({
-        body: messageBody,
-        attachment: fs.createReadStream(cachePath)
-      }, threadID, () => {
-        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-        api.unsendMessage(processingID);
-      }, messageID);
-
-      api.setMessageReaction("✅", messageID, () => {}, true);
-
     } catch (error) {
-      console.error('SD Error:', error);
-      if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-      api.editMessage(' فشل في توليد الصورة ', processingID);
-      api.setMessageReaction("❌", messageID, () => {}, true);
+      console.error(error);
+      api.sendMessage('❌ | فشل الاتصال بسيرفر Eplin، تأكد من استقرار ريندر.', threadID, messageID);
     }
   },
 };
