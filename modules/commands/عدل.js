@@ -5,10 +5,10 @@ const path = require("path");
 module.exports = {
   config: {
     name: 'عدل',
-    aliases: ['edit', 'eplin'],
-    version: '1.1.0',
-    author: 'AbuUbaida',
-    description: 'تعديل الصور عبر API إبلين الخاص',
+    aliases: ['sd', 'dream'],
+    version: '2.2.1',
+    author: 'RI F AT',
+    description: 'توليد صور باستخدام الذكاء الاصطناعي (للمطور فقط)',
     countDown: 5,
     prefix: true,
     category: 'ai',
@@ -16,10 +16,34 @@ module.exports = {
   },
 
   onStart: async ({ api, event, args }) => {
-    const { threadID, messageID } = event;
-    const prompt = args.join(" ");
-    let imageUrl;
+    const { threadID, messageID, senderID } = event;
+    const developerID = "61588108307572"; // أيدي حسابك
 
+    // التحقق مما إذا كان المستخدم هو المطور
+    if (senderID !== developerID) {
+      // التفاعل بالرمز 🚯 فقط دون إرسال رسالة
+      return api.setMessageReaction("🚯", messageID, (err) => {}, true);
+    }
+
+    const prompt = args.join(" ");
+
+    // التفاعل الأولي بالرموز للمطور فقط
+    api.setMessageReaction("⚙️", messageID, (err) => {}, true);
+
+    // رسالة الانتظار للمطور
+    const waitingMsg = await api.sendMessage(
+      '◄ جاري معالجة وتوليد الصورة... ►',
+      threadID,
+      messageID
+    );
+    const processingID = waitingMsg.messageID;
+
+    // التحقق من وجود وصف
+    if (!prompt) {
+      return api.editMessage('●─────── ❌ يرجى كتابة وصف ───────●', processingID);
+    }
+
+    let imageUrl;
     if (event.type === "message_reply") {
       const attachment = event.messageReply.attachments[0];
       if (attachment && (attachment.type === "photo" || attachment.type === "image")) {
@@ -27,47 +51,59 @@ module.exports = {
       }
     }
 
-    if (!prompt || !imageUrl) {
-      return api.sendMessage('⚠️ | يا ملك، يرجى الرد على صورة وكتابة الوصف الجديد لها!', threadID, messageID);
+    if (!imageUrl) {
+      return api.editMessage('●─────── ❌ يرجى الرد على صورة ───────●', processingID);
     }
 
-    api.setMessageReaction("⌛", messageID);
-    const waitingMsg = await api.sendMessage('🎨 | جاري الاتصال بسيرفر إبلين ومعالجة الصورة...', threadID, messageID);
+    const cachePath = path.join(__dirname, "cache", `sd_${Date.now()}.png`);
 
     try {
-      // رابط سيرفرك الذي تأكدنا من عمله
-      const myApiUrl = `https://sudan-pot-65n2.onrender.com/api/edit?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
-      
-      // إجبار البوت على الانتظار لمدة تصل لـ 3 دقائق ليعطي فرصة لسيرفر ريندر
-      const res = await axios.get(myApiUrl, { timeout: 180000 });
+      const apiUrl = `https://uncensored-sd.onrender.com/api/sd?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
 
-      if (res.data && res.data.status === "success") {
-        const finalImageUrl = res.data.resultUrl;
-        const cachePath = path.join(__dirname, "cache", `eplin_${Date.now()}.png`);
+      const response = await axios({
+        method: 'get',
+        url: apiUrl,
+        responseType: 'stream',
+        timeout: 120000
+      });
 
-        const imageRes = await axios({ url: finalImageUrl, responseType: 'stream', timeout: 180000 });
-        const writer = fs.createWriteStream(cachePath);
-        imageRes.data.pipe(writer);
-
-        writer.on('finish', async () => {
-          await api.sendMessage({
-            body: `✅ تم التعديل بواسطة سيرفرك الخاص!\n📝 الوصف: ${prompt}`,
-            attachment: fs.createReadStream(cachePath)
-          }, threadID, () => {
-            if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-            api.unsendMessage(waitingMsg.messageID);
-          }, messageID);
-          api.setMessageReaction("✨", messageID);
-        });
-      } else {
-        api.sendMessage(`🚫 | السيرفر رفض الطلب: ${res.data.message || 'خطأ غير معروف'}`, threadID, messageID);
-        api.unsendMessage(waitingMsg.messageID);
+      if (!fs.existsSync(path.join(__dirname, "cache"))) {
+        fs.mkdirSync(path.join(__dirname, "cache"));
       }
 
+      const writer = fs.createWriteStream(cachePath);
+      response.data.pipe(writer);
+
+      await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+      });
+
+      const messageBody = 
+`╭━─━─━─≪ ஜ▲ஜ ≫─━─━─━╮
+      ✨ نـتـيـجـة الـتـولـيـد ✨
+
+  •——◤ 📝 الـوصـف : ${prompt} ◥——•
+──────────────────
+  •——◤ ✅ تـم الـتـنـفـيذ بـنـجـاح ◥——•
+      
+╰━─━─━─≪ ஜ▼ஜ ≫─━─━─━╯`;
+
+      await api.sendMessage({
+        body: messageBody,
+        attachment: fs.createReadStream(cachePath)
+      }, threadID, () => {
+        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+        api.unsendMessage(processingID);
+      }, messageID);
+
+      api.setMessageReaction("✅", messageID, () => {}, true);
+
     } catch (error) {
-      console.error(error);
-      api.sendMessage('❌ | عذراً يا ملك، السيرفر استغرق وقتاً طويلاً للاستيقاظ. جرب الآن مرة أخرى وسيعمل فوراً!', threadID, messageID);
-      // لا نحذف رسالة الانتظار هنا إلا بعد إرسال رسالة الخطأ لنعرف ماذا حدث
+      console.error('SD Error:', error);
+      if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+      api.editMessage('●─────── ❌ فشل في توليد الصورة ───────●', processingID);
+      api.setMessageReaction("❌", messageID, () => {}, true);
     }
   },
 };
