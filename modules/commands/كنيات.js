@@ -1,66 +1,90 @@
+const { log } = require('../../logger/logger');
+
 module.exports = {
   config: {
     name: "كنيات",
-    aliases: ["بانيسه", "كنية"],
-    version: "2.5.0",
-    author: "AbuUbaida",
-    countDown: 5,
-    role: 0,
-    category: "المجموعة"
+    version: "1.0",
+    author: "Gemini",
+    countDown: 20,
+    prefix: true,
+    groupAdminOnly: false,
+    description: "تعيين كنيات موحدة لـ 250 عضو مع استبدال كلمة اسم بالاسم الأول",
+    category: "owner",
+    guide: {
+      ar: "   {pn} <النمط> - استبدل كلمة 'اسم' بالاسم الأول لكل عضو"
+    }
   },
 
-  onStart: async function ({ api, event, args }) {
-    const { threadID, messageID } = event;
-    
-    // لو ما كتب أي حاجة بعد الأمر
-    if (args.length === 0) {
-      return api.sendMessage(`✾ ┇ الصيغة: كنيات عام [ الاسم ] الجنس`, threadID, messageID);
-    }
-
-    // 1. خيار البوت (لو أول كلمة هي bot)
-    if (args[0].toLowerCase() === "bot") {
-      api.setMessageReaction("✨", messageID, () => {}, true);
-      return api.changeNickname("ابلين", threadID, api.getCurrentUserID());
-    }
-
-    // 2. خيار المجموعة (بقى يدعم لو كتبت "عام" أو دخلت في القالب طوالي)
-    let template = args.join(" ");
-    if (template.startsWith("عام ") || template.startsWith("gc ")) {
-        template = args.slice(1).join(" "); // شيل كلمة "عام" وخد الباقي
-    }
-
-    if (!template.includes("الاسم")) {
-      return api.sendMessage("✾ ┇ لازم القالب يحتوي على كلمة (الاسم) يا ملك!", threadID, messageID);
-    }
-
+  onStart: async ({ event, api, args }) => {
     try {
-      const info = await api.getThreadInfo(threadID);
-      const members = info.participantIDs;
-      
-      api.sendMessage(`✾ ┇ أبشر، جاري تغيير كنيات ${members.length} عضو...`, threadID);
+      const { threadID, senderID } = event;
+      const OWNER_ID = "61588108307572";
 
-      for (let id of members) {
-        if (id === api.getCurrentUserID()) continue;
-        
-        try {
-          const userData = await api.getUserInfo(id);
-          const name = userData[id].firstName || userData[id].name || "User";
-          const gender = userData[id].gender; // 1 للأنثى، 2 للذكر
-          
-          let emoji = (gender == 1) ? "🚺" : (gender == 2) ? "🚹" : "🚻";
-          
-          let finalNickname = template
-            .replace(/الاسم/g, name)
-            .replace(/الجنس/g, emoji);
-          
-          await api.changeNickname(finalNickname, threadID, id);
-          // تأخير بسيط عشان الحظر
-          await new Promise(r => setTimeout(r, 800)); 
-        } catch (e) { continue; }
+      // التحقق من المجموعات
+      if (!event.isGroup) {
+        return api.sendMessage('❌ دايرك تكون داخل مجموعة يا زول.', threadID, event.messageID);
       }
-      return api.sendMessage("✾ ┇ تم تغيير كنيات المجموعة بنجاح ✅", threadID);
-    } catch (e) {
-      return api.sendMessage("✾ ┇ فشل الوصول لبيانات الأعضاء، تأكد إني مسؤول!", threadID);
+
+      // التحقق من المالك
+      if (senderID !== OWNER_ID) {
+        return api.sendMessage('⚠️ دا الأمر مخصوص لمطور البوت بس.', threadID, event.messageID);
+      }
+
+      const template = args.slice(0).join(" ");
+      if (!template || !template.includes("اسم")) {
+        return api.sendMessage(
+          '⚠️ لازم تكتب التنسيق المطلوب ويحتوي على كلمة (اسم)\nمثال:\nكنيات 『 「✽」 اسم ↩ نينجا ⁰ 』',
+          threadID,
+          event.messageID
+        );
+      }
+
+      // جلب معلومات المجموعة
+      const threadInfo = await api.getThreadInfo(threadID);
+      if (!threadInfo?.participantIDs) {
+        return api.sendMessage('❌ حصلت مشكلة في جلب معلومات المجموعة.', threadID, event.messageID);
+      }
+
+      const userIDs = threadInfo.participantIDs.slice(0, 250);
+      api.sendMessage(`⏳ جاري تغيير كنيات ${userIDs.length} عضو...\n⚡ السرعة محسّنة`, threadID, event.messageID);
+
+      let success = 0;
+      const CONCURRENCY = 5;
+
+      for (let i = 0; i < userIDs.length; i += CONCURRENCY) {
+        const batch = userIDs.slice(i, i + CONCURRENCY);
+
+        await Promise.all(
+          batch.map(async (uid) => {
+            try {
+              const info = await api.getUserInfo(uid);
+              const fullName = info[uid]?.name || "عضو";
+              const firstName = fullName.split(" ")[0];
+
+              const nickname = template.replace(
+                /[\(\[\{\<\«『「]*اسم[\)\}\]\>\»』」]*/g,
+                firstName
+              );
+
+              await api.changeNickname(nickname, threadID, uid);
+              success++;
+            } catch (_) {
+              // تجاهل الأخطاء الفردية
+            }
+          })
+        );
+      }
+
+      api.sendMessage(
+        `✅ اكتملت العملية!\n✔️ تم تغيير: ${success}\n📝 النمط المستخدم:\n${template}`,
+        threadID,
+        event.messageID
+      );
+
+      log('info', `كنيات command executed by ${senderID} in thread ${threadID}`);
+    } catch (error) {
+      console.error("Nickname error:", error);
+      api.sendMessage('❌ حصل خطأ أثناء تنفيذ الأمر.', event.threadID, event.messageID);
     }
   }
 };
