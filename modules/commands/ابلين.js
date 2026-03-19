@@ -1,11 +1,10 @@
 const axios = require("axios");
-const { getUser } = require('../data/user'); 
 
 module.exports = {
   config: {
     name: "ابلين",
     aliases: ["زهجان", "سوداني"],
-    version: "3.5.0",
+    version: "4.0.0",
     author: "AbuUbaida",
     countDown: 5,
     role: 0,
@@ -23,18 +22,17 @@ module.exports = {
     if (!userQuery) return api.sendMessage("إنت كتبت شنو؟ ولا دا اختبار صبر؟", threadID, messageID);
 
     try {
-      // 1. التفاعل عشان تعرف إن البوت استلم الأمر
       api.setMessageReaction("😒", messageID, () => {}, true);
 
-      // 2. سرقة ميزات "إيف": جلب البيانات التحليلية
-      const userData = await getUser(senderID) || {};
+      // جلب اسم المستخدم بطريقة مباشرة من الـ API عشان ما نعتمد على ملفات خارجية
+      const userInfo = await api.getUserInfo(senderID);
+      const userName = userInfo[senderID].name || "يا زول";
+      
       const commandsJson = JSON.stringify(commands, null, 2);
-      const userDataJson = JSON.stringify(userData, null, 2);
 
-      // 3. تعريف الشخصية "ابلين" (بميزات إيف)
-      const SYSTEM_PROMPT = `أنتِ "ابلين"، سودانية عمرك 20 عام. مساعدة ذكية لكن زهجانة ومستفزة. كلامك سوداني بحت. شخصيتك متغطرسة وساخرة. حللي البيانات دي وردي بزهج: الأوامر: ${commandsJson}، بيانات المستخدم: ${userDataJson}. الرد مختصر وسوداني وبدون علامات تنسيق.`;
+      // تعريف الشخصية المطور (ذكاء إيف + لسان ابلين)
+      const SYSTEM_PROMPT = `أنتِ "ابلين"، سودانية عمرك 20 عام. مساعدة ذكية لكن زهجانة ومستفزة. كلامك سوداني بحت. الشخص اللي بيكلمك اسمه ${userName}. صلاحياتك تشوفي الأوامر دي: ${commandsJson}. ردي بزهج واختصار وبدون تنسيق نجوم.`;
 
-      // 4. تهيئة الذاكرة في الـ global عشان ما تضيع
       if (!global.client.conversations) global.client.conversations = new Map();
       if (!global.client.conversations.has(senderID)) {
         global.client.conversations.set(senderID, [{ role: "system", content: SYSTEM_PROMPT }]);
@@ -44,7 +42,6 @@ module.exports = {
       history.push({ role: "user", content: userQuery });
       if (history.length > 20) history.splice(1, history.length - 20);
 
-      // 5. استخدام الـ API بتاع DeepAI (نفس كود كيفن الشغال)
       const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
       let formData = "";
       formData += `--${boundary}\r\nContent-Disposition: form-data; name="chatHistory"\r\n\r\n${JSON.stringify(history)}\r\n`;
@@ -71,7 +68,6 @@ module.exports = {
 
       history.push({ role: "assistant", content: reply });
 
-      // 6. الإرسال مع تفعيل الـ Reply
       return api.sendMessage(reply, threadID, (err, info) => {
         if (!global.client.handleReply) global.client.handleReply = [];
         global.client.handleReply.push({
@@ -83,11 +79,10 @@ module.exports = {
 
     } catch (error) {
       console.error(error);
-      return api.sendMessage("في حاجة لخبطت في الـ API، أقفل السكة دي.", threadID, messageID);
+      return api.sendMessage("في حاجة لخبطت في السيرفر، أقفل السكة دي.", threadID, messageID);
     }
   },
 
-  // 7. معالج الردود عشان يكمل المحادثة
   onReply: async function ({ api, event, handleReply, commands }) {
     if (handleReply.author !== event.senderID) return;
     const args = event.body.split(/\s+/);
