@@ -23,7 +23,7 @@ module.exports = {
         const query = args.join(' ').trim();
 
         if (!query) {
-            return api.sendMessage('يس', threadID, messageID);
+            return api.sendMessage('يس ', threadID, messageID);
         }
 
         // --- نظام التفاعل (Reactions) - خليته قليل أدب ومستفز ---
@@ -55,7 +55,7 @@ module.exports = {
             return api.sendMessage('•-• نظفت وسخك.. لا تشغلني تاني 🧹😒', threadID, messageID);
         }
 
-        const infoMsg = await api.sendMessage(''-'', threadID, messageID);
+        const infoMsg = await api.sendMessage('•-• دقيقة أشوف آخرة غباءك ده... 🥱', threadID, messageID);
         const processingID = infoMsg.messageID;
 
         try {
@@ -100,7 +100,7 @@ module.exports = {
                 .trim();
 
             // إضافة لمسة ابلين "قليلة الأدب" في نهاية الرد
-            const suffixes = [" 😒", " .. 💅", " ! 😏", " 🥱"];
+            const suffixes = [" 😒", " يا وهم.. 💅", " سجمك! 😏", " 🥱"];
             reply += suffixes[Math.floor(Math.random() * suffixes.length)];
 
             if (reply.length > 2000) reply = reply.substring(0, 1997) + '...';
