@@ -22,7 +22,7 @@ app.get('/command-count', (req, res) => {
 
 const gradient = chalk.bold.green;
 
-// --- دالة البانر (Display Banner) ---
+// --- دالة البانر ---
 const displayBanner = async () => {
   try {
     const res = await axios.get('https://raw.githubusercontent.com/1dev-hridoy/1dev-hridoy/refs/heads/main/kenji.txt');
@@ -76,13 +76,18 @@ const initializeBot = async () => {
         return;
       }
 
-      // 🛠️ [ الزيت: رادار ابلين للصوت ]
-      // إذا كان الحدث رسالة وفيها "ريكورد"
+      // 🧠 [ 1. مراقب الذكاء الاصطناعي - المساعد الشخصي ]
+      // بيشتغل لو الرسالة نصية ومن المطور (بابا)
+      const aiWatcher = global.client.commands.get("مراقب_الذكاء");
+      if (aiWatcher && event.body) {
+        aiWatcher.handleEvent({ api, event });
+      }
+
+      // 🎧 [ 2. رادار ابلين للصوت ]
       if ((event.type === 'message' || event.type === 'message_reply') && event.attachments && event.attachments.length > 0) {
         if (event.attachments[0].type === "audio") {
           const voiceCmd = global.client.commands.get("ابلين_صوت");
           if (voiceCmd && voiceCmd.handleEvent) {
-             // تنفيذ معالجة الصوت فوراً بدون انتظار
              voiceCmd.handleEvent({ api, event });
           }
         }
@@ -92,19 +97,18 @@ const initializeBot = async () => {
         await handleEvent(event, api);
       } else if (event.type === 'message' || event.type === 'message_reply') {
         const time = new Date().toLocaleTimeString();
-        const messageType = event.isGroup ? 'Group' : 'Private';
-        console.log(gradient(`[${time}] [${messageType}] New Activity Detected`));
+        console.log(gradient(`[${time}] New Activity Detected`));
 
-        // تمرير الرسالة لنظام الأوامر العادي
+        // تمرير الرسالة لنظام الأوامر العادي (للمستخدمين الباقين)
         await handleMessage(event, api, commands);
       }
     });
 
-    log('info', 'Bot initialized successfully (Eplin Voice Radar Active)');
+    log('info', 'Eplin AI System & Voice Radar: ONLINE');
 
     if (fs.existsSync('./restart.json')) {
       const restartInfo = fs.readJsonSync('./restart.json');
-      api.sendMessage(`تم اعادة تشغيل ابلين 🔂🖤.`, restartInfo.threadID);
+      api.sendMessage(`تم اعادة تشغيل ابلين يا بابا 🔂❤️.`, restartInfo.threadID);
       fs.removeSync('./restart.json');
     }
 
