@@ -1,4 +1,4 @@
-Const fs = require('fs-extra');
+const fs = require('fs-extra');
 const express = require('express');
 const login = require('fca-priyansh');
 const { loadCommands, handleCommand } = require('./handler/command');
