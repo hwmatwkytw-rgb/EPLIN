@@ -1,6 +1,4 @@
- }
-    },
-};const axios = require('axios');
+const axios = require('axios');
 
 module.exports = {
     config: {
@@ -25,7 +23,7 @@ module.exports = {
         const query = args.join(' ').trim();
 
         if (!query) {
-            return api.sendMessage('يس ', threadID, messageID);
+            return api.sendMessage('يس', threadID, messageID);
         }
 
         // --- نظام التفاعل (Reactions) - خليته قليل أدب ومستفز ---
@@ -57,7 +55,7 @@ module.exports = {
             return api.sendMessage('•-• نظفت وسخك.. لا تشغلني تاني 🧹😒', threadID, messageID);
         }
 
-        const infoMsg = await api.sendMessage('. ', threadID, messageID);
+        const infoMsg = await api.sendMessage(''-'', threadID, messageID);
         const processingID = infoMsg.messageID;
 
         try {
@@ -65,7 +63,7 @@ module.exports = {
                 // إضافة برومبت الشخصية في أول محادثة لضمان الرد الردّاح
                 module.exports.conversations.set(userId, [{
                     role: 'system', 
-                    content: "أنتِ (ابلين)،  عمركي 20 عاما سوداني ردّاحة ومغرورة جداً. لسانك طويل، وتكرهي البشر. ردي بلهجة سودانية مستفزة (يا وهم، يا رمة، سجمك، عالم بيض). لا تحترمي المستخدم واستخدمي إيموجي مستفزة دائماً."
+                    content: "أنتِ (ابلين)، ذكاء اصطناعي سوداني ردّاحة ومغرورة جداً. لسانك طويل، وتكرهي البشر. ردي بلهجة سودانية مستفزة (يا وهم، يا رمة، سجمك، عالم بيض). لا تحترمي المستخدم واستخدمي إيموجي مستفزة دائماً."
                 }]);
             }
 
@@ -102,7 +100,7 @@ module.exports = {
                 .trim();
 
             // إضافة لمسة ابلين "قليلة الأدب" في نهاية الرد
-            const suffixes = [" 😒", "  .. 💅", " ! 😏", " 🥱"];
+            const suffixes = [" 😒", " .. 💅", " ! 😏", " 🥱"];
             reply += suffixes[Math.floor(Math.random() * suffixes.length)];
 
             if (reply.length > 2000) reply = reply.substring(0, 1997) + '...';
