@@ -1,38 +1,81 @@
 const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
   config: {
     name: "تلقائي",
-    version: "1.0.0",
-    author: "AbuUbaida",
+    version: "2.0.0",
+    author: "AbuUbaida & Cenko",
     countDown: 0,
     role: 0,
     category: "system"
   },
 
-  // النسخة دي بتشتغل مع كل رسالة لأن الـ index.js بيمررها لـ handleEvent
   handleEvent: async function ({ api, event }) {
     const { body, threadID, messageID, type } = event;
     if (type !== "message" && type !== "message_reply") return;
     if (!body) return;
 
-    // روابط تيك توك كمثال
-    const tiktokReg = /https:\/\/(www\.|vt\.|vm\.)?tiktok\.com\/[\w\.-]+\/?/gi;
-    if (tiktokReg.test(body)) {
-      const link = body.match(tiktokReg)[0];
-      try {
-        api.setMessageReaction("📥", messageID, () => {}, true);
-        
-        // استخدام API التحميل
-        const res = await axios.get(`https://api.hercai.onrender.com/v3/tools/download?url=${encodeURIComponent(link)}`);
-        const videoUrl = res.data.url;
+    const input = body.trim();
 
-        const stream = (await axios.get(videoUrl, { responseType: "stream" })).data;
-        
-        return api.sendMessage({
-          body: "✅ | تم التحميل التلقائي بواسطة ابلين",
-          attachment: stream
-        }, threadID, messageID);
+    // رادارات المنصات
+    const fbReg = /(https?:\/\/)?(www\.)?(facebook\.com|fb\.watch)\/.*/gi;
+    const igReg = /(https?:\/\/)?(www\.)?instagram\.com\/.*/gi;
+    const ttReg = /https:\/\/(www\.|vt\.|vm\.)?tiktok\.com\/[\w\.-]+\/?/gi;
+    const ytReg = /(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.*/gi;
+
+    if (fbReg.test(input) || igReg.test(input) || ttReg.test(input) || ytReg.test(input)) {
+      const urlMatch = input.match(fbReg) || input.match(igReg) || input.match(ttReg) || input.match(ytReg);
+      const videoUrlStr = urlMatch[0];
+
+      try {
+        // تفاعل "الساعة" عشان المستخدم يعرف إن البوت شغال
+        api.setMessageReaction("⌚", messageID, () => {}, true);
+
+        let apiUrl;
+        // الـ APIs اللي إنت بتثق فيها
+        if (fbReg.test(videoUrlStr)) {
+          apiUrl = `https://hridoy-apis.vercel.app/downloader/facebook2?url=${encodeURIComponent(videoUrlStr)}&apikey=hridoyXQC`;
+        } else if (igReg.test(videoUrlStr)) {
+          apiUrl = `https://hridoy-apis.vercel.app/downloader/instagram?url=${encodeURIComponent(videoUrlStr)}&apikey=hridoyXQC`;
+        } else if (ttReg.test(videoUrlStr)) {
+          apiUrl = `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(videoUrlStr)}`;
+        } else if (ytReg.test(videoUrlStr)) {
+          apiUrl = `https://hridoy-apis.vercel.app/downloader/ytmp4?url=${encodeURIComponent(videoUrlStr)}&format=1080&apikey=hridoyXQC`;
+        }
+
+        const response = await axios.get(apiUrl);
+        let downloadUrl;
+
+        // استخراج الرابط المباشر من الـ API (كل واحد ومساره)
+        if (ttReg.test(videoUrlStr)) {
+          downloadUrl = response.data.video?.noWatermark || response.data.video?.watermark;
+        } else if (fbReg.test(videoUrlStr)) {
+          downloadUrl = response.data.video_HD?.url || response.data.video_SD?.url;
+        } else if (igReg.test(videoUrlStr)) {
+          downloadUrl = response.data.downloadUrl;
+        } else if (ytReg.test(videoUrlStr)) {
+          downloadUrl = response.data.result?.download;
+        }
+
+        if (downloadUrl) {
+          // التحميل المؤقت في الكاش
+          const cacheDir = path.join(__dirname, 'cache');
+          await fs.ensureDir(cacheDir);
+          const filePath = path.join(cacheDir, `auto_${Date.now()}.mp4`);
+
+          const videoRes = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
+          await fs.writeFile(filePath, Buffer.from(videoRes.data));
+
+          await api.sendMessage({
+            body: "✅ | تم التحميل تلقائياً بواسطة ابلين",
+            attachment: fs.createReadStream(filePath)
+          }, threadID, () => {
+            api.setMessageReaction("✅", messageID, () => {}, true);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          }, messageID);
+        }
       } catch (e) {
         console.log("Error Auto Download:", e);
       }
@@ -40,7 +83,6 @@ module.exports = {
   },
 
   onStart: async function ({ api, event }) {
-    // دي بس عشان الأمر يظهر في القائمة
-    api.sendMessage("نظام التحميل التلقائي شغال في الخلفية يا ملك!", event.threadID);
+    api.sendMessage("نظام التحميل التلقائي (تيك توك، فيسبوك، إنستا، يوتيوب) شغال في الخلفية يا ملك! 🚀", event.threadID);
   }
 };
