@@ -6,70 +6,60 @@ const FormData = require("form-data");
 module.exports = {
   config: {
     name: "ابلين_صوت",
-    version: "6.0.0",
-    author: "محمد & AbuUbaida",
+    version: "7.0.0",
+    author: "SINKO",
     category: "ai"
   },
 
   handleEvent: async function ({ api, event }) {
     const { threadID, messageID, attachments } = event;
+    if (!attachments || attachments[0].type !== "audio") return;
 
-    // المراقب: إذا وصل ريكورد (audio)
-    if (attachments && attachments[0] && attachments[0].type === "audio") {
-      const audioUrl = attachments[0].url;
-      const apiKey = "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"; // ضع مفتاحك هنا
+    const apiKey = "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"; // حط مفتاحك هنا ضروري
 
-      try {
-        api.setMessageReaction("🎧", messageID, () => {}, true);
+    try {
+      api.setMessageReaction("🎧", messageID, () => {}, true);
 
-        const cacheDir = path.join(__dirname, 'cache');
-        await fs.ensureDir(cacheDir);
-        const userAudioPath = path.join(cacheDir, `user_${Date.now()}.mp3`);
+      // إنشاء مجلد الكاش لو ما موجود (عشان ما يدي خطأ رندر)
+      const cacheDir = path.join(process.cwd(), 'cache');
+      await fs.ensureDir(cacheDir);
+      
+      const userAudioPath = path.join(cacheDir, `user_${Date.now()}.mp3`);
 
-        // 1. تحميل ريكورد المستخدم (منطق الأري بفر)
-        const audioRes = await axios.get(audioUrl, { responseType: 'arraybuffer' });
-        await fs.writeFile(userAudioPath, Buffer.from(audioRes.data));
+      // تحميل صوتك
+      const res = await axios.get(attachments[0].url, { responseType: 'arraybuffer' });
+      await fs.writeFile(userAudioPath, Buffer.from(res.data));
 
-        // 2. الفهم (Whisper API) - تحويل صوتك لنص
-        const formData = new FormData();
-        formData.append("file", fs.createReadStream(userAudioPath));
-        formData.append("model", "whisper-1");
-        formData.append("language", "ar"); // ليفهم العربي والسوداني
+      // إرسال لـ Whisper
+      const form = new FormData();
+      form.append("file", fs.createReadStream(userAudioPath));
+      form.append("model", "whisper-1");
 
-        const whisperRes = await axios.post("https://api.openai.com/v1/audio/transcriptions", formData, {
-          headers: {
-            ...formData.getHeaders(),
-            "Authorization": `Bearer ${apiKey}`
-          }
-        });
+      const whisper = await axios.post("https://api.openai.com/v1/audio/transcriptions", form, {
+        headers: { ...form.getHeaders(), "Authorization": `Bearer ${apiKey}` }
+      });
 
-        const userText = whisperRes.data.text; // النص اللي انت قلته في الريكورد
+      const userText = whisper.data.text;
 
-        // 3. التفكير (ذكاء ابلين الردّاحة)
-        // هنا نستخدم نفس منطق الرد اللي بنيته انت
-        let reply = `سمعتك يا وهم وقفت لي شعري.. قايلني ما بفهم؟ قلت: "${userText}" .. سجمك وسجم الـ جابك 😒`;
+      // رد ابلين الردّاح (ممكن تربطه بـ SimSimi أو Gemini)
+      let reply = `سمعتك يا وهم.. قلت: "${userText}" .. قايل صوتك سمح؟ سجمك 😒`;
 
-        // 4. النطق (تحويل رد ابلين لصوت)
-        const eblinAudioPath = path.join(cacheDir, `eblin_${Date.now()}.mp3`);
-        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(reply)}&tl=ar&client=tw-ob`;
-        
-        const voiceRes = await axios.get(ttsUrl, { responseType: 'arraybuffer' });
-        await fs.writeFile(eblinAudioPath, Buffer.from(voiceRes.data));
+      const eblinPath = path.join(cacheDir, `eblin_${Date.now()}.mp3`);
+      const tts = await axios.get(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(reply)}&tl=ar&client=tw-ob`, { responseType: 'arraybuffer' });
+      await fs.writeFile(eblinPath, Buffer.from(tts.data));
 
-        // 5. الإرسال النهائي
-        await api.sendMessage({
-          body: `•-• ابلين سمعت كلامك وقالت ليك:`,
-          attachment: fs.createReadStream(eblinAudioPath)
-        }, threadID, () => {
-          api.setMessageReaction("✅", messageID, () => {}, true);
-          if (fs.existsSync(userAudioPath)) fs.unlinkSync(userAudioPath);
-          if (fs.existsSync(eblinAudioPath)) fs.unlinkSync(eblinAudioPath);
-        }, messageID);
+      await api.sendMessage({
+        body: `•-• ابلين سمعتك وردت:`,
+        attachment: fs.createReadStream(eblinPath)
+      }, threadID, () => {
+        api.setMessageReaction("✅", messageID, () => {}, true);
+        [userAudioPath, eblinPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
+      }, messageID);
 
-      } catch (e) {
-        console.error("Whisper Error:", e);
-        api.setMessageReaction("❌", messageID, () => {}, true);
-      }
+    } catch (e) {
+      api.sendMessage("•-• ابلين اتصممت من ردمك.. في مشكلة في الـ API يا وهم 😒", threadID);
     }
-  }
+  },
+  
+  onStart: async () => {} // خليه فاضي عشان يشتغل تلقائي بس
 };
