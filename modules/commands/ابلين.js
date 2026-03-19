@@ -1,10 +1,12 @@
 const axios = require("axios");
 
+if (!global.client.conversations) global.client.conversations = new Map();
+
 module.exports = {
   config: {
     name: "ابلين",
     aliases: ["زهجان", "سوداني"],
-    version: "4.0.0",
+    version: "6.0.0",
     author: "AbuUbaida",
     countDown: 5,
     role: 0,
@@ -17,6 +19,7 @@ module.exports = {
 
   chatWithEplin: async function ({ api, event, args, commands }) {
     const { threadID, messageID, senderID } = event;
+    const userId = senderID;
     const userQuery = args.join(" ").trim();
 
     if (!userQuery) return api.sendMessage("إنت كتبت شنو؟ ولا دا اختبار صبر؟", threadID, messageID);
@@ -24,23 +27,21 @@ module.exports = {
     try {
       api.setMessageReaction("😒", messageID, () => {}, true);
 
-      // جلب اسم المستخدم بطريقة مباشرة من الـ API عشان ما نعتمد على ملفات خارجية
-      const userInfo = await api.getUserInfo(senderID);
-      const userName = userInfo[senderID].name || "يا زول";
-      
-      const commandsJson = JSON.stringify(commands, null, 2);
+      // جلب اسم المستخدم
+      const userInfo = await api.getUserInfo(userId);
+      const userName = userInfo[userId].name || "يا زول";
+      const commandsList = Object.keys(commands).join(", ");
 
-      // تعريف الشخصية المطور (ذكاء إيف + لسان ابلين)
-      const SYSTEM_PROMPT = `أنتِ "ابلين"، سودانية عمرك 20 عام. مساعدة ذكية لكن زهجانة ومستفزة. كلامك سوداني بحت. الشخص اللي بيكلمك اسمه ${userName}. صلاحياتك تشوفي الأوامر دي: ${commandsJson}. ردي بزهج واختصار وبدون تنسيق نجوم.`;
+      // نظام الحقنة البرمجية عشان الشخصية تظبط
+      const instruction = `[نظام: أنتِ ابلين، سودانية زهجانة ومستفزة. ردي بلهجة سودانية بحتة. الشخص اللي بيكلمك اسمه ${userName}. أوامر البوت المتاحة: ${commandsList}. ممنوع الفصحى نهائي!]`;
 
-      if (!global.client.conversations) global.client.conversations = new Map();
-      if (!global.client.conversations.has(senderID)) {
-        global.client.conversations.set(senderID, [{ role: "system", content: SYSTEM_PROMPT }]);
+      if (!global.client.conversations.has(userId)) {
+        global.client.conversations.set(userId, []);
       }
-      const history = global.client.conversations.get(senderID);
+      const history = global.client.conversations.get(userId);
       
-      history.push({ role: "user", content: userQuery });
-      if (history.length > 20) history.splice(1, history.length - 20);
+      history.push({ role: "user", content: `${instruction}\n${userQuery}` });
+      if (history.length > 15) history.splice(0, 2);
 
       const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
       let formData = "";
@@ -61,31 +62,32 @@ module.exports = {
         data: formData
       });
 
-      let reply = response.data.output || response.data.text || (typeof response.data === 'string' ? response.data : "");
+      let reply = response.data.output || response.data.text || response.data;
       reply = reply.replace(/\\n/g, "\n").replace(/\\"/g, '"').trim();
       
       if (!reply) reply = "سؤالك ده ما عنده معنى، وما دايرة أرد أصلاً.";
 
       history.push({ role: "assistant", content: reply });
 
-      return api.sendMessage(reply, threadID, (err, info) => {
-        if (!global.client.handleReply) global.client.handleReply = [];
+      // --- الميزة المسروقة من كود كيفن (دعم الرد المستمر) ---
+      const sent = await api.sendMessage(reply, threadID, messageID);
+
+      if (sent && sent.messageID) {
+        // إضافة حدث الرد (callback)
         global.client.handleReply.push({
           name: this.config.name,
-          messageID: info.messageID,
-          author: senderID
+          messageID: sent.messageID,
+          author: userId,
+          callback: async ({ api, event, handleReply }) => {
+            const newArgs = event.body.split(/\s+/);
+            return this.chatWithEplin({ api, event, args: newArgs, commands });
+          }
         });
-      }, messageID);
+      }
 
     } catch (error) {
       console.error(error);
-      return api.sendMessage("في حاجة لخبطت في السيرفر، أقفل السكة دي.", threadID, messageID);
+      return api.sendMessage("السيرفر علّق، فكنا ياخ.", threadID, messageID);
     }
-  },
-
-  onReply: async function ({ api, event, handleReply, commands }) {
-    if (handleReply.author !== event.senderID) return;
-    const args = event.body.split(/\s+/);
-    return this.chatWithEplin({ api, event, args, commands });
   }
 };
