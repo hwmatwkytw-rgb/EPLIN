@@ -5,7 +5,7 @@ const path = require("path");
 module.exports = {
   config: {
     name: "تلقائي",
-    version: "2.0.0",
+    version: "3.0.0",
     author: "AbuUbaida & Cenko",
     countDown: 0,
     role: 0,
@@ -18,8 +18,6 @@ module.exports = {
     if (!body) return;
 
     const input = body.trim();
-
-    // رادارات المنصات
     const fbReg = /(https?:\/\/)?(www\.)?(facebook\.com|fb\.watch)\/.*/gi;
     const igReg = /(https?:\/\/)?(www\.)?instagram\.com\/.*/gi;
     const ttReg = /https:\/\/(www\.|vt\.|vm\.)?tiktok\.com\/[\w\.-]+\/?/gi;
@@ -27,49 +25,52 @@ module.exports = {
 
     if (fbReg.test(input) || igReg.test(input) || ttReg.test(input) || ytReg.test(input)) {
       const urlMatch = input.match(fbReg) || input.match(igReg) || input.match(ttReg) || input.match(ytReg);
-      const videoUrlStr = urlMatch[0];
+      const url = urlMatch[0];
 
       try {
-        // تفاعل "الساعة" عشان المستخدم يعرف إن البوت شغال
         api.setMessageReaction("⌚", messageID, () => {}, true);
 
-        let apiUrl;
-        // الـ APIs اللي إنت بتثق فيها
-        if (fbReg.test(videoUrlStr)) {
-          apiUrl = `https://hridoy-apis.vercel.app/downloader/facebook2?url=${encodeURIComponent(videoUrlStr)}&apikey=hridoyXQC`;
-        } else if (igReg.test(videoUrlStr)) {
-          apiUrl = `https://hridoy-apis.vercel.app/downloader/instagram?url=${encodeURIComponent(videoUrlStr)}&apikey=hridoyXQC`;
-        } else if (ttReg.test(videoUrlStr)) {
-          apiUrl = `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(videoUrlStr)}`;
-        } else if (ytReg.test(videoUrlStr)) {
-          apiUrl = `https://hridoy-apis.vercel.app/downloader/ytmp4?url=${encodeURIComponent(videoUrlStr)}&format=1080&apikey=hridoyXQC`;
+        let apiUrl, downloadKey;
+        // نفس الـ APIs والـ Keys من كودك الأصلي
+        if (url.includes('facebook.com') || url.includes('fb.watch')) {
+          apiUrl = `https://hridoy-apis.vercel.app/downloader/facebook2?url=${encodeURIComponent(url)}&apikey=hridoyXQC`;
+          downloadKey = 'video_HD.url';
+        } else if (url.includes('instagram.com')) {
+          apiUrl = `https://hridoy-apis.vercel.app/downloader/instagram?url=${encodeURIComponent(url)}&apikey=hridoyXQC`;
+          downloadKey = 'downloadUrl';
+        } else if (url.includes('tiktok.com')) {
+          apiUrl = `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`;
+        } else if (url.includes('youtu.be') || url.includes('youtube.com')) {
+          apiUrl = `https://hridoy-apis.vercel.app/downloader/ytmp4?url=${encodeURIComponent(url)}&format=1080&apikey=hridoyXQC`;
+          downloadKey = 'result.download';
         }
 
         const response = await axios.get(apiUrl);
+        
         let downloadUrl;
-
-        // استخراج الرابط المباشر من الـ API (كل واحد ومساره)
-        if (ttReg.test(videoUrlStr)) {
-          downloadUrl = response.data.video?.noWatermark || response.data.video?.watermark;
-        } else if (fbReg.test(videoUrlStr)) {
-          downloadUrl = response.data.video_HD?.url || response.data.video_SD?.url;
-        } else if (igReg.test(videoUrlStr)) {
-          downloadUrl = response.data.downloadUrl;
-        } else if (ytReg.test(videoUrlStr)) {
-          downloadUrl = response.data.result?.download;
+        if (url.includes('tiktok.com')) {
+            downloadUrl = response.data.video?.noWatermark || response.data.video?.watermark;
+        } else {
+            // الطريقة الذكية اللي إنت مستخدمها لتفصيص الـ JSON (الـ reduce)
+            downloadUrl = downloadKey.split('.').reduce((obj, key) => obj && obj[key], response.data);
         }
 
         if (downloadUrl) {
-          // التحميل المؤقت في الكاش
           const cacheDir = path.join(__dirname, 'cache');
           await fs.ensureDir(cacheDir);
           const filePath = path.join(cacheDir, `auto_${Date.now()}.mp4`);
 
-          const videoRes = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
+          // "الزيت" هنا: استخدام arraybuffer و Buffer.from زي كودك بالظبط
+          const videoRes = await axios.get(downloadUrl, { 
+            responseType: 'arraybuffer', 
+            timeout: 100000,
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+          });
+          
           await fs.writeFile(filePath, Buffer.from(videoRes.data));
 
           await api.sendMessage({
-            body: "✅ | تم التحميل تلقائياً بواسطة ابلين",
+            body: `●───── ⌬ ─────●\n┇ ⦿ تـم الـتـحـمـيـل تـلـقـائـيـاً ✅\n●───── ⌬ ─────●`,
             attachment: fs.createReadStream(filePath)
           }, threadID, () => {
             api.setMessageReaction("✅", messageID, () => {}, true);
@@ -77,12 +78,13 @@ module.exports = {
           }, messageID);
         }
       } catch (e) {
-        console.log("Error Auto Download:", e);
+        console.error("Auto Download Error:", e);
+        api.setMessageReaction("❌", messageID, () => {}, true);
       }
     }
   },
 
   onStart: async function ({ api, event }) {
-    api.sendMessage("نظام التحميل التلقائي (تيك توك، فيسبوك، إنستا، يوتيوب) شغال في الخلفية يا ملك! 🚀", event.threadID);
+    api.sendMessage("نظام التحميل التلقائي (بمنطق كود سينكو) شغال! 🚀", event.threadID);
   }
 };
