@@ -1,60 +1,54 @@
-const { addReply, removeReply } = require("../data/replice");
+const fs = require("fs-extra");
+const path = __dirname + "/cache/replies.json";
 
 module.exports = {
   config: {
     name: "ردود",
     aliases: ["reply", "الردود"],
-    version: "1.0.0",
+    version: "1.5.0",
     author: "AbuUbaida",
     countDown: 0,
-    role: 1, // رتبة الإدارة (أدمن البوت ومطوريه)
-    category: "ay"
+    role: 1, 
+    category: "system"
   },
 
   onStart: async function ({ api, event, args }) {
     const { threadID, messageID } = event;
+
+    // التأكد من وجود المجلد والملف
+    if (!fs.existsSync(__dirname + "/cache")) fs.mkdirSync(__dirname + "/cache");
+    if (!fs.existsSync(path)) fs.writeJsonSync(path, {});
+
     const action = args[0]?.toLowerCase();
-    
-    // لو ما كتب أكشن (أضف أو حذف)
+    const storage = fs.readJsonSync(path);
+
     if (!action) {
-      return api.sendMessage("✾ ┇ حـدد الإجـراء الـمطلوب: [ اضف | حذف ]", threadID, messageID);
+      return api.sendMessage("『 نظام الردود 』\n\n✾ الـصيغة:\n- ردود اضف [كلمة] | [رد]\n- ردود حذف [كلمة]", threadID, messageID);
     }
-    
-    // --- قـسم الإضـافة ---
+
+    // --- إضـافـة رد ---
     if (action === "اضف" || action === "أضف") {
-      // بناخد الكلام اللي بعد كلمة "اضف" ونقسمه بـ |
       const content = args.slice(1).join(" ").split("|").map(t => t.trim());
-      const trigger = content[0];
+      const trigger = content[0]?.toLowerCase();
       const response = content[1];
 
       if (!trigger || !response) {
-        return api.sendMessage("✾ ┇ الـصـيغة: ردود اضف [الكلمة] | [الرد]", threadID, messageID);
-      }
-      
-      try {
-        await addReply(trigger, response);
-        return api.sendMessage(`✅ تم إضافة الرد بنجاح:\n- الكلمة: ${trigger}\n- الرد: ${response}`, threadID, messageID);
-      } catch (e) {
-        return api.sendMessage(`✾ ┇ حصل خطأ أثناء الإضافة!`, threadID, messageID);
+        return api.sendMessage("✾ خـطأ: اسـتخدم الـفاصلة | بـين الـكلمة والـرد.", threadID, messageID);
       }
 
-    // --- قـسم الـحذف ---
-    } else if (action === "حذف") {
-      const trigger = args.slice(1).join(" ").trim();
-      
-      if (!trigger) {
-        return api.sendMessage("✾ ┇ الـصـيغة: ردود حذف [الكلمة]", threadID, messageID);
-      }
-      
-      try {
-        await removeReply(trigger);
-        return api.sendMessage(`✅ تم حذف الرد الخاص بـ "${trigger}"`, threadID, messageID);
-      } catch (err) {
-        return api.sendMessage(`✾ ┇ ${err.message}`, threadID, messageID);
-      }
+      storage[trigger] = response;
+      fs.writeJsonSync(path, storage);
+      return api.sendMessage(`✅ تـم حـفظ الـرد:\n⚝ الـكلمة: ${trigger}\n⚝ الـرد: ${response}`, threadID, messageID);
+    }
 
-    } else {
-      return api.sendMessage("✾ ┇ خـيار غـير مـعروف، اسـتخدم (اضف) أو (حذف).", threadID, messageID);
+    // --- حـذف رد ---
+    if (action === "حذف") {
+      const trigger = args.slice(1).join(" ").trim().toLowerCase();
+      if (!storage[trigger]) return api.sendMessage("✾ الـكلمة غير مـوجودة!", threadID, messageID);
+
+      delete storage[trigger];
+      fs.writeJsonSync(path, storage);
+      return api.sendMessage(`✅ تـم حـذف الـرد الخاص بـ "${trigger}"`, threadID, messageID);
     }
   }
 };
