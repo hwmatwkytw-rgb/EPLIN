@@ -6,60 +6,68 @@ const FormData = require("form-data");
 module.exports = {
   config: {
     name: "ابلين_صوت",
-    version: "7.0.0",
+    version: "8.0.0",
     author: "SINKO",
     category: "ai"
   },
 
   handleEvent: async function ({ api, event }) {
     const { threadID, messageID, attachments } = event;
-    if (!attachments || attachments[0].type !== "audio") return;
+    if (!attachments || attachments.length === 0 || attachments[0].type !== "audio") return;
 
-    const apiKey = "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"; // حط مفتاحك هنا ضروري
+    // المفتاح بتاعك يا ملك
+    const apiKey = "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";
 
     try {
       api.setMessageReaction("🎧", messageID, () => {}, true);
 
-      // إنشاء مجلد الكاش لو ما موجود (عشان ما يدي خطأ رندر)
       const cacheDir = path.join(process.cwd(), 'cache');
       await fs.ensureDir(cacheDir);
-      
       const userAudioPath = path.join(cacheDir, `user_${Date.now()}.mp3`);
 
-      // تحميل صوتك
+      // 1. تحميل الريكورد بصيغة صحيحة
       const res = await axios.get(attachments[0].url, { responseType: 'arraybuffer' });
       await fs.writeFile(userAudioPath, Buffer.from(res.data));
 
-      // إرسال لـ Whisper
+      // 2. الفهم (Whisper API) - الطريقة المضمونة للـ Headers
       const form = new FormData();
       form.append("file", fs.createReadStream(userAudioPath));
       form.append("model", "whisper-1");
+      form.append("language", "ar");
 
       const whisper = await axios.post("https://api.openai.com/v1/audio/transcriptions", form, {
-        headers: { ...form.getHeaders(), "Authorization": `Bearer ${apiKey}` }
+        headers: {
+          ...form.getHeaders(),
+          "Authorization": `Bearer ${apiKey}`
+        }
       });
 
       const userText = whisper.data.text;
 
-      // رد ابلين الردّاح (ممكن تربطه بـ SimSimi أو Gemini)
-      let reply = `سمعتك يا وهم.. قلت: "${userText}" .. قايل صوتك سمح؟ سجمك 😒`;
+      // 3. التفكير (رد ابلين الردّاح)
+      // ملاحظة: لو عندك API بتاع ذكاء اصطناعي حطه هنا، حالياً هو بيرد رد ثابت ردّاح
+      let reply = `سمعتك يا رمة.. قلت: "${userText}" .. قايل صوتك حلو؟ سجمك وسجم الـ جابك 😒`;
 
+      // 4. النطق (TTS)
       const eblinPath = path.join(cacheDir, `eblin_${Date.now()}.mp3`);
       const tts = await axios.get(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(reply)}&tl=ar&client=tw-ob`, { responseType: 'arraybuffer' });
       await fs.writeFile(eblinPath, Buffer.from(tts.data));
 
+      // 5. الإرسال
       await api.sendMessage({
-        body: `•-• ابلين سمعتك وردت:`,
+        body: `●───── ⌬ ─────●\n┇ ⦿ ابلين الردّاحة 🗣️\n●───── ⌬ ─────●`,
         attachment: fs.createReadStream(eblinPath)
       }, threadID, () => {
         api.setMessageReaction("✅", messageID, () => {}, true);
-        [userAudioPath, eblinPath].forEach(p => fs.existsSync(p) && fs.unlinkSync(p));
+        if (fs.existsSync(userAudioPath)) fs.unlinkSync(userAudioPath);
+        if (fs.existsSync(eblinPath)) fs.unlinkSync(eblinPath);
       }, messageID);
 
     } catch (e) {
-      api.sendMessage("•-• ابلين اتصممت من ردمك.. في مشكلة في الـ API يا وهم 😒", threadID);
+      console.error(e.response ? e.response.data : e); // عشان نشوف المشكلة في الكونسول
+      api.setMessageReaction("❌", messageID, () => {}, true);
     }
   },
   
-  onStart: async () => {} // خليه فاضي عشان يشتغل تلقائي بس
+  onStart: async () => {} 
 };
