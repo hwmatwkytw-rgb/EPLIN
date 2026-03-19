@@ -6,7 +6,7 @@ module.exports = {
   config: {
     name: "ابلين",
     aliases: ["زهجان", "سوداني"],
-    version: "6.0.0",
+    version: "7.0.0",
     author: "AbuUbaida",
     countDown: 5,
     role: 0,
@@ -19,7 +19,6 @@ module.exports = {
 
   chatWithEplin: async function ({ api, event, args, commands }) {
     const { threadID, messageID, senderID } = event;
-    const userId = senderID;
     const userQuery = args.join(" ").trim();
 
     if (!userQuery) return api.sendMessage("إنت كتبت شنو؟ ولا دا اختبار صبر؟", threadID, messageID);
@@ -27,21 +26,19 @@ module.exports = {
     try {
       api.setMessageReaction("😒", messageID, () => {}, true);
 
-      // جلب اسم المستخدم
-      const userInfo = await api.getUserInfo(userId);
-      const userName = userInfo[userId].name || "يا زول";
+      const userInfo = await api.getUserInfo(senderID);
+      const userName = userInfo[senderID].name || "يا زول";
       const commandsList = Object.keys(commands).join(", ");
 
-      // نظام الحقنة البرمجية عشان الشخصية تظبط
-      const instruction = `[نظام: أنتِ ابلين، سودانية زهجانة ومستفزة. ردي بلهجة سودانية بحتة. الشخص اللي بيكلمك اسمه ${userName}. أوامر البوت المتاحة: ${commandsList}. ممنوع الفصحى نهائي!]`;
+      const instruction = `[نظام: أنتِ ابلين، سودانية زهجانة ومستفزة. ردي بلهجة سودانية بحتة. الشخص اللي بيكلمك اسمه ${userName}. أوامر البوت: ${commandsList}. ممنوع الفصحى!]`;
 
-      if (!global.client.conversations.has(userId)) {
-        global.client.conversations.set(userId, []);
+      if (!global.client.conversations.has(senderID)) {
+        global.client.conversations.set(senderID, [{ role: "system", content: instruction }]);
       }
-      const history = global.client.conversations.get(userId);
+      const history = global.client.conversations.get(senderID);
       
-      history.push({ role: "user", content: `${instruction}\n${userQuery}` });
-      if (history.length > 15) history.splice(0, 2);
+      history.push({ role: "user", content: userQuery });
+      if (history.length > 15) history.splice(1, 2); // الحفاظ على السيستم برومبت وحذف القديم
 
       const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
       let formData = "";
@@ -57,37 +54,37 @@ module.exports = {
         headers: {
           "content-type": `multipart/form-data; boundary=${boundary}`,
           "origin": "https://deepai.org",
-          "user-agent": "Mozilla/5.0"
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         },
         data: formData
       });
 
       let reply = response.data.output || response.data.text || response.data;
-      reply = reply.replace(/\\n/g, "\n").replace(/\\"/g, '"').trim();
+      if (typeof reply !== "string") reply = "سؤالك ده ما عنده معنى، وما دايرة أرد أصلاً.";
       
-      if (!reply) reply = "سؤالك ده ما عنده معنى، وما دايرة أرد أصلاً.";
-
+      reply = reply.replace(/\\n/g, "\n").replace(/\\"/g, '"').trim();
       history.push({ role: "assistant", content: reply });
 
-      // --- الميزة المسروقة من كود كيفن (دعم الرد المستمر) ---
-      const sent = await api.sendMessage(reply, threadID, messageID);
-
-      if (sent && sent.messageID) {
-        // إضافة حدث الرد (callback)
+      return api.sendMessage(reply, threadID, (err, info) => {
+        if (err) return;
         global.client.handleReply.push({
           name: this.config.name,
-          messageID: sent.messageID,
-          author: userId,
-          callback: async ({ api, event, handleReply }) => {
-            const newArgs = event.body.split(/\s+/);
-            return this.chatWithEplin({ api, event, args: newArgs, commands });
-          }
+          messageID: info.messageID,
+          author: senderID,
+          commands: commands // بنمرر الأوامر عشان الـ onReply يشوفها
         });
-      }
+      }, messageID);
 
     } catch (error) {
-      console.error(error);
+      console.error(error.message);
       return api.sendMessage("السيرفر علّق، فكنا ياخ.", threadID, messageID);
     }
+  },
+
+  // دالة الـ onReply المنفصلة عشان نظام"ريلاي" يشتغل صح
+  onReply: async function ({ api, event, handleReply }) {
+    if (handleReply.author !== event.senderID) return;
+    const args = event.body.split(/\s+/);
+    return this.chatWithEplin({ api, event, args, commands: handleReply.commands });
   }
 };
