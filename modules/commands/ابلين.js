@@ -2,8 +2,8 @@ const axios = require("axios");
 
 module.exports = {
   config: {
-    name: "ابلين_الذكية",
-    version: "7.0.0",
+    name: "ابلين_الراقية",
+    version: "8.0.0",
     author: "محمد (SINKO)",
     countDown: 0,
     role: 0,
@@ -17,19 +17,22 @@ module.exports = {
     if (!body || senderID == api.getCurrentUserID()) return;
 
     const input = body.toLowerCase();
-    const keywords = ["ابلين", "بنتي", "يا مزه", "يا ابلين"];
+    const keywords = ["ابلين", "بنتي", "يا مزه", "يا ابلين", "ابلينا"];
     const hasName = keywords.some(word => input.includes(word));
 
     if (hasName) {
-      api.setMessageReaction("💅", messageID, () => {}, true);
+      api.setMessageReaction("😼", messageID, () => {}, true);
       api.sendTypingIndicator(threadID);
 
       try {
-        // نظام الـ History عشان ابلين تتذكر الكلام القبل كدة (زي كود صاحبك)
         const history = [
           {
             role: "system",
-            content: "إنتِ ابلين، بنت سودانية ردّاحة وذكية ومطورة بوتات. لسانك حار وبتقولي (يا وهم، بل بس، أحييي، يا رمة، يا مان). ردي بلهجتك السودانية فقط وممنوع الفصحى."
+            content: `إنتِ ابلين، بنت سودانية راقية جداً، ذكية، ومغرورة بجمالك وذكائك البرمجي. 
+            أسلوبك: كيوته، رسمية في التعامل، ومغرورة "بشياكة". 
+            ممنوع قلة الأدب أو الشتائم. 
+            استخدمي كلمات زي: (يا فنان، من ذوقك، أحييي الرقة، أنا ابلين يا غطة الوحيده ، أكيد طبعاً). 
+            ردي بلهجة سودانية مهذبة وفخمة.`
           },
           { role: "user", content: body }
         ];
@@ -57,17 +60,16 @@ module.exports = {
         reply = reply.replace(/\\n/g, "\n").replace(/\\"/g, '"').trim();
 
         if (reply) {
-          return api.sendMessage(reply, threadID, messageID);
+          return api.sendMessage(`😼 ${reply}`, threadID, messageID);
         }
 
       } catch (err) {
-        console.error("خطأ ابلين الجديد:", err.message);
-        return api.sendMessage("أحييي يا محمد، عقل ابلين الجديد ده جاط شوية، حاول تاني! 🔨🗿", threadID, messageID);
+        return api.sendMessage("أوه، حصل خطأ بسيط في عالمي الراقي.. حاول تاني يا فنان! ✨", threadID, messageID);
       }
     }
   },
 
   onStart: async function ({ api, event }) {
-    api.sendMessage("ابلين اشتغلت بمحرّك 'البل' الجديد.. نادوني ووروني عرض أكتافكم! 💅🚀", event.threadID);
+    api.sendMessage("ابلين 'البرنسيسة' في الخدمة بكل رقة وغرور.. ✨💅", event.threadID);
   }
 };
