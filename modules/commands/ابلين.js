@@ -3,7 +3,7 @@ const axios = require("axios");
 module.exports = {
   config: {
     name: "ابلين_الذكية",
-    version: "5.0.0",
+    version: "7.0.0",
     author: "محمد (SINKO)",
     countDown: 0,
     role: 0,
@@ -13,43 +13,61 @@ module.exports = {
   handleEvent: async function ({ api, event }) {
     const { body, threadID, messageID, senderID, type } = event;
     
-    // التأكد إنها رسالة عادية وما من البوت نفسه
     if (type !== "message" && type !== "message_reply") return;
     if (!body || senderID == api.getCurrentUserID()) return;
 
     const input = body.toLowerCase();
-    // الكلمات اللي بتخلي ابلين "تفتح خشمها"
-    const keywords = ["ابلين", "ابلينا", "يا ابلين", " بنتي"];
+    const keywords = ["ابلين", "بنتي", "يا مزه", "يا ابلين"];
     const hasName = keywords.some(word => input.includes(word));
 
     if (hasName) {
-      const apiKey = "AIzaSyCzFE3hjaHinwIvShLPhs81CR8mpMrAVso"; // حط مفتاحك الجديد هنا
+      api.setMessageReaction("💅", messageID, () => {}, true);
+      api.sendTypingIndicator(threadID);
 
       try {
-        // حركة الـ React عشان تبين إنها شافت الكلام
-        api.setMessageReaction("😼", messageID, () => {}, true);
-        api.sendTypingIndicator(threadID);
+        // نظام الـ History عشان ابلين تتذكر الكلام القبل كدة (زي كود صاحبك)
+        const history = [
+          {
+            role: "system",
+            content: "إنتِ ابلين، بنت سودانية ردّاحة وذكية ومطورة بوتات. لسانك حار وبتقولي (يا وهم، بل بس، أحييي، يا رمة، يا مان). ردي بلهجتك السودانية فقط وممنوع الفصحى."
+          },
+          { role: "user", content: body }
+        ];
 
-        const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-          contents: [{
-            parts: [{
-              text: `إنتِ ابلين، بنت سودانية "ردّاحة" ومطورة بوتات، لسانك حار وبتقولي (يا وهم، بل بس، أحييي، يا رمة، يا أصلي). ردي بلهجتك السودانية وبذكاء وردح على الزول ده: "${body}"`
-            }]
-          }]
+        const boundary = "----WebKitFormBoundary" + Math.random().toString(36).substring(2);
+        let formData = "";
+        formData += `--${boundary}\r\nContent-Disposition: form-data; name="chat_style"\r\n\r\nchat\r\n`;
+        formData += `--${boundary}\r\nContent-Disposition: form-data; name="chatHistory"\r\n\r\n${JSON.stringify(history)}\r\n`;
+        formData += `--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nstandard\r\n`;
+        formData += `--${boundary}\r\nContent-Disposition: form-data; name="hacker_is_stinky"\r\n\r\nvery_stinky\r\n`;
+        formData += `--${boundary}\r\nContent-Disposition: form-data; name="enabled_tools"\r\n\r\n[]\r\n--${boundary}--\r\n`;
+
+        const response = await axios({
+          method: "POST",
+          url: "https://api.deepai.org/hacking_is_a_serious_crime",
+          headers: {
+            "content-type": `multipart/form-data; boundary=${boundary}`,
+            "origin": "https://deepai.org",
+            "user-agent": "Mozilla/5.0"
+          },
+          data: formData
         });
 
-        const reply = response.data.candidates[0].content.parts[0].text;
-        
-        return api.sendMessage(reply, threadID, messageID);
+        let reply = response.data.output || response.data.text || response.data;
+        reply = reply.replace(/\\n/g, "\n").replace(/\\"/g, '"').trim();
+
+        if (reply) {
+          return api.sendMessage(reply, threadID, messageID);
+        }
 
       } catch (err) {
-        console.error("خطأ ابلين:", err);
+        console.error("خطأ ابلين الجديد:", err.message);
+        return api.sendMessage("أحييي يا محمد، عقل ابلين الجديد ده جاط شوية، حاول تاني! 🔨🗿", threadID, messageID);
       }
     }
   },
 
   onStart: async function ({ api, event }) {
-    // دي بس عشان لو زول كتب /ابلين_الذكية يعرف إنها شغالة
-    api.sendMessage("ابلين قاعدة ومستمعة، ناديني في نص الكلام وبجيك ناطة! 💅", event.threadID);
+    api.sendMessage("ابلين اشتغلت بمحرّك 'البل' الجديد.. نادوني ووروني عرض أكتافكم! 💅🚀", event.threadID);
   }
 };
