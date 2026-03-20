@@ -1,43 +1,55 @@
-const axios = require('axios');
+const axios = require("axios");
 
 module.exports = {
   config: {
-    name: "AblinAI",
-    version: "3.0.0",
+    name: "ابلين_الذكية",
+    version: "5.0.0",
     author: "محمد (SINKO)",
-    description: "ابلين بترد تلقائياً لما زول ينادي اسمها في نص الكلام"
+    countDown: 0,
+    role: 0,
+    category: "AI"
   },
 
-  onChat: async function ({ api, event }) {
-    const { threadID, messageID, body, senderID } = event;
-    if (!body) return;
+  handleEvent: async function ({ api, event }) {
+    const { body, threadID, messageID, senderID, type } = event;
+    
+    // التأكد إنها رسالة عادية وما من البوت نفسه
+    if (type !== "message" && type !== "message_reply") return;
+    if (!body || senderID == api.getCurrentUserID()) return;
 
-    const nameToWatch = "بنتي"; // بنراقب كلمة "ابلين" بكل أشكالها
-    const apiKey = "AIzaSyCzFE3hjaHinwIvShLPhs81CR8mpMrAVso"; // حط  API Key الجديد (المخفي) هنا
+    const input = body.toLowerCase();
+    // الكلمات اللي بتخلي ابلين "تفتح خشمها"
+    const keywords = ["ابلين", "ابلينا", "يا ابلين", " بنتي"];
+    const hasName = keywords.some(word => input.includes(word));
 
-    // فحص: هل اسم "ابلين" موجود في نص الرسالة؟
-    if (body.toLowerCase().includes("ابلين") || body.toLowerCase().includes("ابلينا")) {
-      
-      // بنخلي البوت يظهر إنه "قاعد يكتب" عشان الحركة تكون طبيعية
-      api.sendTypingIndicator(threadID);
+    if (hasName) {
+      const apiKey = "AIzaSyCzFE3hjaHinwIvShLPhs81CR8mpMrAVso"; // حط مفتاحك الجديد هنا
 
       try {
+        // حركة الـ React عشان تبين إنها شافت الكلام
+        api.setMessageReaction("😼", messageID, () => {}, true);
+        api.sendTypingIndicator(threadID);
+
         const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
           contents: [{
             parts: [{
-              text: `إنتِ اسمك ابلين، بنت سودانية "ردّاحة" وذكية ومطورة بوتات، بتستخدمي كلمات زي (يا وهم، بل بس، أحييي، يا أصلي، يا رمة). ردي بلهجتك السودانية الحارة على الزول الناداك ده: "${body}"`
+              text: `إنتِ ابلين، بنت سودانية "ردّاحة" ومطورة بوتات، لسانك حار وبتقولي (يا وهم، بل بس، أحييي، يا رمة، يا أصلي). ردي بلهجتك السودانية وبذكاء وردح على الزول ده: "${body}"`
             }]
           }]
         });
 
         const reply = response.data.candidates[0].content.parts[0].text;
         
-        // الرد على الرسالة اللي فيها اسمها
         return api.sendMessage(reply, threadID, messageID);
 
       } catch (err) {
-        console.error("Ablin AI Error:", err);
+        console.error("خطأ ابلين:", err);
       }
     }
+  },
+
+  onStart: async function ({ api, event }) {
+    // دي بس عشان لو زول كتب /ابلين_الذكية يعرف إنها شغالة
+    api.sendMessage("ابلين قاعدة ومستمعة، ناديني في نص الكلام وبجيك ناطة! 💅", event.threadID);
   }
 };
