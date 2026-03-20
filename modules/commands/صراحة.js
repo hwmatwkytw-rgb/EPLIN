@@ -1,4 +1,4 @@
-module.exports = {
+لاdule.exports = {
   config: {
     name: "صراحة",
     aliases: ["صراحه"],
@@ -37,7 +37,7 @@ module.exports = {
     ];
 
     const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-    const msg = `⊳ ${randomQuestion}\n\n[ رد بـ "نعم" أو "لا"   ]`;
+    const msg = `⊳ ${randomQuestion}\n\n`;
 
     return api.sendMessage(msg, threadID, (err, info) => {
       // تسجيل الرد في global.client عشان البوت يراقب الرد على الرسالة دي بالذات
