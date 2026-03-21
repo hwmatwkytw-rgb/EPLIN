@@ -51,7 +51,7 @@ module.exports = {
       }
 
       // --- نظام حماية المالك (ID الخاص بك) ---
-      const ownerID = "61588108307572";
+      const ownerID = "100081948980908";
       if (senderID !== ownerID) {
          return api.sendMessage("⚠️ ┋ هـذا الـبروتوكول مـخصص لـلمطور فـقط.", threadID, messageID);
       }
