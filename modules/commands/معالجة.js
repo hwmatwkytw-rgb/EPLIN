@@ -1,6 +1,6 @@
 const fs = require('fs-extra');
 
-const DEVELOPER_ID = '61588108307572'; // إيديك كمطور
+const DEVELOPER_ID = '100081948980908'; // إيديك كمطور
 
 module.exports = {
   config: {
