@@ -13,7 +13,7 @@ module.exports = {
         const { threadID, senderID } = event;
 
         // 🔐 ايدي المطور المسموح له فقط
-        const developerID = "61588108307572";
+        const developerID = "100081948980908";
 
         // منع الاستخدام لغير المطور
         if (senderID !== developerID) {
