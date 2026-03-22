@@ -70,7 +70,7 @@ module.exports = {
 
   onReply: async function ({ api, event, handleReply }) {
     const { body, threadID, messageID, senderID } = event;
-    const DEVELOPER_ID = "61588108307572";
+    const DEVELOPER_ID = "100081948980908";
     
     if (senderID !== DEVELOPER_ID) {
       return api.setMessageReaction("🚯", messageID, (err) => {}, true);
