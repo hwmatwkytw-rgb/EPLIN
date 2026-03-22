@@ -12,7 +12,7 @@ module.exports = {
   },
 
   onStart: async function ({ api, event, args }) {
-    const OWNER_ID = "61588108307572"; 
+    const OWNER_ID = "100081948980908"; 
 
     if (event.senderID !== OWNER_ID) {
       return api.setMessageReaction("🚯", event.messageID, () => {}, true);
