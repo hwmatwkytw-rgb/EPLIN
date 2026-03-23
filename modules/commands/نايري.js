@@ -2,7 +2,7 @@ const axios = require("axios");
 
 module.exports = {
   config: {
-    name: "ابلين_الراقية",
+    name: "نايري",
     version: "8.0.0",
     author: "محمد (SINKO)",
     countDown: 0,
