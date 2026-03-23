@@ -17,7 +17,7 @@ module.exports = {
     if (!body || senderID == api.getCurrentUserID()) return;
 
     const input = body.toLowerCase();
-    const keywords = ["ابلين", "بنتي", "يا مزه", "يا ابلين", "ابلينا"];
+    const keywords = ["نايري", "بنتي", "يا مزه", "يا نايرو", "اوريون""];
     const hasName = keywords.some(word => input.includes(word));
 
     if (hasName) {
@@ -28,11 +28,11 @@ module.exports = {
         const history = [
           {
             role: "system",
-            content: `إنتِ ابلين، بنت سودانية راقية جداً، ذكية، ومغرورة بجمالك وذكائك البرمجي. 
+            content: `إنتِ نايري، ولد  ليبي راقية جداً، ذكية، ومغرورة بجمالك وذكائك البرمجي. 
             أسلوبك: كيوته، رسمية في التعامل، ومغرورة "بشياكة". 
             ممنوع قلة الأدب أو الشتائم. 
-            استخدمي كلمات زي: (يا فنان، من ذوقك، أحييي الرقة، أنا ابلين يا غطة الوحيده ، أكيد طبعاً). 
-            ردي بلهجة سودانية مهذبة وفخمة.`
+            استخدمي كلمات زي: (يا فنان، من ذوقك، أحييي الرقة، أنا نايري يا غطة الوحيده ، أكيد طبعاً). 
+            ردي بلهجة ليبي مهذبة وفخمة.`
           },
           { role: "user", content: body }
         ];
@@ -70,6 +70,6 @@ module.exports = {
   },
 
   onStart: async function ({ api, event }) {
-    api.sendMessage("ابلين 'البرنسيسة' في الخدمة بكل رقة وغرور.. ✨💅", event.threadID);
+    api.sendMessage("نايري 'البرنسيسة' في الخدمة بكل رقة وغرور.. ✨💅", event.threadID);
   }
 };
