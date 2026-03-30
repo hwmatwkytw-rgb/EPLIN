@@ -3,11 +3,11 @@ const axios = require("axios");
 module.exports = {
     config: {
         name: "يوتيوب",
-        version: "6.0.0",
+        version: "6.1.0",
         author: "Fix Pro",
         countDown: 5,
         role: 0,
-        description: "تحميل فيديو من يوتيوب مع حفظ الجودة لكل مستخدم + صورة",
+        description: "يوتيوب بدون أخطاء + حماية كاملة",
         category: "media"
     },
 
@@ -32,7 +32,7 @@ module.exports = {
 
         if (!query) {
             return api.sendMessage(
-                "❌ اكتب اسم الفيديو أو الجودة\n\n📌 مثال:\nيوتيوب naruto\nيوتيوب 720",
+                "❌ اكتب اسم الفيديو\nمثال: يوتيوب naruto",
                 threadID,
                 messageID
             );
@@ -43,11 +43,11 @@ module.exports = {
                 `https://api.betabotz.eu.org/api/search/ytsearch?q=${encodeURIComponent(query)}`
             );
 
-            let results = res.data.result.slice(0, 5);
-
-            if (!results.length) {
-                return api.sendMessage("❌ لا يوجد نتائج", threadID);
+            if (!res.data || !res.data.result) {
+                throw new Error("Search API Failed");
             }
+
+            let results = res.data.result.slice(0, 5);
 
             global.ytSearch[threadID] = results;
 
@@ -62,8 +62,12 @@ module.exports = {
             return api.sendMessage(msg, threadID, messageID);
 
         } catch (err) {
-            console.log("SEARCH ERROR:", err?.response?.data || err.message);
-            return api.sendMessage("⚠️ خطأ في البحث", threadID);
+            console.log("SEARCH ERROR:", err.message);
+
+            return api.sendMessage(
+                "⚠️ فشل البحث، حاول مرة ثانية",
+                threadID
+            );
         }
     },
 
@@ -77,47 +81,49 @@ module.exports = {
 
         let list = global.ytSearch[threadID];
 
-        if (choice < 1 || choice > list.length) {
-            return api.sendMessage("❌ رقم غير صحيح", threadID);
+        if (!list[choice - 1]) {
+            return api.sendMessage("❌ اختيار غير صحيح", threadID);
         }
 
         let video = list[choice - 1];
 
-        global.ytUserQuality = global.ytUserQuality || {};
-
-        let quality = global.ytUserQuality[senderID] || "720";
+        let quality = (global.ytUserQuality && global.ytUserQuality[senderID]) || "720";
 
         try {
             delete global.ytSearch[threadID];
 
-            // 🎥 تحميل الفيديو
             const download = await axios.get(
                 `https://api.betabotz.eu.org/api/download/ytmp4?url=${video.url}&quality=${quality}`
             );
 
-            if (!download.data || !download.data.result) {
-                throw new Error("API Error");
+            if (!download.data || !download.data.result || !download.data.result.mp4) {
+                throw new Error("Download API Failed");
             }
 
             const videoUrl = download.data.result.mp4;
 
             const videoStream = await axios.get(videoUrl, {
-                responseType: "stream"
+                responseType: "stream",
+                timeout: 60000
             });
 
-            // 🖼️ الصورة المصغرة
-            let attachments = [videoStream.data];
+            let attachments = [];
 
-            try {
-                const thumbStream = await axios.get(video.thumbnail, {
-                    responseType: "stream"
-                });
-                attachments.unshift(thumbStream.data);
-            } catch {}
+            // 🎬 إضافة الصورة (اختياري)
+            if (video.thumbnail) {
+                try {
+                    const thumb = await axios.get(video.thumbnail, {
+                        responseType: "stream"
+                    });
+                    attachments.push(thumb.data);
+                } catch {}
+            }
+
+            attachments.push(videoStream.data);
 
             return api.sendMessage(
                 {
-                    body: `🎬 ${video.title}\n⏱️ ${video.duration}\n📺 الجودة: ${quality}p`,
+                    body: `🎬 ${video.title}\n📺 الجودة: ${quality}p`,
                     attachment: attachments
                 },
                 threadID,
@@ -125,10 +131,10 @@ module.exports = {
             );
 
         } catch (err) {
-            console.log("DOWNLOAD ERROR:", err?.response?.data || err.message);
+            console.log("DOWNLOAD ERROR:", err.message);
 
             return api.sendMessage(
-                "⚠️ فشل تحميل الفيديو، جرب فيديو آخر أو جودة مختلفة",
+                "⚠️ فشل تحميل الفيديو ❌\n\n💡 جرب:\n- فيديو ثاني\n- جودة أقل (360)",
                 threadID
             );
         }
