@@ -1,48 +1,93 @@
 module.exports = {
     config: {
         name: "مافيا",
-        version: "6.0",
-        author: "🔥 احترافي",
+        version: "Legend-1.0",
+        author: "🔥 Ultimate Dev",
         countDown: 5,
         role: 0,
         prefix: true,
-        description: "مافيا احترافية",
+        description: "مافيا أسطورية + خرائط + تكتيك + أحداث + AI",
         category: "games"
+    },
+
+    onStart: async ({ api, event }) => {
+        const { threadID, senderID } = event;
+
+        if (!global.mafia) global.mafia = {};
+        if (global.mafia[threadID])
+            return api.sendMessage("⚠️ لعبة شغالة بالفعل", threadID);
+
+        global.mafia[threadID] = {
+            host: senderID,
+            players: [],
+            alive: [],
+            roles: {},
+            votes: {},
+            points: {},
+            wins: {},
+            bank: {},
+            items: {},
+            tactics: {},
+            missions: {},
+            map: null,
+            spy: null
+        };
+
+        api.sendMessage(
+`🎭 لعبة المافيا الأسطورية
+
+اكتب:
+- انضم
+- بدء
+- متجر
+- بنك
+- ترتيب
+- عالمي
+- انهاء`,
+        threadID,
+        (err, info) => {
+            global.client.handleReply.push({
+                name: "مافيا",
+                messageID: info.messageID,
+                type: "join"
+            });
+        });
     },
 
     onReply: async ({ api, event, handleReply }) => {
         const { threadID, senderID, body } = event;
-        const game = global.mafia[threadID];
+        const game = global.mafia?.[threadID];
         if (!game) return;
 
         try {
-            // ===== الانضمام =====
+
+            // ================= JOIN =================
             if (handleReply.type === "join") {
 
                 if (body === "انضم") {
-                    if (game.players.includes(senderID)) {
-                        return api.sendMessage("❌ انت داخل.", threadID);
-                    }
+                    if (game.players.includes(senderID))
+                        return api.sendMessage("❌ داخل مسبقاً", threadID);
 
                     game.players.push(senderID);
-                    game.points[senderID] = 0;
+                    game.points[senderID] = 5;
+                    game.wins[senderID] = 0;
+                    game.bank[senderID] = 0;
+                    game.items[senderID] = { shield: 0, bullet: 0, info: 0 };
 
-                    return api.sendMessage(`✅ العدد: ${game.players.length}`, threadID);
+                    return api.sendMessage("✅ تم الانضمام", threadID);
                 }
 
+                // ================= START =================
                 if (body === "بدء" && senderID === game.host) {
 
-                    if (game.players.length < 6) {
-                        return api.sendMessage("❌ لازم 6 لاعبين.", threadID);
-                    }
+                    if (game.players.length < 6)
+                        return api.sendMessage("❌ لازم 6 لاعبين", threadID);
 
                     game.alive = [...game.players];
-                    game.roles = {};
-                    game.votes = {};
-                    game.nightActions = {};
 
                     const shuffled = [...game.players].sort(() => 0.5 - Math.random());
 
+                    game.roles = {};
                     game.roles[shuffled[0]] = "مافيا";
                     game.roles[shuffled[1]] = "مافيا";
                     game.roles[shuffled[2]] = "دكتور";
@@ -50,233 +95,141 @@ module.exports = {
                     game.roles[shuffled[4]] = "قاتل";
                     game.roles[shuffled[5]] = "قناص";
 
-                    if (shuffled[6]) game.roles[shuffled[6]] = "ساحر";
-
-                    for (let i = 7; i < shuffled.length; i++) {
+                    for (let i = 6; i < shuffled.length; i++)
                         game.roles[shuffled[i]] = "مواطن";
-                    }
 
-                    game.mafiaBoss = shuffled[0];
+                    // 🗺 MAP
+                    const maps = ["🏙 المدينة", "🏚 الحي الشعبي", "🏢 الحكومة", "🌑 الظلام"];
+                    game.map = maps[Math.floor(Math.random() * maps.length)];
 
-                    // إرسال الأدوار
+                    // 🕵️ SPY
+                    game.spy = game.players[Math.floor(Math.random() * game.players.length)];
+                    api.sendMessage("🕵️ أنت الجاسوس", game.spy);
+
+                    // 🎭 ROLES DM
                     for (let id of game.players) {
-                        let role = game.roles[id];
-                        if (id === game.mafiaBoss) role += " 👑";
-                        api.sendMessage(`🎭 دورك: ${role}`, id);
+                        api.sendMessage(`🎭 دورك: ${game.roles[id]}`, id).catch(() => {});
                     }
+
+                    api.sendMessage(`🗺 الخريطة: ${game.map}`, threadID);
 
                     return startNight(api, threadID);
                 }
-            }
 
-            // ===== شات المافيا =====
-            if (body.startsWith("م ")) {
-                if (game.roles[senderID] !== "مافيا") return;
-
-                const msg = body.slice(2);
-
-                game.alive.forEach(id => {
-                    if (game.roles[id] === "مافيا" && id !== senderID) {
-                        api.sendMessage(`💬 مافيا: ${msg}`, id);
-                    }
-                });
-            }
-
-            // ===== الليل =====
-            if (handleReply.type === "night") {
-
-                if (!game.alive.includes(senderID)) return;
-                if (isNaN(body)) return;
-
-                const num = parseInt(body);
-                const target = game.alive[num - 1];
-                if (!target) return;
-
-                const role = game.roles[senderID];
-
-                // منع التكرار
-                if (game.nightActions[senderID]) {
-                    return api.sendMessage("❌ اخترت بالفعل.", senderID);
+                // ================= SHOP =================
+                if (body === "متجر") {
+                    return api.sendMessage(
+`🛒 متجر:
+1 🛡 درع = 5
+2 🔫 رصاصة = 7
+3 🔍 معلومة = 4`,
+                    threadID,
+                    (err, info) => {
+                        global.client.handleReply.push({
+                            name: "مافيا",
+                            messageID: info.messageID,
+                            type: "shop"
+                        });
+                    });
                 }
 
-                game.nightActions[senderID] = {
-                    role,
-                    target
-                };
+                // ================= LEADER =================
+                if (body === "ترتيب") {
 
-                api.sendMessage("✔ تم اختيارك.", senderID);
+                    let list = Object.entries(game.wins)
+                        .sort((a,b)=>b[1]-a[1])
+                        .slice(0,10)
+                        .map((x,i)=>`${i+1}- ${x[0]} | 🏆 ${x[1]}`)
+                        .join("\n");
+
+                    return api.sendMessage("🏆 ترتيب:\n\n"+(list||"فارغ"), threadID);
+                }
+
+                // ================= GLOBAL =================
+                if (body === "عالمي") {
+
+                    let list = Object.entries(global.mafiaGlobal?.players || {})
+                        .sort((a,b)=>b[1]-a[1])
+                        .slice(0,10)
+                        .map((x,i)=>`${i+1}- ${x[0]} | 🌍 ${x[1]}`)
+                        .join("\n");
+
+                    return api.sendMessage("🌍 عالمي:\n\n"+(list||"فارغ"), threadID);
+                }
+
+                // ================= END =================
+                if (body === "انهاء" && senderID === game.host) {
+                    delete global.mafia[threadID];
+                    return api.sendMessage("🛑 انتهت اللعبة", threadID);
+                }
             }
 
-            // ===== التصويت =====
-            if (handleReply.type === "vote") {
+            // ================= SHOP LOGIC =================
+            if (handleReply.type === "shop") {
 
-                if (!game.alive.includes(senderID)) return;
-                if (isNaN(body)) return;
+                let p = game.points[senderID];
 
-                const num = parseInt(body);
-                const target = game.alive[num - 1];
-                if (!target) return;
-
-                game.votes[senderID] = target;
-
-                api.sendMessage("🗳 صوتك تم.", threadID);
-
-                if (Object.keys(game.votes).length === game.alive.length) {
-                    endVote(api, threadID);
+                if (body === "1" && p >= 5) {
+                    game.points[senderID] -= 5;
+                    game.items[senderID].shield++;
+                    return api.sendMessage("🛡 تم شراء درع", threadID);
                 }
+
+                if (body === "2" && p >= 7) {
+                    game.points[senderID] -= 7;
+                    game.items[senderID].bullet++;
+                    return api.sendMessage("🔫 تم شراء رصاصة", threadID);
+                }
+
+                if (body === "3" && p >= 4) {
+                    game.points[senderID] -= 4;
+                    game.items[senderID].info++;
+                    return api.sendMessage("🔍 معلومة جاهزة", threadID);
+                }
+
+                return api.sendMessage("❌ خطأ أو نقاط غير كافية", threadID);
             }
 
         } catch (e) {
-            console.error(e);
-            api.sendMessage("❌ خطأ.", threadID);
+            console.log(e);
+            api.sendMessage("❌ خطأ", threadID);
         }
-    },
-
-    onStart: async ({ api, event }) => {
-        const { threadID, senderID } = event;
-
-        if (!global.mafia) global.mafia = {};
-        if (global.mafia[threadID]) {
-            return api.sendMessage("⚠️ في لعبة شغالة.", threadID);
-        }
-
-        global.mafia[threadID] = {
-            host: senderID,
-            players: [],
-            roles: {},
-            alive: [],
-            votes: {},
-            nightActions: {},
-            mafiaBoss: null,
-            points: {}
-        };
-
-        api.sendMessage(
-            "🎭 لعبة المافيا\n\nاكتب (انضم)\nاكتب (بدء)",
-            threadID,
-            (err, info) => {
-                global.client.handleReply.push({
-                    name: "مافيا",
-                    messageID: info.messageID,
-                    author: senderID,
-                    type: "join"
-                });
-            }
-        );
     }
 };
 
-// ===== وظائف =====
+// ================= FUNCTIONS =================
 
 function startNight(api, threadID) {
     const game = global.mafia[threadID];
-    game.nightActions = {};
 
-    let list = "🌙 الليل - اختر رقم:\n";
-    game.alive.forEach((id, i) => list += `${i + 1}\n`);
+    // ⚡ EVENT
+    const events = [
+        "🌩 انقطاع كهرباء",
+        "💣 انفجار",
+        "🕵️ كشف لاعب",
+        "🧟 فوضى",
+        "🔇 صمت"
+    ];
 
-    api.sendMessage(list, threadID, (err, info) => {
-        global.client.handleReply.push({
-            name: "مافيا",
-            messageID: info.messageID,
-            type: "night"
+    let event = events[Math.floor(Math.random()*events.length)];
+    api.sendMessage(`⚠️ حدث: ${event}`, threadID);
+
+    setTimeout(()=>aiBalance(game), 2000);
+
+    let list = "🌙 الليل\n";
+    game.alive.forEach((id,i)=>list+=`${i+1}\n`);
+
+    api.sendMessage(list, threadID);
+}
+
+// ================= AI BALANCE =================
+function aiBalance(game) {
+    let mafia = game.alive.filter(x=>game.roles[x]==="مافيا").length;
+    let civ = game.alive.length - mafia;
+
+    if (mafia > civ) {
+        game.alive.forEach(id=>{
+            if(game.roles[id]!=="مافيا") game.points[id] += 1;
         });
-    });
-
-    setTimeout(() => endNight(api, threadID), 25000);
-}
-
-function endNight(api, threadID) {
-    const game = global.mafia[threadID];
-
-    let votes = {};
-    let saved = null;
-
-    for (let id in game.nightActions) {
-        const action = game.nightActions[id];
-
-        if (action.role === "دكتور") {
-            saved = action.target;
-        }
-
-        if (["مافيا", "قاتل", "قناص"].includes(action.role)) {
-            let weight = (id == game.mafiaBoss) ? 2 : 1;
-            votes[action.target] = (votes[action.target] || 0) + weight;
-        }
     }
-
-    let max = 0, target = null;
-    for (let id in votes) {
-        if (votes[id] > max) {
-            max = votes[id];
-            target = id;
-        }
-    }
-
-    if (target && target !== saved) {
-        game.alive = game.alive.filter(x => x !== target);
-        api.sendMessage("💀 مات لاعب.", threadID);
-    } else {
-        api.sendMessage("✨ تم الإنقاذ.", threadID);
-    }
-
-    checkWin(api, threadID);
-    startDay(api, threadID);
-}
-
-function startDay(api, threadID) {
-    const game = global.mafia[threadID];
-    game.votes = {};
-
-    let list = "☀️ النهار - صوت:\n";
-    game.alive.forEach((id, i) => list += `${i + 1}\n`);
-
-    api.sendMessage(list, threadID, (err, info) => {
-        global.client.handleReply.push({
-            name: "مافيا",
-            messageID: info.messageID,
-            type: "vote"
-        });
-    });
-}
-
-function endVote(api, threadID) {
-    const game = global.mafia[threadID];
-
-    let count = {};
-    for (let id in game.votes) {
-        let weight = (id == game.mafiaBoss) ? 2 : 1;
-        count[game.votes[id]] = (count[game.votes[id]] || 0) + weight;
-    }
-
-    let max = 0, target = null;
-    for (let id in count) {
-        if (count[id] > max) {
-            max = count[id];
-            target = id;
-        }
-    }
-
-    game.alive = game.alive.filter(id => id !== target);
-    api.sendMessage("⚖️ تم الإعدام.", threadID);
-
-    checkWin(api, threadID);
-    startNight(api, threadID);
-}
-
-function checkWin(api, threadID) {
-    const game = global.mafia[threadID];
-
-    const mafia = game.alive.filter(id => game.roles[id] === "مافيا").length;
-    const others = game.alive.length - mafia;
-
-    if (mafia === 0) {
-        api.sendMessage("🏆 فاز الشعب!", threadID);
-        delete global.mafia[threadID];
-    }
-
-    if (mafia >= others) {
-        api.sendMessage("🏆 فازت المافيا!", threadID);
-        delete global.mafia[threadID];
-    }
-}
+                                   }
