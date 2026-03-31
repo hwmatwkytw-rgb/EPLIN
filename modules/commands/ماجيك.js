@@ -1,37 +1,35 @@
-
-
 code:
 const axios = require('axios');
 const crypto = require("crypto");
 const fs = require('fs-extra');
-const  path = require ( 'path' ) ;
+const path = require('path');
 
-دالة  النوم ( مللي ثانية )  {
-    return  new  Promise ( resolve => setTimeout ( resolve , ms ) ) ;
+function Sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-فئة  MagicAi  {
- "constructor ( d_id , models )  {
-وظيفةthis.d_id = d_id || this.GenerateID ( ) ;​​​​
-        this.Token = null ;​​
-        this.baseUrl = ' https://api.magicaiimage.top ' ;
-        this.models = models ;​​
+class MagicAi {
+    constructor(d_id, models) {
+        this.d_id = d_id || this.GenerateID();
+        this.Token = null;
+        this.baseUrl = 'https://api.magicaiimage.top';
+        this.models = models;
     }
 
-    Seed ( )  {  return  Math.floor ( Math.random ( ) * 1e15 ) ; }​​​​
+    Seed() { return Math.floor(Math.random() * 1e15); }
 
-    تشفير ( بيانات OData )  {
-        const  key = Buffer.from ( [ 0 , 0 , 0 , 109 , 97 , 103 , 105 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ] ) ;​​
-        const  iv = Buffer.alloc ( 16 , 0 ) ;​​
-        const  cipher = crypto.createCipheriv ( " aes - 128-cbc" , key , iv ) ;
-        cipher.setAutoPadding ( true ) ;​​
-        const  encryptedBuffer = Buffer.concat ( [ cipher.update ( JSON.stringify ( OData ) , " utf8 " ) , cipher.final ( ) ] ) ;​​​​​​
-        أعد  encryptedBuffer.toString ( " base64 " ) ;
+    Encrypt(OData) {
+        const key = Buffer.from([0, 0, 0, 109, 97, 103, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        const iv = Buffer.alloc(16, 0);
+        const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
+        cipher.setAutoPadding(true);
+        const encryptedBuffer = Buffer.concat([cipher.update(JSON.stringify(OData), "utf8"), cipher.final()]);
+        return encryptedBuffer.toString("base64");
     }
 
-    فك تشفير ( البيانات الإلكترونية )  {
-
-
+    Decrypt(Edata) {
+        const key = Buffer.from([0, 0, 0, 109, 97, 103, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        const iv = Buffer.alloc(16, 0);
         const decipher = crypto.createDecipheriv("aes-128-cbc", key, iv);
         decipher.setAutoPadding(true);
         const decrypted = Buffer.concat([decipher.update(Buffer.from(Edata, "base64")), decipher.final()]);
