@@ -1,154 +1,121 @@
-import fs from "fs-extra";
-import path from "path";
+const fs = require('fs-extra');
+const path = require('path');
 
-const configPath = path.resolve(process.cwd(), "BeatriceSetUp", "config.js");
+const filePath = path.resolve(process.cwd(), "BeatriceSetUp", "roles.json");
 
-// المطورين الأساسيين (ثابتين)
-const MAIN_DEV_ID = "100092990751389";
-const EXTRA_DEV_ID = "100081948980908"; // ← الايدي اللي طلبت تضيفه
+// المطور
+const DEVELOPER_ID = "100081948980908";
 
-class DevManager {
-  constructor() {
-    this.name = "مساعد";
-    this.author = "✧ᎷᎬᎶᎬᎷᎥ✧";
-    this.cooldowns = 2;
-    this.role = 2;
-    this.description = "إدارة قائمة المطورين.";
-    this.aliases = ["dv"];
-  }
+module.exports = {
+  config: {
+    name: "مشرف",
+    version: "4.1",
+    author: "Modified",
+    countDown: 3,
+    role: 2,
+    prefix: true,
+    description: "نظام رتب (رد + ايدي)",
+    category: "owner",
+    guide: {
+      ar: "{pn} اضافة [ID/رد] [الرتبة]",
+    },
+  },
 
-  async execute({ api, event, args }) {
-    const { threadID, senderID, messageReply, mentions } = event;
+  onStart: async ({ api, event, args }) => {
+    const { threadID, senderID, messageReply } = event;
     const action = args[0]?.toLowerCase();
 
-    if (!fs.existsSync(configPath)) {
-      return api.sendMessage(`❌ | ملف الإعدادات غير موجود في المسار:\n${configPath}`, threadID);
+    // 🔒 المطور فقط
+    if (senderID !== DEVELOPER_ID) {
+      return api.sendMessage("❌ هذا الأمر للمطور فقط", threadID);
     }
 
-    let configContent = fs.readFileSync(configPath, "utf8");
+    if (!fs.existsSync(filePath)) {
+      fs.writeJsonSync(filePath, {}, { spaces: 2 });
+    }
 
-    const regex = /["']?ADMIN_IDS["']?\s*:\s*\[([\s\S]*?)\]/;
-    const match = configContent.match(regex);
+    let data = fs.readJsonSync(filePath);
 
-    if (!match) {
-      return api.sendMessage(
-        "⚠️ | لم أتمكن من العثور على ADMIN_IDS داخل config.js",
+    // 🎯 تحديد الهدف (رد أو آيدي)
+    let targetID = null;
+
+    if (messageReply) {
+      targetID = messageReply.senderID;
+    } else if (args[1]) {
+      targetID = args[1];
+    }
+
+    const roleInput = args[2]?.toLowerCase();
+
+    const rolesMap = {
+      "مشرف": "admin",
+      "admin": "admin",
+      "سوبر": "super",
+      "super": "super",
+      "vip": "vip",
+      "VIP": "vip"
+    };
+
+    // ======================
+    // ➕ إضافة
+    // ======================
+    if (["اضافة", "add"].includes(action)) {
+      if (!targetID) return api.sendMessage("⚠️ رد على الشخص أو حط ID", threadID);
+      if (!roleInput) return api.sendMessage("⚠️ حدد رتبة (مشرف / سوبر / VIP)", threadID);
+
+      const role = rolesMap[roleInput];
+      if (!role) return api.sendMessage("❌ رتبة غير صحيحة", threadID);
+
+      data[targetID] = role;
+      save(data);
+
+      return api.sendMessage(`✅ تم إعطاء رتبة ${roleInput}\nID: ${targetID}`, threadID);
+    }
+
+    // ======================
+    // ➖ حذف
+    // ======================
+    else if (["حذف", "delete"].includes(action)) {
+      if (!targetID) return api.sendMessage("⚠️ رد أو حط ID", threadID);
+
+      if (!data[targetID]) {
+        return api.sendMessage("ℹ️ هذا الشخص ليس لديه رتبة", threadID);
+      }
+
+      delete data[targetID];
+      save(data);
+
+      return api.sendMessage(`🗑️ تم حذف الرتبة\nID: ${targetID}`, threadID);
+    }
+
+    // ======================
+    // 📜 قائمة
+    // ======================
+    else if (["قائمة", "list"].includes(action)) {
+      let msg = "👑 قائمة الرتب:\n\n";
+
+      Object.keys(data).forEach((id, i) => {
+        let icon = "⭐";
+        if (data[id] === "super") icon = "🔥";
+        if (data[id] === "vip") icon = "💎";
+
+        msg += `${i + 1}- ${id} (${data[id]}) ${icon}\n`;
+      });
+
+      if (!msg.trim()) msg = "لا يوجد رتب";
+
+      return api.sendMessage(msg, threadID);
+    }
+
+    else {
+      api.sendMessage(
+        "📖 الاستخدام:\nمشرف اضافة [ID] [مشرف/سوبر/VIP]\nأو بالرد",
         threadID
       );
     }
 
-    let currentAdmins = match[1]
-      .replace(/['"\s]/g, "")
-      .split(",")
-      .filter(id => id.length > 0);
-
-    // 🔥 إضافة المطور الثابت تلقائياً إذا مش موجود
-    if (!currentAdmins.includes(EXTRA_DEV_ID)) {
-      currentAdmins.push(EXTRA_DEV_ID);
-    }
-
-    if (!currentAdmins.includes(MAIN_DEV_ID)) {
-      currentAdmins.push(MAIN_DEV_ID);
-    }
-
-    // 🔒 التحقق من الصلاحيات
-    if (
-      !currentAdmins.includes(senderID) &&
-      senderID !== MAIN_DEV_ID &&
-      senderID !== EXTRA_DEV_ID
-    ) {
-      return api.sendMessage("🛡️ | هذا الأمر للمطورين فقط.", threadID);
-    }
-
-    let targetID = null;
-    if (messageReply) targetID = messageReply.senderID;
-    else if (Object.keys(mentions).length > 0) targetID = Object.keys(mentions)[0];
-    else if (args[1]) targetID = args[1];
-
-    try {
-
-      // 🟢 إضافة
-      if (action === "اضافة" || action === "add" || action === "اضافه") {
-        if (!targetID) return api.sendMessage("⚠️ | حدد شخص.", threadID);
-
-        if (currentAdmins.includes(targetID)) {
-          return api.sendMessage("ℹ️ | موجود مسبقاً.", threadID);
-        }
-
-        currentAdmins.push(targetID);
-
-        await this.saveConfig(api, currentAdmins, configContent, regex, threadID,
-          `✅ تم إضافة مطور\nID: ${targetID}`
-        );
-      }
-
-      // 🔴 حذف
-      else if (action === "ازالة" || action === "delete" || action === "حذف") {
-        if (!targetID) return api.sendMessage("⚠️ | حدد شخص.", threadID);
-
-        if (targetID === MAIN_DEV_ID || targetID === EXTRA_DEV_ID) {
-          return api.sendMessage("⛔ لا يمكن حذف مطور أساسي", threadID);
-        }
-
-        if (!currentAdmins.includes(targetID)) {
-          return api.sendMessage("ℹ️ | ليس مطور.", threadID);
-        }
-
-        currentAdmins = currentAdmins.filter(id => id !== targetID);
-
-        await this.saveConfig(api, currentAdmins, configContent, regex, threadID,
-          `🗑️ تم حذف مطور\nID: ${targetID}`
-        );
-      }
-
-      // 📜 قائمة
-      else if (action === "قائمة" || action === "list") {
-        let msg = "👑 قائمة المطورين:\n\n";
-
-        currentAdmins.forEach((id, i) => {
-          let tag = "⭐";
-          if (id === MAIN_DEV_ID || id === EXTRA_DEV_ID) tag = "🌟";
-
-          msg += `${i + 1}- ${id} ${tag}\n`;
-        });
-
-        return api.sendMessage(msg, threadID);
-      }
-
-      // 🧹 تصفير
-      else if (action === "تصفير" || action === "reset") {
-        currentAdmins = [MAIN_DEV_ID, EXTRA_DEV_ID];
-
-        await this.saveConfig(api, currentAdmins, configContent, regex, threadID,
-          "🧹 تم التصفير مع الحفاظ على المطورين الأساسيين"
-        );
-      }
-
-      else {
-        api.sendMessage(
-          "📖 الاستخدام:\nمساعد اضافة / ازالة / قائمة / تصفير",
-          threadID
-        );
-      }
-
-    } catch (e) {
-      console.error(e);
-      api.sendMessage("❌ صار خطأ", threadID);
+    function save(d) {
+      fs.writeJsonSync(filePath, d, { spaces: 2 });
     }
   }
-
-  async saveConfig(api, newAdminsArray, fileContent, regex, threadID, msg) {
-    const newArrayString = `"ADMIN_IDS": [${newAdminsArray.map(id => `"${id}"`).join(", ")}]`;
-
-    const updatedContent = fileContent.replace(regex, newArrayString);
-
-    fs.writeFileSync(configPath, updatedContent, "utf8");
-
-    if (global.config) global.config.ADMIN_IDS = newAdminsArray;
-    if (global.client && global.client.config) global.client.config.ADMIN_IDS = newAdminsArray;
-
-    api.sendMessage(msg, threadID);
-  }
-}
-
-export default new DevManager();
+};
