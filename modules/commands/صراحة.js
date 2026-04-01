@@ -1,70 +1,199 @@
-لاdule.exports = {
+const fs = require('fs-extra');
+const path = require('path');
+
+module.exports = {
   config: {
     name: "صراحة",
-    aliases: ["صراحه"],
-    version: "2.0.0",
-    author: "AbuUbaida",
-    countDown: 5,
-    role: 0,
-    category: "fun"
+    version: "3.0",
+    author: "Fix Pro",
+    countDown: 3,
+    prefix: true,
+    adminOnly: false,
+    category: "fun",
+    description: "صراحة + نقاط + تايمر + متجر",
+    guide: {
+      en: "{pn}"
+    },
   },
 
-  onStart: async function ({ api, event }) {
-    return this.askQuestion(api, event);
-  },
+  onStart: async function({ api, event, args }) {
+    const { threadID, messageID, senderID } = event;
 
-  // دالة لجلب سؤال عشوائي وإرساله
-  askQuestion: async function (api, event) {
-    const { threadID, messageID } = event;
+    global.sarahaGame = global.sarahaGame || {};
+    global.sarahaPoints = global.sarahaPoints || {};
+    global.sarahaInv = global.sarahaInv || {};
+
     const questions = [
-      'ما أسوأ شيء فعلته في الحياة؟',
-      'حصل اتحرشو بيك ؟',
-      'اسم امك منو ؟',
-      'ما آخر قرار أخذته وندمت عليه؟',
-      'ما أكثر شيء تكرهه في نفسك؟',
-      'هل ظلمت أحد من قبل؟ كيف؟',
-      'كيف ولماذا تركك الحبيب؟',
-      'هل أحببت من طرف واحد من قبل؟',
-      'هل غدر بك أعز صديق لك؟ كيف؟',
-      'ما هو الشيء الذي يمثل لك خط أحمر؟',
-      'من أقرب شخص لك في هذه المجموعة ؟',
-      'أوصف حياتك في كلمة؟',
-      'راضي عن شخصيتك ؟',
-      'بتعمل شنو وقت تزعل ؟',
-      'ترجع ل ex ?',
-      'موقف محرج حصل معاك',
-      'لونك المفضل'
+      "😏 هل كذبت اليوم؟",
+      "💔 هل تحب شخص في السر؟",
+      "🔥 ما هو أكبر سر تخفيه؟",
+      "😅 هل ندمت على شيء؟",
+      "👀 من أكثر شخص تكرهه؟",
+      "💭 هل تفكر في شخص الآن؟",
+      "🤫 ما هو سر لا يعرفه أحد عنك؟",
+      "😈 هل فعلت شيء محرج؟"
     ];
 
-    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-    const msg = `⊳ ${randomQuestion}\n\n`;
+    const shop = {
+      hint: 3,
+      skip: 5,
+      double: 10
+    };
 
-    return api.sendMessage(msg, threadID, (err, info) => {
-      // تسجيل الرد في global.client عشان البوت يراقب الرد على الرسالة دي بالذات
-      global.client.handleReply.push({
-        name: this.config.name,
-        messageID: info.messageID,
-        author: event.senderID
-      });
-    }, messageID);
+    // 🛒 عرض المتجر
+    if (args[0] === "متجر") {
+      return api.sendMessage(
+`🛒 متجر الصراحة:
+
+🔹 hint = 3 نقاط
+🔹 skip = 5 نقاط
+🔹 double = 10 نقاط
+
+💡 شراء: صراحة شراء hint`,
+        threadID,
+        messageID
+      );
+    }
+
+    // 💰 شراء
+    if (args[0] === "شراء") {
+      let item = args[1];
+      if (!shop[item]) return api.sendMessage("❌ عنصر غير موجود", threadID);
+
+      let points = global.sarahaPoints[senderID] || 0;
+
+      if (points < shop[item]) {
+        return api.sendMessage("❌ نقاطك لا تكفي", threadID);
+      }
+
+      global.sarahaPoints[senderID] -= shop[item];
+
+      global.sarahaInv[senderID] = global.sarahaInv[senderID] || {};
+      global.sarahaInv[senderID][item] =
+        (global.sarahaInv[senderID][item] || 0) + 1;
+
+      return api.sendMessage(
+`✅ تم شراء ${item}
+💰 نقاطك الآن: ${global.sarahaPoints[senderID]}`,
+        threadID,
+        messageID
+      );
+    }
+
+    try {
+      let q = questions[Math.floor(Math.random() * questions.length)];
+      let time = 15;
+
+      api.sendMessage(
+`💬 سؤال صراحة:
+
+${q}
+
+⏱️ لديك ${time} ثانية`,
+        threadID,
+        (err, info) => {
+
+          global.sarahaGame[threadID] = {
+            lastMsgID: info.messageID,
+            expire: Date.now() + time * 1000
+          };
+
+          global.client.handleReply.push({
+            name: "صراحة",
+            messageID: info.messageID,
+            type: "saraha"
+          });
+
+          // ⏱️ انتهاء الوقت
+          setTimeout(() => {
+            if (global.sarahaGame[threadID]) {
+              delete global.sarahaGame[threadID];
+              api.sendMessage("⏰ انتهى الوقت! لم يجب أحد.", threadID);
+            }
+          }, time * 1000);
+
+        },
+        messageID
+      );
+
+    } catch (error) {
+      console.error(error);
+      return api.sendMessage("❌ حدث خطأ", threadID, messageID);
+    }
   },
 
-  // معالج الردود (الريلاي)
-  onReply: async function ({ api, event, handleReply }) {
-    const { body, threadID, messageID } = event;
+  onReply: async function({ api, event }) {
+    const { threadID, senderID, body } = event;
 
-    // التأكد إن الشخص اللي رد هو نفسه اللي طلب الأمر (اختياري)
-    if (handleReply.author !== event.senderID) return;
+    if (!global.sarahaGame || !global.sarahaGame[threadID]) return;
+    if (!body) return;
 
-    const input = body.toLowerCase().trim();
+    let game = global.sarahaGame[threadID];
 
-    if (input === "نعم" || input === "لا") {
-      // حذف الـ handleReply القديم عشان ما يتكرر
-      const index = global.client.handleReply.findIndex(item => item.messageID === handleReply.messageID);
-      if (index !== -1) global.client.handleReply.splice(index, 1);
+    // ⏱️ تحقق من الوقت
+    if (Date.now() > game.expire) return;
 
-      // بدء سؤال جديد
-      return this.askQuestion(api, event);
+    global.sarahaPoints[senderID] =
+      (global.sarahaPoints[senderID] || 0) + 1;
+
+    let points = global.sarahaPoints[senderID];
+
+    const questions = [
+      "😏 هل كذبت اليوم؟",
+      "💔 هل تحب شخص في السر؟",
+      "🔥 ما هو أكبر سر تخفيه؟",
+      "😅 هل ندمت على شيء؟",
+      "👀 من أكثر شخص تكرهه؟",
+      "💭 هل تفكر في شخص الآن؟",
+      "🤫 ما هو سر لا يعرفه أحد عنك؟",
+      "😈 هل فعلت شيء محرج؟"
+    ];
+
+    try {
+
+      // 🗑️ حذف السؤال القديم
+      if (game.lastMsgID) {
+        try {
+          await api.unsendMessage(game.lastMsgID);
+        } catch (e) {}
+      }
+
+      let newQ = questions[Math.floor(Math.random() * questions.length)];
+      let time = 15;
+
+      api.sendMessage(
+`💬 سؤال جديد:
+
+${newQ}
+
+🏆 نقاطك: ${points}
+⏱️ لديك ${time} ثانية`,
+        threadID,
+        (err, info) => {
+
+          global.sarahaGame[threadID] = {
+            lastMsgID: info.messageID,
+            expire: Date.now() + time * 1000
+          };
+
+          global.client.handleReply.push({
+            name: "صراحة",
+            messageID: info.messageID,
+            type: "saraha"
+          });
+
+          setTimeout(() => {
+            if (global.sarahaGame[threadID]) {
+              delete global.sarahaGame[threadID];
+              api.sendMessage("⏰ انتهى الوقت! لم يجب أحد.", threadID);
+            }
+          }, time * 1000);
+
+        }
+      );
+
+    } catch (error) {
+      console.error(error);
     }
   }
 };
