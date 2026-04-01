@@ -4,7 +4,7 @@ const path = require('path');
 
 module.exports = {
     config: {
-        name: 'تحدي',
+        name: 'تحد',
         version: '3.0',
         author: 'Fix Pro',
         countDown: 5,
