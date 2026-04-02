@@ -149,7 +149,7 @@ module.exports = {
 
         finalMessage += `⏣────── ✾ ⌬ ✾ ──────⏣\n`;
         finalMessage += ` ⠇عـدد الأوامـر: ${uniqueCommands.length}\n`;
-        finalMessage += ` ⠇الـمـطـوࢪ: سينكو 𓆩☆𓆪`;
+        finalMessage += ` ⠇الـمـطـوࢪ: sakran 𓆩☆𓆪`;
 
         try {
             const imagePath = await downloadImage('https://i.ibb.co/FZCHwt9/received-1740662803574945.webp');
