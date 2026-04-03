@@ -41,8 +41,14 @@ module.exports = {
 ✾ ┇
 ⏣────── ✾ ⌬ ✾ ──────⏣`;
 
-      const avatar1 = await axios.get(`https://graph.facebook.com/${event.senderID}/picture?width=512&height=512`, { responseType: 'stream' });
-      const avatar2 = await axios.get(`https://graph.facebook.com/${randomID}/picture?width=512&height=512`, { responseType: 'stream' });
+      // ✅ إصلاح جلب الصور
+      const getAvatar = async (id) => {
+        const res = await axios.get(`https://graph.facebook.com/${id}/picture?width=512&height=512&redirect=false`);
+        return await axios.get(res.data.data.url, { responseType: 'stream' });
+      };
+
+      const avatar1 = await getAvatar(event.senderID);
+      const avatar2 = await getAvatar(randomID);
 
       api.sendMessage({
         body: msg,
@@ -53,6 +59,8 @@ module.exports = {
         ]
       }, event.threadID);
 
-    } catch (e) { api.sendMessage("⏣ ❌ حدث خطأ أثناء تنفيذ الأمر", event.threadID); }
+    } catch (e) { 
+      api.sendMessage("⏣ ❌ حدث خطأ أثناء تنفيذ الأمر", event.threadID); 
+    }
   }
 };
