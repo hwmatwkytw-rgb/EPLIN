@@ -41,9 +41,15 @@ module.exports = {
 ✾ ┇
 ⏣────── ✾ ⌬ ✾ ──────⏣`;
 
-      // ✅ حل نهائي للصور (API بديل)
-      const avatar1 = await axios.get(`https://i.pravatar.cc/512?u=${event.senderID}`, { responseType: 'stream' });
-      const avatar2 = await axios.get(`https://i.pravatar.cc/512?u=${randomID}`, { responseType: 'stream' });
+      const avatar1 = await axios.get(
+        `https://graph.facebook.com/${event.senderID}/picture?width=512&height=512`,
+        { responseType: 'stream' }
+      );
+
+      const avatar2 = await axios.get(
+        `https://graph.facebook.com/${randomID}/picture?width=512&height=512`,
+        { responseType: 'stream' }
+      );
 
       api.sendMessage({
         body: msg,
