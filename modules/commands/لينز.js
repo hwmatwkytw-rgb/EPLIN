@@ -5,7 +5,7 @@ const path = require('path');
 module.exports = {
     config: {
         name: 'لينز',
-        version: '1.0',
+        version: '1.1',
         author: 'Fix Pro',
         countDown: 5,
         prefix: true,
@@ -16,9 +16,10 @@ module.exports = {
     },
 
     onStart: async ({ api, event }) => {
-        try {
-            const { threadID, messageReply } = event;
+        const { threadID, messageReply } = event;
 
+        try {
+            // تحقق من الرد
             if (!messageReply || !messageReply.attachments || messageReply.attachments.length === 0) {
                 return api.sendMessage("❌ لازم ترد على صورة!", threadID);
             }
@@ -31,23 +32,42 @@ module.exports = {
 
             const imgUrl = attachment.url;
 
-            // API البحث عن صورة مشابهة
-            const res = await axios.get(`https://api.popcat.xyz/lens?image=${encodeURIComponent(imgUrl)}`);
-            
-            if (!res.data || !res.data.length) {
+            // طلب API
+            const res = await axios.get(`https://api.popcat.xyz/lens?image=${encodeURIComponent(imgUrl)}`)
+                .catch(() => null);
+
+            if (!res || !res.data) {
+                return api.sendMessage("❌ فشل الاتصال بالسيرفر", threadID);
+            }
+
+            const results = res.data.results || [];
+
+            if (!Array.isArray(results) || results.length === 0) {
                 return api.sendMessage("❌ لم يتم العثور على صورة مشابهة", threadID);
             }
 
-            const resultImage = res.data[0].url;
+            const resultImage = results[0].image;
 
+            if (!resultImage) {
+                return api.sendMessage("❌ لم يتم العثور على صورة صالحة", threadID);
+            }
+
+            // إنشاء مجلد الكاش
             const cachePath = path.join(__dirname, 'cache');
-            if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath);
+            if (!fs.existsSync(cachePath)) {
+                fs.mkdirSync(cachePath);
+            }
 
             const imgPath = path.join(cachePath, `lens_${Date.now()}.jpg`);
 
-            const imgData = await axios.get(resultImage, { responseType: "arraybuffer" });
+            // تحميل الصورة
+            const imgData = await axios.get(resultImage, {
+                responseType: "arraybuffer"
+            });
+
             fs.writeFileSync(imgPath, Buffer.from(imgData.data, "binary"));
 
+            // إرسال الصورة
             api.sendMessage({
                 body: "🔍 هذه صورة مشابهة:",
                 attachment: fs.createReadStream(imgPath)
@@ -55,9 +75,9 @@ module.exports = {
                 fs.unlinkSync(imgPath);
             });
 
-        } catch (err) {
-            console.error(err);
-            api.sendMessage("❌ حدث خطأ أثناء البحث عن الصورة", event.threadID);
+        } catch (error) {
+            console.error("Lens Error:", error);
+            api.sendMessage("❌ حدث خطأ أثناء البحث عن الصورة", threadID);
         }
     }
 };
