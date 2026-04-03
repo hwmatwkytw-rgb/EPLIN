@@ -1,7 +1,3 @@
-╭───〔 𓆩 📄 مـحـتـوى الـمـلـف 𓆪 〕───╮
-┃ ꕥ الـاسم: ردود.js
-╰──────────────────╯
-
 code:
 const fs = require("fs-extra");
 const path = require("path");
