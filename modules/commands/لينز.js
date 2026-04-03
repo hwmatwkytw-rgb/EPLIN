@@ -5,7 +5,7 @@ const path = require('path');
 module.exports = {
     config: {
         name: 'لينز',
-        version: '1.1',
+        version: '1.2',
         author: 'Fix Pro',
         countDown: 5,
         prefix: true,
@@ -31,25 +31,43 @@ module.exports = {
             }
 
             const imgUrl = attachment.url;
+            let resultImage = null;
 
-            // طلب API
-            const res = await axios.get(`https://api.popcat.xyz/lens?image=${encodeURIComponent(imgUrl)}`)
-                .catch(() => null);
+            // 🔹 المحاولة الأولى (Popcat)
+            try {
+                const res = await axios.get(
+                    `https://api.popcat.xyz/lens?image=${encodeURIComponent(imgUrl)}`,
+                    { timeout: 10000 }
+                );
 
-            if (!res || !res.data) {
-                return api.sendMessage("❌ فشل الاتصال بالسيرفر", threadID);
+                const results = res.data?.results || [];
+                if (Array.isArray(results) && results.length > 0) {
+                    resultImage = results[0].image;
+                }
+            } catch (e) {
+                console.log("Popcat فشل ❌");
             }
 
-            const results = res.data.results || [];
-
-            if (!Array.isArray(results) || results.length === 0) {
-                return api.sendMessage("❌ لم يتم العثور على صورة مشابهة", threadID);
-            }
-
-            const resultImage = results[0].image;
-
+            // 🔹 المحاولة الثانية (API احتياطي)
             if (!resultImage) {
-                return api.sendMessage("❌ لم يتم العثور على صورة صالحة", threadID);
+                try {
+                    const backup = await axios.get(
+                        `https://api.siputzx.my.id/api/tools/reverse-image?image=${encodeURIComponent(imgUrl)}`,
+                        { timeout: 10000 }
+                    );
+
+                    const data = backup.data?.data || [];
+                    if (Array.isArray(data) && data.length > 0) {
+                        resultImage = data[0].image || data[0].thumbnail;
+                    }
+                } catch (e) {
+                    console.log("Backup API فشل ❌");
+                }
+            }
+
+            // ❌ إذا فشلوا الاثنين
+            if (!resultImage) {
+                return api.sendMessage("❌ فشل الاتصال بكل السيرفرات 😢", threadID);
             }
 
             // إنشاء مجلد الكاش
@@ -77,7 +95,7 @@ module.exports = {
 
         } catch (error) {
             console.error("Lens Error:", error);
-            api.sendMessage("❌ حدث خطأ أثناء البحث عن الصورة", threadID);
+            api.sendMessage("❌ حدث خطأ أثناء التنفيذ", threadID);
         }
     }
 };
