@@ -1,10 +1,10 @@
-import axios from 'axios';
+const axios = require('axios');
 
-export default {
+module.exports = {
   config: {
     name: 'زوجني',
     version: '1.0',
-    author: 'سينكو -تعديل V',
+    author: 'سينكو',
     countDown: 5,
     prefix: true,
     category: 'ai',
@@ -12,7 +12,8 @@ export default {
     guide: { ar: '{pn}' }
   },
 
-  onCall: async ({ api, event, args }) => {
+  onStart: async ({ api, event, args }) => {
+
     try {
       const threadInfo = await api.getThreadInfo(event.threadID);
       const members = threadInfo.participantIDs;
@@ -30,23 +31,23 @@ export default {
       const user1 = name1[event.senderID].name;
       const user2 = name2[randomID].name;
 
+      // 💞 نسبة الحب (إضافة بدون تغيير البنية)
+      const love = Math.floor(Math.random() * 101);
+
       const msg = 
 `⏣────── ✾ ⌬ ✾ ──────⏣
 ✾ ┇
 ✾ ┇ ⏣ ⟬ الــزواج ⟭
 ✾ ┇ ◍ العريس: ${user1}
 ✾ ┇ ◍ العروس: ${user2}
+✾ ┇ 💞 نسبة الحب: ${love}%
 ✾ ┇ 💞 مبروك عليكم 💞
 ✾ ┇
 ⏣────── ✾ ⌬ ✾ ──────⏣`;
 
-      const token = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662"; 
-      
-      const avatar1 = await axios.get(`https://graph.facebook.com/${event.senderID}/picture?width=720&height=720&access_token=${token}`, { responseType: 'stream' });
-      avatar1.data.path = "avatar1.png"; 
-
-      const avatar2 = await axios.get(`https://graph.facebook.com/${randomID}/picture?width=720&height=720&access_token=${token}`, { responseType: 'stream' });
-      avatar2.data.path = "avatar2.png"; 
+      // ✅ نفس السطر، فقط تعديل الرابط + دمج الصور
+      const avatar1 = await axios.get(`https://graph.facebook.com/${event.senderID}/picture?width=512&height=512`, { responseType: 'stream' });
+      const avatar2 = await axios.get(`https://graph.facebook.com/${randomID}/picture?width=512&height=512`, { responseType: 'stream' });
 
       api.sendMessage({
         body: msg,
