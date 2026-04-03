@@ -1,10 +1,10 @@
-const axios = require('axios');
+import axios from 'axios';
 
-module.exports = {
+export default {
   config: {
     name: 'زوجني',
     version: '1.0',
-    author: 'سينكو',
+    author: 'سينكو -تعديل V',
     countDown: 5,
     prefix: true,
     category: 'ai',
@@ -12,8 +12,7 @@ module.exports = {
     guide: { ar: '{pn}' }
   },
 
-  onStart: async ({ api, event, args }) => {
-
+  onCall: async ({ api, event, args }) => {
     try {
       const threadInfo = await api.getThreadInfo(event.threadID);
       const members = threadInfo.participantIDs;
@@ -31,27 +30,27 @@ module.exports = {
       const user1 = name1[event.senderID].name;
       const user2 = name2[randomID].name;
 
-      const love = Math.floor(Math.random() * 101);
-
       const msg = 
 `⏣────── ✾ ⌬ ✾ ──────⏣
 ✾ ┇
 ✾ ┇ ⏣ ⟬ الــزواج ⟭
 ✾ ┇ ◍ العريس: ${user1}
 ✾ ┇ ◍ العروس: ${user2}
-✾ ┇ 💞 نسبة الحب: ${love}%
 ✾ ┇ 💞 مبروك عليكم 💞
 ✾ ┇
 ⏣────── ✾ ⌬ ✾ ──────⏣`;
 
-      const merged = await axios.get(
-        `https://api.popcat.xyz/ship?user1=https://graph.facebook.com/${event.senderID}/picture?width=512&height=512&user2=https://graph.facebook.com/${randomID}/picture?width=512&height=512`,
-        { responseType: 'stream' }
-      );
+      const token = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662"; 
+      
+      const avatar1 = await axios.get(`https://graph.facebook.com/${event.senderID}/picture?width=720&height=720&access_token=${token}`, { responseType: 'stream' });
+      avatar1.data.path = "avatar1.png"; 
+
+      const avatar2 = await axios.get(`https://graph.facebook.com/${randomID}/picture?width=720&height=720&access_token=${token}`, { responseType: 'stream' });
+      avatar2.data.path = "avatar2.png"; 
 
       api.sendMessage({
         body: msg,
-        attachment: merged.data,
+        attachment: [avatar1.data, avatar2.data],
         mentions: [
           { id: event.senderID, tag: user1 },
           { id: randomID, tag: user2 }
