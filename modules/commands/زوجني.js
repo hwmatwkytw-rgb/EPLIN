@@ -31,29 +31,27 @@ module.exports = {
       const user1 = name1[event.senderID].name;
       const user2 = name2[randomID].name;
 
+      const love = Math.floor(Math.random() * 101);
+
       const msg = 
 `⏣────── ✾ ⌬ ✾ ──────⏣
 ✾ ┇
 ✾ ┇ ⏣ ⟬ الــزواج ⟭
 ✾ ┇ ◍ العريس: ${user1}
 ✾ ┇ ◍ العروس: ${user2}
+✾ ┇ 💞 نسبة الحب: ${love}%
 ✾ ┇ 💞 مبروك عليكم 💞
 ✾ ┇
 ⏣────── ✾ ⌬ ✾ ──────⏣`;
 
-      const avatar1 = await axios.get(
-        `https://graph.facebook.com/${event.senderID}/picture?width=512&height=512`,
-        { responseType: 'stream' }
-      );
-
-      const avatar2 = await axios.get(
-        `https://graph.facebook.com/${randomID}/picture?width=512&height=512`,
+      const merged = await axios.get(
+        `https://api.popcat.xyz/ship?user1=https://graph.facebook.com/${event.senderID}/picture?width=512&height=512&user2=https://graph.facebook.com/${randomID}/picture?width=512&height=512`,
         { responseType: 'stream' }
       );
 
       api.sendMessage({
         body: msg,
-        attachment: [avatar1.data, avatar2.data],
+        attachment: merged.data,
         mentions: [
           { id: event.senderID, tag: user1 },
           { id: randomID, tag: user2 }
