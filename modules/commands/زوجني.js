@@ -41,14 +41,9 @@ module.exports = {
 ✾ ┇
 ⏣────── ✾ ⌬ ✾ ──────⏣`;
 
-      // ✅ إصلاح جلب الصور
-      const getAvatar = async (id) => {
-        const res = await axios.get(`https://graph.facebook.com/${id}/picture?width=512&height=512&redirect=false`);
-        return await axios.get(res.data.data.url, { responseType: 'stream' });
-      };
-
-      const avatar1 = await getAvatar(event.senderID);
-      const avatar2 = await getAvatar(randomID);
+      // ✅ حل نهائي للصور (API بديل)
+      const avatar1 = await axios.get(`https://i.pravatar.cc/512?u=${event.senderID}`, { responseType: 'stream' });
+      const avatar2 = await axios.get(`https://i.pravatar.cc/512?u=${randomID}`, { responseType: 'stream' });
 
       api.sendMessage({
         body: msg,
